@@ -5,6 +5,7 @@ import {
 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
+import { DropCap } from "./DropCap";
 
 /**
  * DigestView -- M5 newspaper-section restyle of the daily digest.
@@ -188,16 +189,26 @@ export function DigestView({
             </div>
           ) : dailySummary ? (
             <>
-              <p
+              {/* Editorial drop-cap reused on the daily-brief hero
+                  paragraph (design-review #17). DropCap component
+                  extracted from the original WelcomeScreen lockup.
+                  Italic + 18px leading is layered on top via the
+                  className prop so the rest of the typography stays
+                  aligned with the M5 digest restyle.
+
+                  Note: ``::first-letter`` on a <p> with the
+                  ``.editorial-drop`` class will pick up the first
+                  rendered letter inside the paragraph regardless of
+                  nested inline wrappers, so the overflowWrap span
+                  below doesn't disrupt the drop-cap effect. */}
+              <DropCap
                 data-testid="digest-daily-summary-text"
-                className="editorial-drop font-display text-[18px] italic leading-[1.55] text-foreground"
-                style={{
-                  overflowWrap: "anywhere",
-                  wordBreak: "break-word",
-                }}
+                className="text-[18px] italic leading-[1.55]"
               >
-                {dailySummary.summary}
-              </p>
+                <span style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                  {dailySummary.summary}
+                </span>
+              </DropCap>
               <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
                 filed {relativeTime(dailySummary.generated_at) || "today"} · {dailySummary.article_count} article{dailySummary.article_count === 1 ? "" : "s"}
               </p>

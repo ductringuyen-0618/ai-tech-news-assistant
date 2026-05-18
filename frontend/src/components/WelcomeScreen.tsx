@@ -28,6 +28,7 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import { API_ENDPOINTS, apiFetch } from "../config/api";
+import { DropCap } from "./DropCap";
 
 interface WelcomeScreenProps {
   onTryResearch: () => void;
@@ -168,13 +169,13 @@ export function WelcomeScreen({
           <p className="font-display italic text-[24px] leading-[1.3] text-foreground-soft mb-6 max-w-xl">
             A reader&apos;s terminal for the agentic era.
           </p>
-          <p className="editorial-drop font-display text-[16px] leading-[1.65] text-foreground mb-6 max-w-xl">
+          <DropCap className="mb-6 max-w-xl">
             Reading the news is now a research problem. TechPulse aggregates
             the day&apos;s stories from TechCrunch, The Verge, Wired, Ars
             Technica and more &mdash; then hands you an agentic research
             desk that decomposes any question, dispatches subagents across
             the corpus, and synthesises a cited answer in real time.
-          </p>
+          </DropCap>
 
           {/* Feature list -- compact numbered four-row, NOT a 2x2
               card grid. Single-screen means no fluff. */}

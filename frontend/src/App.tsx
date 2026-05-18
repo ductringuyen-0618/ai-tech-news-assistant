@@ -499,6 +499,17 @@ function AppShell() {
       onValueChange={setActiveTab}
       className="min-h-screen flex flex-row bg-background text-foreground"
     >
+      {/* Skip-to-content link (design-review #14). Hidden until
+          focused; appears as a high-contrast mono pill in the top-
+          left corner so keyboard users can jump past the sidebar
+          and masthead. Anchored to ``#main-content`` which lives on
+          the <main> below. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only fixed top-2 left-2 z-50 bg-foreground text-background px-3 py-1 font-mono-tx text-[12px] uppercase-eyebrow"
+      >
+        [ skip to main ]
+      </a>
       <CommandPaletteProvider activeTab={activeTab} onSelectTab={setActiveTab}>
         <Sidebar
           activeTab={activeTab}
@@ -507,6 +518,7 @@ function AppShell() {
         />
 
         <main
+          id="main-content"
           data-slot="main-content"
           className="flex-1 min-w-0 flex flex-col overflow-x-hidden"
         >

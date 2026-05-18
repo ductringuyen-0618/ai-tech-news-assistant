@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import { API_BASE_URL, API_ENDPOINTS } from "../config/api";
 import { MarkdownReport } from "./MarkdownReport";
 import { SuggestedQueries } from "./SuggestedQueries";
+import { RecentDispatches } from "./RecentDispatches";
 import {
   SubQuestionsPanel,
   type SubQuestionArticle,
@@ -817,6 +818,12 @@ export function ResearchMode({}: ResearchModeProps) {
             label="Try a sample question:"
             data-testid="research-empty-suggestions"
           />
+          {/* Recent Dispatches panel (design-review #7). Fills the
+              ~50% empty whitespace under the input on desktop and
+              gives the Research empty state visual weight + a recall
+              affordance. Lazily fetches /api/saved-research so the
+              empty state stays cheap to mount. */}
+          <RecentDispatches />
         </div>
       )}
 

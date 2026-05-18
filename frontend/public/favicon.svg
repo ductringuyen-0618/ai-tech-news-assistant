@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- TechPulse favicon -- Fraunces-style serif T, signal accent on
+       the page-tone background (cream in light, near-black in dark).
+       Variable text-color via prefers-color-scheme so the glyph reads
+       on either browser-tab theme. The bracket frame echoes the
+       "[ ]" monospace pill language used through the app. -->
+  <style>
+    :root { --bg: oklch(0.985 0.005 80); --ink: oklch(0.45 0.18 12); }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: oklch(0.16 0.01 240); --ink: oklch(0.82 0.18 200); }
+    }
+    .frame  { fill: var(--bg); }
+    .glyph  { fill: var(--ink);
+              font-family: 'Fraunces', 'Times New Roman', Georgia, serif;
+              font-weight: 600;
+              font-style: italic;
+              font-size: 26px;
+              text-anchor: middle;
+              dominant-baseline: middle; }
+    .bracket { fill: var(--ink); font-family: 'JetBrains Mono', ui-monospace, monospace;
+               font-size: 10px; }
+  </style>
+  <rect class="frame" width="32" height="32" rx="2" />
+  <text class="glyph" x="16" y="20">T</text>
+</svg>

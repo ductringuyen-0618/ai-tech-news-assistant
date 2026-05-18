@@ -266,3 +266,21 @@ html {
 .animate-fadeIn {
   animation: fadeIn 0.3s ease-out;
 }
+
+/* ------------------------------------------------------------------
+ *  Global focus-visible ring (design-review #14).
+ *
+ *  Every keyboard-focused interactive element gets a 2px outline in
+ *  the signal accent, offset by 2px from the element edge so it
+ *  reads as an electric outline rather than a UA-default solid box.
+ *  Mouse focus is suppressed via :focus-visible (modern browsers).
+ *
+ *  Tailwind's preflight already strips the default outline on
+ *  interactive elements via ``outline-none``; this rule re-adds a
+ *  consistent, theme-aware outline only when keyboard navigation is
+ *  active.
+ * ------------------------------------------------------------------ */
+:where(button, a, input, textarea, select, summary, [role="tab"], [role="button"], [role="link"], [role="menuitem"], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent-signal);
+  outline-offset: 2px;
+}

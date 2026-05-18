@@ -316,11 +316,12 @@ export function KnowledgeGraph({}: KnowledgeGraphProps) {
       setGraphData(next);
       initializePositions(next);
 
-      if (nodes.length === 0) {
-        toast.message("Knowledge graph is empty", {
-          description: "Run an ingest + summarize cycle to populate entities.",
-        });
-      } else {
+      // Polish iter (design-review #6): suppress the empty-state toast on
+      // mount. The inline `kg-empty-state` panel ("No entities indexed
+      // yet") already conveys the same information without the floating
+      // bottom-right overlay overlapping the trending sidebar. Toasts are
+      // for state changes, not first-render conditions.
+      if (nodes.length > 0) {
         toast.success(`Loaded ${nodes.length} entities`);
       }
     } catch (error) {

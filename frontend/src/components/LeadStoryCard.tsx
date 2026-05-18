@@ -118,33 +118,46 @@ export function LeadStoryCard({ article }: LeadStoryCardProps) {
   // cap floats over a real paragraph rather than a one-liner teaser.
   const body = (article.summaryMedium || article.summaryShort || "").trim();
 
+  const hasImage = Boolean(article.imageUrl);
+
   return (
     <article
       data-slot="card"
       data-testid="news-card-lead"
       className="group relative p-3 border-t-2 border-foreground transition-colors hover:bg-[var(--background-tint)]"
     >
-      {/* Lead-story image -- 16:9 letterbox, black background fallback. */}
-      <div className="relative aspect-[16/9] bg-foreground/90 overflow-hidden mb-3">
-        <ImageWithFallback
-          src={article.imageUrl}
-          alt={article.title}
-          className="w-full h-full object-cover"
-        />
-        <button
-          type="button"
-          data-testid="news-card-lead-save-btn"
-          onClick={toggleSaved}
-          aria-label={isSaved ? "Unsave article" : "Save article"}
-          aria-pressed={isSaved}
-          className="absolute top-2 right-2 font-mono-tx text-[10px] uppercase-eyebrow px-2 py-1 bg-background/90 border border-[var(--rule)] text-foreground hover:bg-background"
-        >
-          {isSaved ? "[ saved ]" : "[+ save ]"}
-        </button>
-      </div>
+      {/* Lead-story image -- 16:9 letterbox, black background fallback.
+
+          Polish iter (design-review #9): when the article has no
+          ``image_url`` (Show-HN / Hacker News entries rarely do), we
+          drop the entire image slot rather than render a loud "No
+          image" placeholder. The save toggle migrates inline next to
+          the source eyebrow so the affordance is preserved without
+          the empty grey block. Headline + deck + body still fill the
+          full lead width. */}
+      {hasImage && (
+        <div className="relative aspect-[16/9] bg-foreground/90 overflow-hidden mb-3">
+          <ImageWithFallback
+            src={article.imageUrl}
+            alt={article.title}
+            className="w-full h-full object-cover"
+          />
+          <button
+            type="button"
+            data-testid="news-card-lead-save-btn"
+            onClick={toggleSaved}
+            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-pressed={isSaved}
+            className="absolute top-2 right-2 font-mono-tx text-[10px] uppercase-eyebrow px-2 py-1 bg-background/90 border border-[var(--rule)] text-foreground hover:bg-background"
+          >
+            {isSaved ? "[ saved ]" : "[+ save ]"}
+          </button>
+        </div>
+      )}
 
       {/* Source eyebrow -- mono, .text-gray-500 carried for the source-name
-          assertion scope. */}
+          assertion scope. When the image slot is omitted we tuck the
+          save toggle on the right of this row so the contract remains. */}
       <div className="font-mono-tx text-[11px] uppercase-eyebrow flex items-center gap-2 mb-2">
         <span className="text-gray-500 uppercase-eyebrow">{article.source}</span>
         <span className="text-foreground-soft">.</span>
@@ -154,6 +167,18 @@ export function LeadStoryCard({ article }: LeadStoryCardProps) {
             <span className="text-foreground-soft">.</span>
             <span className="text-foreground-soft">v{article.credibilityScore}</span>
           </>
+        )}
+        {!hasImage && (
+          <button
+            type="button"
+            data-testid="news-card-lead-save-btn"
+            onClick={toggleSaved}
+            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-pressed={isSaved}
+            className="ml-auto font-mono-tx text-[10px] uppercase-eyebrow px-2 py-1 border border-[var(--rule)] text-foreground hover:text-signal hover:border-[var(--accent-signal)]"
+          >
+            {isSaved ? "[ saved ]" : "[+ save ]"}
+          </button>
         )}
       </div>
 

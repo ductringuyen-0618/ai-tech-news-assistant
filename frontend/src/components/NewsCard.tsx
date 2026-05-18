@@ -148,13 +148,27 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
       className="group relative p-3 border-t border-[var(--rule)] hover:bg-[var(--background-tint)] transition-colors"
     >
       {/* Letterbox image -- 16:10, black background fallback. The save
-          toggle is absolute top-right inside the image frame. */}
+          toggle is absolute top-right inside the image frame.
+
+          Polish iter (design-review #9): when ``imageUrl`` is empty
+          (the upstream RSS feed never shipped an ``image_url``) we
+          render a quiet ink-on-paper frame instead of the loud grey
+          "Tech News" SVG placeholder. The save toggle still anchors
+          to the same frame so the grid alignment is preserved. */}
       <div className="relative aspect-[16/10] bg-foreground/90 overflow-hidden mb-3">
-        <ImageWithFallback
-          src={article.imageUrl}
-          alt={article.title}
-          className="w-full h-full object-cover"
-        />
+        {article.imageUrl ? (
+          <ImageWithFallback
+            src={article.imageUrl}
+            alt={article.title}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center">
+            <span className="font-mono-tx text-[10px] uppercase-eyebrow text-background/60">
+              [ no image ]
+            </span>
+          </div>
+        )}
         <button
           type="button"
           data-testid="news-card-save-btn"

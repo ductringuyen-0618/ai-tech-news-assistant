@@ -197,7 +197,17 @@ export function WelcomeScreen({
             ))}
           </ul>
 
-          {/* CTAs ------------------------------------------------- */}
+          {/* CTAs ------------------------------------------------- *
+           *
+           * Polish iter (design-review #15): clearer hierarchy.
+           *  - Research is the marquee action: solid signal-accent
+           *    fill, arrow glyph, hover flips to ink-on-paper.
+           *  - Read today's feed is the secondary call: solid
+           *    foreground/background block (inverted ink) so it
+           *    reads as a real button, not a meta link.
+           *  - Skip intro becomes a quiet tertiary text link with
+           *    its own underline-on-hover affordance.
+           */}
           <div className="flex items-center gap-3 mb-4">
             <button
               data-testid="welcome-cta-research"
@@ -213,7 +223,7 @@ export function WelcomeScreen({
               data-testid="welcome-cta-feed"
               type="button"
               onClick={onBrowseFeed}
-              className="font-mono-tx text-[12px] uppercase-eyebrow px-4 py-2 border border-[var(--rule)] text-foreground hover:bg-[var(--background-tint)] hover:text-signal hover:border-[var(--accent-signal)] transition-colors"
+              className="font-mono-tx text-[12px] uppercase-eyebrow px-4 py-2 bg-foreground text-background hover:bg-[var(--accent-signal)] transition-colors"
             >
               [ read today&apos;s feed ]
             </button>
@@ -222,7 +232,7 @@ export function WelcomeScreen({
             data-testid="welcome-dismiss"
             type="button"
             onClick={onSkip}
-            className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft hover:text-signal self-start transition-colors"
+            className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft hover:text-signal hover:underline self-start transition-colors"
           >
             skip intro &gt;
           </button>

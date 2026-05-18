@@ -253,9 +253,13 @@ function AppShell() {
             summaryMedium,
             url: article.url,
             publishedAt: article.published_at,
-            imageUrl:
-              article.image_url ||
-              "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'><rect width='400' height='300' fill='%23e5e7eb'/><text x='50%25' y='50%25' font-family='sans-serif' font-size='24' fill='%236b7280' text-anchor='middle' dominant-baseline='middle'>Tech News</text></svg>",
+            // Polish iter (design-review #9): pass the raw image_url
+            // through without an unconditional placeholder fallback.
+            // Card components decide their own no-image rendering --
+            // LeadStoryCard drops the hero image slot entirely when
+            // missing; the secondary NewsCard keeps a minimal grey
+            // placeholder for grid alignment.
+            imageUrl: article.image_url || "",
             category: article.categories || [],
             source: article.source,
             credibilityScore: 85,

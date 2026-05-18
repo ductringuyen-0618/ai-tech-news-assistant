@@ -147,11 +147,18 @@ export function Sidebar({ activeTab, badges, onGoHome }: SidebarProps) {
                 isActive ? "text-foreground bg-[var(--background-tint)]" : "",
               ].join(" ")}
             >
+              {/* Left rule: 3px signal bar when active, hairline
+                  rule fade on hover when inactive. The transition
+                  animates the background between transparent →
+                  foreground-soft so the cursor reveals on hover
+                  without a hard step. */}
               <span
                 aria-hidden="true"
                 className={[
-                  "w-[3px] h-5 ml-[-16px] mr-[13px]",
-                  isActive ? "bg-[var(--accent-signal)]" : "bg-transparent",
+                  "w-[3px] h-5 ml-[-16px] mr-[13px] transition-colors",
+                  isActive
+                    ? "bg-[var(--accent-signal)]"
+                    : "bg-transparent group-hover:bg-[var(--rule)]",
                 ].join(" ")}
               />
               <span

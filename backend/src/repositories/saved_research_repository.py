@@ -176,3 +176,36 @@ class SavedResearchRepository:
             )
             conn.commit()
             return True
+
+    # ------------------------------------------------------------------ #
+    #  Seed (design-review #4) — first-touch demo dispatches.
+    # ------------------------------------------------------------------ #
+
+    def seed_if_empty(self) -> int:
+        """Seed example saved-research dispatches when the table is empty.
+
+        Idempotent: a no-op once any row exists in the table. Inserts a
+        small, hand-written corpus so the portfolio-site `/saved` page
+        renders a realistic File Room instead of "No saved research yet"
+        on a fresh deploy. The seed fixtures live in
+        :mod:`src.repositories.seed_data.saved_research_seeds` to keep
+        the repository file readable.
+
+        Returns the number of rows inserted (0 when the table was
+        already non-empty, ``len(SEED_DISPATCHES)`` on a cold start).
+        """
+        if self.count() > 0:
+            return 0
+        # Inline import so we don't pay the cost of loading the seed
+        # corpus on every repository construction.
+        from .seed_data.saved_research_seeds import SEED_DISPATCHES
+
+        inserted = 0
+        for dispatch in SEED_DISPATCHES:
+            self.create(
+                question=dispatch["question"],
+                report_md=dispatch["report_md"],
+                sources=dispatch.get("sources", []),
+            )
+            inserted += 1
+        return inserted

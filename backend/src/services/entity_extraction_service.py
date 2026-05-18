@@ -94,6 +94,183 @@ def _is_likely_acronym(name: str) -> bool:
     return len(name) <= 4 and name.isupper() and name.isalpha()
 
 
+# ---------------------------------------------------------------------- #
+#  Regex / dictionary fallback NER (design-review #3).
+#  Used when Ollama is unreachable in production (e.g. Fly.io has no
+#  local Ollama server). Quality is intentionally modest -- this is a
+#  belt-and-braces path so the Knowledge tab on the portfolio site is
+#  never an empty state. The model path remains primary.
+# ---------------------------------------------------------------------- #
+
+# Hand-curated dictionary mapping known names to their entity type.
+# Order: companies > people > products > technologies (matters for the
+# tie-breaker when a phrase could fit multiple buckets).
+_KNOWN_COMPANIES = {
+    "openai", "anthropic", "google", "alphabet", "microsoft", "apple",
+    "meta", "facebook", "amazon", "nvidia", "intel", "amd", "tesla",
+    "spacex", "netflix", "adobe", "ibm", "oracle", "salesforce",
+    "stripe", "shopify", "twilio", "snowflake", "databricks", "github",
+    "gitlab", "cloudflare", "vercel", "supabase", "atlassian", "asana",
+    "notion", "figma", "canva", "linkedin", "twitter", "x corp",
+    "tiktok", "bytedance", "uber", "lyft", "airbnb", "doordash",
+    "instacart", "robinhood", "coinbase", "binance", "kraken",
+    "palantir", "snowflake", "datadog", "mongodb", "elastic", "hashicorp",
+    "redhat", "vmware", "broadcom", "qualcomm", "arm", "tsmc", "samsung",
+    "huawei", "xiaomi", "sony", "lg", "panasonic", "dell", "hp",
+    "lenovo", "asus", "acer", "razer", "logitech", "nintendo", "ea",
+    "activision", "ubisoft", "epic games", "unity", "valve", "discord",
+    "slack", "zoom", "dropbox", "box", "okta", "auth0", "twilio",
+    "cisco", "juniper", "fortinet", "crowdstrike", "sentinelone",
+    "mistral", "perplexity", "cohere", "hugging face", "huggingface",
+    "stability ai", "midjourney", "runway", "scale ai", "character ai",
+    "deepmind", "boston dynamics", "waymo", "cruise", "rivian", "lucid",
+    "ford", "general motors", "toyota", "honda", "bmw", "mercedes",
+    "porsche", "ferrari", "intel labs", "y combinator", "sequoia",
+    "andreessen horowitz", "a16z", "lightspeed", "founders fund",
+    "kleiner perkins", "accel", "benchmark", "general catalyst",
+    "tiger global", "softbank", "vision fund", "berkshire hathaway",
+    "blackrock", "vanguard", "jpmorgan", "goldman sachs", "morgan stanley",
+    "bank of america", "wells fargo", "citi", "deutsche bank", "ubs",
+    "credit suisse", "barclays", "hsbc", "santander", "bbva",
+    "reddit", "pinterest", "snap", "snapchat", "spotify", "twitch",
+    "youtube", "wikipedia", "wikimedia", "mozilla", "linux foundation",
+    "apache foundation", "cncf", "kubernetes", "docker inc",
+    "neuralink", "openai dev", "claude code", "amazon web services",
+}
+
+_KNOWN_PRODUCTS = {
+    "gpt-3", "gpt-3.5", "gpt-4", "gpt-4o", "gpt-5", "chatgpt", "dall-e",
+    "dall-e 2", "dall-e 3", "sora", "claude", "claude 3", "claude 3.5",
+    "claude 3 opus", "claude 3 sonnet", "claude 3 haiku", "claude code",
+    "gemini", "gemini 1.5", "gemini 2.0", "gemini pro", "gemini ultra",
+    "bard", "llama", "llama 2", "llama 3", "llama 3.1", "llama 3.2",
+    "mistral", "mistral 7b", "mixtral", "mixtral 8x7b", "phi",
+    "phi-3", "iphone", "iphone 15", "iphone 16", "ipad", "macbook",
+    "macbook pro", "apple watch", "vision pro", "airpods", "homepod",
+    "android", "pixel", "pixel 8", "pixel 9", "galaxy", "galaxy s24",
+    "windows", "windows 11", "office 365", "microsoft 365", "azure",
+    "azure openai", "copilot", "github copilot", "microsoft copilot",
+    "bing chat", "cursor", "tabnine", "codeium", "v0", "perplexity",
+    "you.com", "kagi", "duckduckgo", "firefox", "chrome", "safari",
+    "edge", "brave", "tor", "vivaldi", "vs code", "visual studio",
+    "intellij", "pycharm", "rustrover", "webstorm", "android studio",
+    "xcode", "playground", "tinygrad", "model context protocol", "mcp",
+}
+
+_KNOWN_TECHNOLOGIES = {
+    "ai", "machine learning", "deep learning", "neural network",
+    "transformer", "transformers", "rag", "retrieval augmented generation",
+    "fine-tuning", "rlhf", "llm", "large language model", "embedding",
+    "embeddings", "vector database", "computer vision", "nlp",
+    "natural language processing", "reinforcement learning", "agi",
+    "robotics", "autonomous driving", "self-driving", "blockchain",
+    "cryptocurrency", "bitcoin", "ethereum", "solana", "web3",
+    "nft", "defi", "smart contracts", "quantum computing", "5g", "6g",
+    "edge computing", "iot", "internet of things", "ar", "vr",
+    "augmented reality", "virtual reality", "mixed reality", "xr",
+    "metaverse", "saas", "paas", "iaas", "kubernetes", "docker",
+    "serverless", "microservices", "graphql", "rest api", "webhook",
+    "oauth", "passkeys", "biometrics", "fido2", "zero trust",
+    "ransomware", "phishing", "ddos", "sql injection", "xss",
+    "cuda", "rocm", "pytorch", "tensorflow", "jax", "keras", "scikit-learn",
+    "rust", "go", "python", "typescript", "javascript", "wasm",
+    "webassembly", "react", "vue", "svelte", "next.js", "remix",
+    "nuxt", "fastapi", "flask", "django", "spring boot", "node.js",
+    "deno", "bun", "postgresql", "mongodb", "redis", "elasticsearch",
+    "kafka", "rabbitmq", "apache spark", "hadoop", "airflow", "dbt",
+}
+
+
+def _regex_extract_entities(text: str, max_entities: int = 12) -> List[Tuple[str, str]]:
+    """Cheap fallback NER used when Ollama is unreachable.
+
+    Strategy:
+      1. Pull all title-cased phrases (one to four consecutive Capitalised
+         tokens). This catches "OpenAI", "Sam Altman", "GPT-4", "Vision Pro".
+      2. Lower-case the phrase and look it up in our four dictionaries.
+         Order: company > person > product > technology > other. People
+         are inferred via the "two title-cased tokens not in any dict"
+         heuristic so the corpus's frequent founder/CEO names land in
+         the graph even if we don't pre-list them.
+      3. Apply the existing sanity rules (stopwords, single-noise words,
+         all-caps non-acronym filter) before returning.
+
+    The returned list is deduped (case-insensitive) and capped at
+    ``max_entities`` to keep the per-article output comparable to what
+    the Ollama prompt produces.
+    """
+    if not text:
+        return []
+
+    # Title-cased phrase matcher. Tokens may include digits / hyphens
+    # (so "GPT-4" and "Llama 3" survive). The look-ahead caps the run
+    # at four tokens so we don't grab a whole sentence.
+    pattern = re.compile(
+        r"\b([A-Z][A-Za-z0-9\-]+(?:\s+[A-Z][A-Za-z0-9\-]+){0,3})\b"
+    )
+
+    candidates: List[str] = []
+    seen_lower: set = set()
+    for match in pattern.finditer(text):
+        phrase = match.group(1).strip()
+        if not phrase or len(phrase) < 3:
+            continue
+        key = phrase.lower()
+        if key in seen_lower:
+            continue
+        seen_lower.add(key)
+        candidates.append(phrase)
+
+    out: List[Tuple[str, str]] = []
+    for phrase in candidates:
+        lo = phrase.lower()
+        # Dictionary lookups, ordered by priority.
+        if lo in _KNOWN_COMPANIES:
+            ent_type = "company"
+        elif lo in _KNOWN_PRODUCTS:
+            ent_type = "product"
+        elif lo in _KNOWN_TECHNOLOGIES:
+            ent_type = "technology"
+        else:
+            tokens = phrase.split()
+            # Two- or three-token phrase, both/all title-cased, not a
+            # single common noun -- almost always a person's name in
+            # tech-news copy (e.g. "Sam Altman", "Sundar Pichai").
+            looks_like_person = (
+                2 <= len(tokens) <= 3
+                and all(t[0:1].isupper() for t in tokens)
+                and not any(t.lower() in COMMON_STOPWORDS for t in tokens)
+                and not any(t.lower() in SINGLE_NOISE_WORDS for t in tokens)
+            )
+            if looks_like_person:
+                ent_type = "person"
+            else:
+                # Skip lone capitalised nouns that aren't in any dict.
+                # Returning them as "other" floods the graph with sentence
+                # heads ("The", "Today", lone "AI"). Better to drop.
+                continue
+
+        # Apply the sanity rules (re-use the existing filters by
+        # constructing a {"name", "type"} shaped dict and round-tripping
+        # through ``_sanitize_candidate`` -- the caller wires this up).
+        if lo in COMMON_STOPWORDS or lo in SINGLE_NOISE_WORDS:
+            continue
+        if (
+            phrase.isalpha()
+            and phrase.isupper()
+            and len(phrase) >= 5
+            and phrase not in COMMON_ACRONYMS
+            and not _is_likely_acronym(phrase)
+        ):
+            continue
+
+        out.append((phrase, ent_type))
+        if len(out) >= max_entities:
+            break
+
+    return out
+
+
 class EntityExtractionService:
     """
     Extract named entities from article text via Ollama and persist them.
@@ -107,6 +284,13 @@ class EntityExtractionService:
     # We send at most this many chars to Ollama. 1B models lose the plot
     # past a few thousand tokens and the prompt is mostly the lede anyway.
     MAX_PROMPT_CHARS = 4_000
+
+    # Process-wide latch. When the first ``_call_ollama`` raises a
+    # connect-refused / DNS-failure error (e.g. Fly.io with no local
+    # Ollama), every subsequent ``extract_entities`` call short-circuits
+    # to the regex fallback. Saves us 80 * <timeout-seconds> of cold
+    # connect waits on a per-machine cold start.
+    _ollama_unreachable: bool = False
 
     # NOTE: Prompt is built via simple string concatenation (not str.format)
     # because the JSON example contains literal '{' and '}' characters that
@@ -231,23 +415,40 @@ class EntityExtractionService:
         snippet = content[: self.MAX_PROMPT_CHARS]
         prompt = self.PROMPT_PREFIX + snippet + self.PROMPT_SUFFIX
 
+        # Fast path: if a previous call already proved Ollama is
+        # unreachable for this process, skip the network round-trip
+        # and go straight to regex extraction.
+        if EntityExtractionService._ollama_unreachable:
+            return _regex_extract_entities(snippet)
+
+        # Try Ollama first. If the call fails (connection refused,
+        # timeout, model not pulled, ...) OR returns junk, fall through
+        # to the regex/dictionary path so the Knowledge graph isn't an
+        # empty state on deployments without a local Ollama (design-
+        # review #3 -- Fly.io has no Ollama; see
+        # _regex_extract_entities for the fallback shape).
         try:
             raw = await self._call_ollama(prompt)
         except Exception as exc:  # noqa: BLE001 - last-resort
+            EntityExtractionService._ollama_unreachable = True
             logger.warning(
-                "Ollama NER call failed for article %s: %s", article_id, exc
+                "Ollama NER call failed for article %s: %s -- "
+                "switching to regex fallback for the remainder of this "
+                "process",
+                article_id,
+                exc,
             )
-            return []
+            return _regex_extract_entities(snippet)
 
         parsed = self._parse_ollama_response(raw)
         if parsed is None:
             logger.info(
-                "Article %s: Ollama returned non-JSON, dropping all entities. "
+                "Article %s: Ollama returned non-JSON, falling back to regex. "
                 "Response head=%r",
                 article_id,
                 (raw or "")[:120],
             )
-            return []
+            return _regex_extract_entities(snippet)
 
         cleaned: List[Tuple[str, str]] = []
         seen: set = set()

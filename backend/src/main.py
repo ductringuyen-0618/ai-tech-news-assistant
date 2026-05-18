@@ -100,6 +100,32 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # pragma: no cover
         logger.error(f"Database schema init failed: {type(exc).__name__}: {exc}")
 
+    # Seed the Saved Research table on a fresh DB (design-review #4).
+    # ``seed_if_empty`` is idempotent — a no-op once any row exists, so
+    # this is safe to call on every boot. Wrapped in its own try/except
+    # because a failure here must NOT take the API offline; worst case
+    # the /saved page just shows the empty state.
+    try:
+        from src.repositories.saved_research_repository import (
+            SavedResearchRepository,
+        )
+        saved_repo = SavedResearchRepository(settings.sqlite_database_path)
+        inserted = saved_repo.seed_if_empty()
+        if inserted > 0:
+            logger.info(
+                "Saved-research seed: inserted %d demo dispatch(es)",
+                inserted,
+            )
+        else:
+            logger.info(
+                "Saved-research seed: table already populated; no-op"
+            )
+    except Exception as exc:  # pragma: no cover
+        logger.error(
+            "Saved-research seed failed: %s: %s",
+            type(exc).__name__, exc,
+        )
+
     # Retention cron (Milestone 3). Runs once on startup AND daily at
     # 00:00 UTC. The job itself is defined in
     # src.services.retention_service.run_retention_job.

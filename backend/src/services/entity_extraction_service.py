@@ -76,6 +76,19 @@ SINGLE_NOISE_WORDS = {
     "thing", "things", "year", "years",
 }
 
+# Multi-token phrases that are HN/Reddit/etc. boilerplate. Filtered by
+# the regex fallback NER (design-review #3) because the Hacker News RSS
+# feed peppers article bodies with "Comments URL" / "Show HN" / "Ask
+# HN" / "Tell HN" headers; without this guard those become the top-
+# mentioned "entities" in the knowledge graph.
+PHRASE_NOISE = {
+    "comments url", "article url", "show hn", "ask hn", "tell hn",
+    "hi hn", "hey hn", "launch hn", "points #", "points comments",
+    "the download", "the verge", "ars technica", "mit technology",
+    "techcrunch", "hacker news", "wired", "the information",
+    "the wall street journal",
+}
+
 # All-caps tokens we're willing to keep as-is (acronyms with real meaning).
 # Anything else that's all-caps and >= 5 chars is rejected as "probably
 # the model SHOUTED at us".
@@ -224,6 +237,11 @@ def _regex_extract_entities(text: str, max_entities: int = 12) -> List[Tuple[str
     out: List[Tuple[str, str]] = []
     for phrase in candidates:
         lo = phrase.lower()
+        # Drop HN/Reddit/RSS-feed boilerplate phrases up-front so they
+        # never reach the dictionary lookups or the looks-like-person
+        # heuristic.
+        if lo in PHRASE_NOISE:
+            continue
         # Dictionary lookups, ordered by priority.
         if lo in _KNOWN_COMPANIES:
             ent_type = "company"

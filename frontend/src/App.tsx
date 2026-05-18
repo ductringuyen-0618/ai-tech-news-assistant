@@ -579,12 +579,26 @@ function AppShell() {
                   from the agentic desk.
                 </em>
               </h1>
+              {/* Masthead stat chips. Polish iter (design-review
+                  #8): bump text from ``text-foreground-soft`` to the
+                  full ``text-foreground`` so light-mode chips clear
+                  WCAG AA on a cream background, and tint the integer
+                  count with the signal accent so the eye lands on the
+                  number rather than the bracket frame. */}
               <div className="flex items-center gap-2 pb-1">
-                <span className="border border-[var(--rule)] px-2 py-0.5 font-mono-tx text-[11px] text-foreground-soft">
-                  [ 🔥 {articles.filter((a) => a.trending).length} trending ]
+                <span className="border border-[var(--rule)] px-2 py-0.5 font-mono-tx text-[11px] text-foreground">
+                  [ <span aria-hidden>🔥 </span>
+                  <span className="text-signal tabular-nums">
+                    {articles.filter((a) => a.trending).length}
+                  </span>{" "}
+                  trending ]
                 </span>
-                <span className="border border-[var(--rule)] px-2 py-0.5 font-mono-tx text-[11px] text-foreground-soft">
-                  [ {totalArticleCount || articles.length} today ]
+                <span className="border border-[var(--rule)] px-2 py-0.5 font-mono-tx text-[11px] text-foreground">
+                  [{" "}
+                  <span className="text-signal tabular-nums">
+                    {totalArticleCount || articles.length}
+                  </span>{" "}
+                  today ]
                 </span>
               </div>
             </div>

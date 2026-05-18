@@ -100,6 +100,46 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # pragma: no cover
         logger.error(f"Database schema init failed: {type(exc).__name__}: {exc}")
 
+    # Clean up RSS-boilerplate entity rows left by earlier extraction
+    # runs (design-review #3 follow-up). The regex fallback NER now
+    # filters phrases like "Comments URL" / "Show HN" at extraction
+    # time, but rows persisted before that filter landed are still in
+    # the entities table and dominate the trending list. Wipe them
+    # once per boot; the operation is idempotent because subsequent
+    # extractions won't re-create the rows.
+    try:
+        import sqlite3 as _sql
+        from src.services.entity_extraction_service import PHRASE_NOISE
+        db_path = settings.sqlite_database_path
+        if db_path.startswith("sqlite:///"):
+            db_path = db_path.replace("sqlite:///", "")
+        with _sql.connect(db_path) as _conn:
+            has_table = _conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' "
+                "AND name='entities'"
+            ).fetchone()
+            if has_table:
+                placeholders = ",".join("?" * len(PHRASE_NOISE))
+                cleaned = _conn.execute(
+                    f"DELETE FROM entity_mentions WHERE entity_id IN ("
+                    f"  SELECT id FROM entities WHERE LOWER(name) IN ({placeholders})"
+                    f")",
+                    tuple(PHRASE_NOISE),
+                ).rowcount
+                ent_cleaned = _conn.execute(
+                    f"DELETE FROM entities WHERE LOWER(name) IN ({placeholders})",
+                    tuple(PHRASE_NOISE),
+                ).rowcount
+                _conn.commit()
+                if ent_cleaned > 0:
+                    logger.info(
+                        "Entity noise sweep: removed %d entities + %d "
+                        "mentions matching the noise phrase list",
+                        ent_cleaned, cleaned,
+                    )
+    except Exception as exc:  # pragma: no cover
+        logger.warning("Entity noise sweep failed (non-fatal): %s", exc)
+
     # Seed the Saved Research table on a fresh DB (design-review #4).
     # ``seed_if_empty`` is idempotent — a no-op once any row exists, so
     # this is safe to call on every boot. Wrapped in its own try/except

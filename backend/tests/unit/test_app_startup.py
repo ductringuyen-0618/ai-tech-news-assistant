@@ -39,17 +39,14 @@ def test_config_initialization():
     assert hasattr(settings, 'default_llm_provider')
 
 
-@patch('src.repositories.article_repository.sqlite3.connect')
-def test_database_repository_init(mock_connect):
-    """Test that database repository can be initialized."""
+def test_database_repository_init(tmp_path):
+    """Test that ArticleRepository can be initialized against a real SQLite DB."""
     from src.repositories.article_repository import ArticleRepository
-    
-    # Mock the database connection
-    mock_connect.return_value.__enter__.return_value.execute.return_value = None
-    
-    repo = ArticleRepository(":memory:")
+
+    db_path = str(tmp_path / "init_check.db")
+    repo = ArticleRepository(db_path)
     assert repo is not None
-    assert repo.db_path == ":memory:"
+    assert repo.db_path == db_path
 
 
 def test_article_model_creation():

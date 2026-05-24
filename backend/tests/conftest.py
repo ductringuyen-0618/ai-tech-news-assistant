@@ -6,6 +6,7 @@ Common test configuration, fixtures, and utilities for the test suite.
 """
 
 import asyncio
+import importlib.util
 import pytest
 import tempfile
 import os
@@ -18,6 +19,16 @@ TEST_DB_PATH = ":memory:"  # Use in-memory SQLite for tests
 
 # Patch settings to use in-memory database for all tests
 os.environ['DATABASE_URL'] = 'sqlite:///:memory:'
+
+
+def pytest_collection_modifyitems(config, items):
+    """Auto-skip tests marked requires_torch when torch is not importable."""
+    if importlib.util.find_spec("torch") is not None:
+        return
+    skip_torch = pytest.mark.skip(reason="torch not installed in this environment")
+    for item in items:
+        if "requires_torch" in item.keywords:
+            item.add_marker(skip_torch)
 
 
 @pytest.fixture(scope="session")

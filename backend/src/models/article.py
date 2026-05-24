@@ -91,6 +91,9 @@ class AISummary(BaseModel):
 class ArticleStats(BaseModel):
     """Model for article statistics."""
     total_articles: int = Field(0, description="Total number of articles")
+    articles_today: int = Field(0, description="Articles ingested today")
+    articles_this_week: int = Field(0, description="Articles ingested in the last 7 days")
+    unique_sources: int = Field(0, description="Number of distinct sources")
     articles_with_summaries: int = Field(0, description="Articles with AI summaries")
     articles_with_embeddings: int = Field(0, description="Articles with embeddings")
     sources: Dict[str, int] = Field(default_factory=dict, description="Articles per source")

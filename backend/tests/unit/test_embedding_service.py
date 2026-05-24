@@ -22,6 +22,7 @@ class TestEmbeddingService:
         """Create service instance."""
         return EmbeddingService()
     
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_initialize_service(self, service):
         """Test service initialization."""
@@ -29,14 +30,15 @@ class TestEmbeddingService:
             mock_model = MagicMock()
             mock_model.get_sentence_embedding_dimension.return_value = 384
             mock_transformer.return_value = mock_model
-            
+
             with patch('torch.cuda.is_available', return_value=False):
                 await service.initialize()
-            
+
             assert service._initialized is True
             assert service.embedding_dim == 384
             assert service.device == "cpu"
-    
+
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_initialize_with_cuda(self, service):
         """Test service initialization with CUDA."""
@@ -44,10 +46,10 @@ class TestEmbeddingService:
             mock_model = MagicMock()
             mock_model.get_sentence_embedding_dimension.return_value = 384
             mock_transformer.return_value = mock_model
-            
+
             with patch('torch.cuda.is_available', return_value=True):
                 await service.initialize()
-            
+
             assert service.device == "cuda"
     
     @pytest.mark.asyncio

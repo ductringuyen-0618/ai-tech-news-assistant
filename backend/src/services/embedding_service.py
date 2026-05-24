@@ -20,17 +20,31 @@ from ..models.embedding import (
 
 settings = get_settings()
 
-# Import at module level for testing purposes
+# Import at module level for testing purposes.
+# Each dep is imported independently so a missing torch/sentence_transformers
+# does not disable the numpy-only similarity-compute paths.
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    np = None
+    NUMPY_AVAILABLE = False
+
+try:
+    import torch
+    TORCH_AVAILABLE = True
+except ImportError:
+    torch = None
+    TORCH_AVAILABLE = False
+
 try:
     from sentence_transformers import SentenceTransformer
-    import torch
-    import numpy as np
-    TRANSFORMERS_AVAILABLE = True
+    SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SentenceTransformer = None
-    torch = None
-    np = None
-    TRANSFORMERS_AVAILABLE = False
+    SENTENCE_TRANSFORMERS_AVAILABLE = False
+
+TRANSFORMERS_AVAILABLE = SENTENCE_TRANSFORMERS_AVAILABLE and TORCH_AVAILABLE
 
 logger = logging.getLogger(__name__)
 
@@ -202,7 +216,7 @@ class EmbeddingService:
             raise ValidationError("Embeddings must have the same dimension")
         
         try:
-            if not TRANSFORMERS_AVAILABLE or np is None:
+            if np is None:
                 raise EmbeddingError("numpy package is not available")
             
             # Convert to numpy arrays
@@ -242,7 +256,7 @@ class EmbeddingService:
             List of similarity scores
         """
         try:
-            if not TRANSFORMERS_AVAILABLE or np is None:
+            if np is None:
                 raise EmbeddingError("numpy package is not available")
             
             query = np.array(query_embedding)

@@ -72,7 +72,7 @@ class TestNewsServiceValidation:
 
 class TestEmbeddingServiceValidation:
     """Validate EmbeddingService functionality."""
-    
+
     def test_embedding_service_initializes(self):
         """Test EmbeddingService can be instantiated."""
         service = EmbeddingService()
@@ -80,7 +80,8 @@ class TestEmbeddingServiceValidation:
         assert hasattr(service, 'generate_embeddings')
         assert hasattr(service, 'compute_similarity')
         assert hasattr(service, 'batch_similarity')
-    
+
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_embedding_service_initialization(self):
         """Test EmbeddingService can initialize."""
@@ -92,6 +93,7 @@ class TestEmbeddingServiceValidation:
         info = await service.get_model_info()
         assert isinstance(info, dict)
     
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_generate_embeddings_returns_vectors(self):
         """Test generate_embeddings returns proper embeddings."""
@@ -217,6 +219,7 @@ class TestEmbeddingRepositoryValidation:
 class TestServiceInteroperability:
     """Test that services work together correctly."""
     
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_article_and_embedding_service_workflow(self):
         """
@@ -277,6 +280,7 @@ class TestServiceInteroperability:
         
         await news_service.cleanup()
     
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_complete_service_pipeline(self):
         """
@@ -371,6 +375,7 @@ class TestServiceErrorHandling:
         except Exception as e:
             pytest.fail(f"Cleanup raised exception: {e}")
     
+    @pytest.mark.requires_torch
     @pytest.mark.asyncio
     async def test_embedding_service_model_info(self):
         """Test EmbeddingService returns model info."""

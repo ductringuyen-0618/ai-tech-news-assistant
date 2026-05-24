@@ -373,11 +373,13 @@ class TestSearchErrorHandling:
         assert response.status_code in [400, 404, 422]
     
     def test_search_wrong_http_method(self, client):
-        """Test that GET method is not allowed."""
-        response = client.get("/api/search?query=test")
-        
-        # Should return method not allowed, not found, or server error
-        assert response.status_code in [404, 405, 500]
+        """Test that GET on the POST-only sub-routes is rejected.
+
+        ``/api/search/`` itself is a documented GET endpoint, so we probe
+        a POST-only path instead (``/api/search/semantic``).
+        """
+        response = client.get("/api/search/semantic")
+        assert response.status_code in [404, 405, 422, 500]
     
     def test_search_missing_content_type(self, client, sample_search_payload):
         """Test that missing content-type header is handled."""

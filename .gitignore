@@ -609,3 +609,23 @@ backend/models/
 # Windows accidental "nul" artifact from cmd redirects
 nul
 .deploy/
+
+# =======================
+# Project-specific caches and runtime state added during this commit pass
+# =======================
+# Editor / agent runtime state
+.agent/
+.agents/
+.cursor/
+
+# Tool caches
+.ruff_cache/
+frontend/.vite/
+frontend/playwright/.cache/
+
+# Local SQLite data dir (the *.db pattern above misses the chroma_db subdir)
+backend/data/
+
+# Vercel link metadata is per-checkout and is already in frontend/.gitignore
+# but keep a top-level fallback in case someone runs vercel link higher up
+.vercel/

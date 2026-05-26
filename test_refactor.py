@@ -3,9 +3,10 @@ Test the refactored /api/news endpoint with direct psycopg2
 """
 import os
 import sys
+from dotenv import load_dotenv
 
-# Set DATABASE_URL
-os.environ['DATABASE_URL'] = "postgresql://ai_tech_news_user:eGofnVxiV295g4BptRLLUgQs8G7k5dQi@dpg-d4dqttq4d50c73biqh10-a.oregon-postgres.render.com/ai_tech_news"
+# Load DATABASE_URL from backend/.env
+load_dotenv(os.path.join(os.path.dirname(__file__), 'backend', '.env'))
 
 print("=" * 60)
 print("Testing refactored /api/news endpoint (psycopg2)")

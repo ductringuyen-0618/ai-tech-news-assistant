@@ -379,7 +379,24 @@ class ArticleRepository:
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
             total = conn.execute("SELECT COUNT(*) as count FROM articles").fetchone()["count"]
-            with_embeddings = conn.execute("SELECT COUNT(*) as count FROM articles WHERE embedding_generated = TRUE").fetchone()["count"]
+            # Count from the article_embeddings side-table (populated by
+            # `scripts/backfill_embeddings.py`). The legacy `articles
+            # .embedding_generated` flag is also accepted as a fallback for
+            # rows that were embedded before the backfill script started
+            # writing to the side-table. Either source counting non-zero
+            # is enough to flip the "embeddings available" indicator on.
+            try:
+                with_embeddings_table = conn.execute(
+                    "SELECT COUNT(*) as count FROM article_embeddings"
+                ).fetchone()["count"]
+            except sqlite3.OperationalError:
+                # article_embeddings table doesn't exist yet — fall back
+                # to the column flag.
+                with_embeddings_table = 0
+            with_embeddings_flag = conn.execute(
+                "SELECT COUNT(*) as count FROM articles WHERE embedding_generated = TRUE"
+            ).fetchone()["count"]
+            with_embeddings = max(with_embeddings_table, with_embeddings_flag)
             with_summaries = conn.execute("SELECT COUNT(*) as count FROM articles WHERE summary IS NOT NULL AND TRIM(summary) != ''").fetchone()["count"]
 
             top_sources_rows = conn.execute("SELECT source, COUNT(*) as count FROM articles GROUP BY source ORDER BY count DESC LIMIT 5").fetchall()
@@ -392,4 +409,31 @@ class ArticleRepository:
                 "articles_with_summaries": with_summaries,
                 "articles_without_summaries": total - with_summaries,
                 "top_sources": top_sources,
+            }
+
+    async def health_check(self):
+        """Lightweight DB connectivity probe used by /health/detailed.
+
+        Returns a dict shaped to match what the health route expects
+        (`status`, `database_accessible`). Any sqlite-level failure is
+        caught and surfaced as `status: "unhealthy"` with the exception
+        message — the health endpoint then renders that as a degraded
+        component without taking the app offline.
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                row = conn.execute("SELECT COUNT(*) FROM articles").fetchone()
+                total = int(row[0]) if row else 0
+            return {
+                "status": "healthy",
+                "database_accessible": True,
+                "total_articles": total,
+                "db_path": self.db_path,
+            }
+        except Exception as exc:  # pragma: no cover — defensive
+            return {
+                "status": "unhealthy",
+                "database_accessible": False,
+                "error": f"{type(exc).__name__}: {exc}",
+                "db_path": self.db_path,
             }

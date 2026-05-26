@@ -426,12 +426,26 @@ class NewsService:
             feeds_accessible = 0
             total_feeds = len(self.rss_feeds)
             
-            # Check each RSS feed
-            for feed_url in self.rss_feeds:
+            # Check each RSS feed.
+            #
+            # `self.rss_feeds` comes from settings and is either a list of
+            # URL strings OR a list of `{name, url, description}` dicts
+            # (the current default in `core/config.py`). Normalise to a
+            # URL string before handing to feedparser — passing a dict
+            # makes feedparser return `bozo=True` for every entry, which
+            # historically caused /health/detailed to report
+            # "Feeds accessible: 0/5" even though the feeds are reachable.
+            for feed_entry in self.rss_feeds:
+                if isinstance(feed_entry, dict):
+                    feed_url = feed_entry.get("url") or feed_entry.get("rss_url")
+                else:
+                    feed_url = feed_entry
+                if not feed_url:
+                    continue
                 try:
                     import feedparser
                     parsed_feed = feedparser.parse(feed_url)
-                    
+
                     # Check if feed is accessible and valid
                     if not parsed_feed.bozo and getattr(parsed_feed, 'status', 200) == 200:
                         feeds_accessible += 1

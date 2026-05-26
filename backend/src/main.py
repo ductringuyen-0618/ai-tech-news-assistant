@@ -100,6 +100,23 @@ async def lifespan(app: FastAPI):
     except Exception as exc:  # pragma: no cover
         logger.error(f"Database schema init failed: {type(exc).__name__}: {exc}")
 
+    # Also run SQLAlchemy create_all so the side tables the ingestion
+    # service expects (``sources``, ``categories``, ``article_categories``,
+    # ``embeddings``, ``users``) exist. ``Base.metadata.create_all`` uses
+    # CREATE TABLE IF NOT EXISTS so it never touches the denormalised
+    # ``articles`` table that ArticleRepository owns above. Without this,
+    # ``/api/ingest/stats`` blows up with "no such table: sources" on
+    # any volume bootstrapped from the raw-sqlite3 path.
+    try:
+        from src.database.base import init_db as sa_init_db
+        sa_init_db()
+        logger.info("SQLAlchemy auxiliary tables ensured (sources, categories, ...)")
+    except Exception as exc:  # pragma: no cover
+        logger.warning(
+            "SQLAlchemy init_db skipped (non-fatal): %s: %s",
+            type(exc).__name__, exc,
+        )
+
     # Clean up RSS-boilerplate entity rows left by earlier extraction
     # runs (design-review #3 follow-up). The regex fallback NER now
     # filters phrases like "Comments URL" / "Show HN" at extraction

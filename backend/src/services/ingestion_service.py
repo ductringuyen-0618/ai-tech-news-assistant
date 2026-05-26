@@ -548,26 +548,58 @@ class IngestionService:
             logger.warning(f"Failed to update source timestamp: {e}")
     
     def get_stats(self) -> Dict[str, Any]:
-        """Get database statistics."""
+        """Get database statistics.
+
+        Each counter is queried in its own try/except so that a missing
+        SQLAlchemy-managed table (e.g. ``sources``, ``categories``) on
+        a Fly volume that was bootstrapped from the raw-sqlite3 schema
+        only doesn't zero out the other counters. We log the underlying
+        error once and return whatever we could pull.
+        """
+        stats: Dict[str, Any] = {
+            "total_articles": 0,
+            "total_sources": 0,
+            "total_categories": 0,
+            "last_result": self.result.to_dict() if self.result.start_time else None,
+        }
+        partial_errors = []
+
         try:
-            total_articles = self.db.query(Article).count()
-            total_sources = self.db.query(Source).count()
-            total_categories = self.db.query(Category).count()
-            
-            return {
-                "total_articles": total_articles,
-                "total_sources": total_sources,
-                "total_categories": total_categories,
-                "last_result": self.result.to_dict() if self.result.start_time else None
-            }
-        except Exception as e:
-            logger.error(f"Failed to get stats: {e}")
-            return {
-                "error": str(e),
-                "total_articles": 0,
-                "total_sources": 0,
-                "total_categories": 0
-            }
+            stats["total_articles"] = self.db.query(Article).count()
+        except Exception as e:  # noqa: BLE001
+            partial_errors.append(f"articles: {e}")
+            logger.warning("Failed to count articles in get_stats: %s", e)
+            # SQLAlchemy session may be in a failed transaction state
+            # after a missing-table error; roll it back so subsequent
+            # queries in this same call can still execute.
+            try:
+                self.db.rollback()
+            except Exception:  # noqa: BLE001
+                pass
+
+        try:
+            stats["total_sources"] = self.db.query(Source).count()
+        except Exception as e:  # noqa: BLE001
+            partial_errors.append(f"sources: {e}")
+            logger.warning("Failed to count sources in get_stats: %s", e)
+            try:
+                self.db.rollback()
+            except Exception:  # noqa: BLE001
+                pass
+
+        try:
+            stats["total_categories"] = self.db.query(Category).count()
+        except Exception as e:  # noqa: BLE001
+            partial_errors.append(f"categories: {e}")
+            logger.warning("Failed to count categories in get_stats: %s", e)
+            try:
+                self.db.rollback()
+            except Exception:  # noqa: BLE001
+                pass
+
+        if partial_errors:
+            stats["partial_errors"] = partial_errors
+        return stats
     
     def close(self) -> None:
         """Close HTTP client."""

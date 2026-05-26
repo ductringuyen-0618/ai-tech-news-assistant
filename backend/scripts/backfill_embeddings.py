@@ -118,7 +118,13 @@ def _upsert_embedding(
     embedding: List[float],
     model_name: str,
 ) -> None:
-    """INSERT OR REPLACE one row."""
+    """INSERT OR REPLACE one row and flip articles.embedding_generated.
+
+    The stats endpoint (``ArticleRepository.get_stats``) reports
+    ``articles_with_embeddings`` from BOTH the side-table count AND the
+    legacy ``articles.embedding_generated`` column; we update both so
+    every reader sees the same answer.
+    """
     with sqlite3.connect(db) as conn:
         conn.execute(
             """
@@ -133,6 +139,18 @@ def _upsert_embedding(
             """,
             (article_id, json.dumps(embedding), model_name, len(embedding)),
         )
+        # Legacy flag — kept truthful so /api/news/stats and any consumer
+        # of the ``articles.embedding_generated`` column see the upsert.
+        try:
+            conn.execute(
+                "UPDATE articles SET embedding_generated = 1, "
+                "    updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+                (article_id,),
+            )
+        except sqlite3.OperationalError:
+            # Column doesn't exist on very old volumes; not fatal —
+            # the side-table row is the source of truth either way.
+            pass
         conn.commit()
 
 

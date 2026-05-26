@@ -1076,9 +1076,9 @@ export function ResearchMode({}: ResearchModeProps) {
                 onClick={onRetry}
                 data-testid="research-retry-btn"
                 disabled={isResearching || !lastSubmittedQuery}
-                className="px-3 py-1.5 text-[11px] uppercase-eyebrow border border-[var(--rule)] hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40"
+                className="px-3 py-1.5 text-[11px] uppercase-eyebrow border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40 transition-colors"
               >
-                [ retry ]
+                Retry
               </button>
             </div>
           ) : (
@@ -1139,9 +1139,9 @@ export function ResearchMode({}: ResearchModeProps) {
                   onClick={handleCancel}
                   data-testid="research-cancel-btn"
                   aria-label="Cancel research"
-                  className="px-3 py-1.5 border border-[var(--rule)] hover:bg-[var(--background-tint)] hover:text-signal"
+                  className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal transition-colors"
                 >
-                  [ ⌃X cancel ]
+                  Cancel <span className="text-foreground-mute ml-1">⌃X</span>
                 </button>
               )}
               {showReport && phase === "done" && (
@@ -1159,13 +1159,15 @@ export function ResearchMode({}: ResearchModeProps) {
                     }
                     aria-live="polite"
                     disabled={saveState !== "idle"}
-                    className="px-3 py-1.5 border border-[var(--rule)] hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40"
+                    className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40 transition-colors"
                   >
                     {saveState === "saved"
-                      ? "[ ✓ saved ]"
+                      ? "Saved ✓"
                       : saveState === "saving"
-                      ? "[ saving... ]"
-                      : "[ ⌃S save ]"}
+                      ? "Saving…"
+                      : (
+                        <>Save <span className="text-foreground-mute ml-1">⌃S</span></>
+                      )}
                   </button>
                   <button
                     type="button"
@@ -1173,18 +1175,20 @@ export function ResearchMode({}: ResearchModeProps) {
                     data-testid="research-copy-btn"
                     aria-label={copied ? "Copied" : "Copy markdown"}
                     aria-live="polite"
-                    className="px-3 py-1.5 border border-[var(--rule)] hover:bg-[var(--background-tint)] hover:text-signal"
+                    className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal transition-colors"
                   >
-                    {copied ? "[ ✓ copied ]" : "[ ⌃C copy ]"}
+                    {copied ? "Copied ✓" : (
+                      <>Copy <span className="text-foreground-mute ml-1">⌃C</span></>
+                    )}
                   </button>
                   <button
                     type="button"
                     onClick={onDownloadMarkdown}
                     data-testid="research-download-btn"
                     aria-label="Download markdown"
-                    className="px-3 py-1.5 border border-[var(--rule)] hover:bg-[var(--background-tint)] hover:text-signal"
+                    className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal transition-colors"
                   >
-                    [ ⌃D .md ]
+                    Download .md <span className="text-foreground-mute ml-1">⌃D</span>
                   </button>
                 </>
               )}
@@ -1214,9 +1218,9 @@ export function ResearchMode({}: ResearchModeProps) {
                   setQuery(s);
                   void conductResearch(s);
                 }}
-                className="px-3 py-1.5 font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] hover:text-signal hover:border-[var(--accent-signal)]"
+                className="px-3 py-1.5 font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] rounded-full hover:text-signal hover:border-[var(--accent-signal)] transition-colors"
               >
-                [ {s} ]
+                {s}
               </button>
             ))}
           </div>
@@ -1253,9 +1257,11 @@ export function ResearchMode({}: ResearchModeProps) {
             onClick={() => conductResearch()}
             disabled={isResearching || !query.trim()}
             aria-label="Research"
-            className="px-3 py-1.5 font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40"
+            className="px-3 py-1.5 font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40 transition-colors"
           >
-            {isResearching ? "[ running... ]" : "[ Research ⏎ ]"}
+            {isResearching ? "Running…" : (
+              <>Research <span className="text-foreground-mute ml-1">⏎</span></>
+            )}
           </button>
         </div>
       </div>

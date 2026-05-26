@@ -1,20 +1,36 @@
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700;9..144,900&family=IBM+Plex+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+/*
+ * REDESIGN Phase A — Atelier tokens.
+ *
+ * The Broadsheet Terminal palette (cream + oxblood) has been retired.
+ * Atelier is the new default: warm off-white paper, near-black ink with
+ * a blue cast, a single electric-indigo accent for live agent state,
+ * plus a warm amber and a soft teal for confidence / info chips.
+ *
+ * Type: Geist for display + UI (modern variable sans), IBM Plex Mono
+ * for data/telemetry, Fraunces reserved for editorial moments inside
+ * the research report (lazy-loaded — kept in this @import for now so
+ * MarkdownReport keeps working without a separate font request).
+ */
+@import url('https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&display=swap');
 
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  --font-size: 16px;
-  /* Broadsheet Terminal — light "newsprint" palette (M0).
-   * Near-monochrome ink-on-paper. Single signal accent (oxblood ink)
-   * reserved for live-agent state and citation links. */
-  --background: oklch(0.985 0.005 80);      /* cream-paper */
-  --background-tint: oklch(0.965 0.008 75); /* tinted card surface */
-  --foreground: oklch(0.18 0.01 50);        /* deep ink */
-  --foreground-soft: oklch(0.36 0.01 50);   /* secondary ink */
-  --rule: oklch(0.78 0.005 70);             /* hairline rule */
-  --accent-signal: oklch(0.45 0.18 12);     /* oxblood ink */
-  --accent-signal-bg: oklch(0.94 0.04 12);  /* wash for chips */
-  --grain-opacity: 0.035;
+  --font-size: 15px;
+  /* Atelier light — warm paper, near-black ink, electric indigo accent. */
+  --background:       oklch(0.985 0.003 95);   /* warm paper */
+  --background-tint:  oklch(0.965 0.004 95);   /* card surface */
+  --background-deep:  oklch(0.93  0.005 95);   /* nav strip / footers */
+  --foreground:       oklch(0.16  0.01  260);  /* near-black, blue cast */
+  --foreground-soft:  oklch(0.42  0.01  260);  /* secondary */
+  --foreground-mute:  oklch(0.62  0.01  260);  /* tertiary / captions */
+  --rule:             oklch(0.88  0.005 260);  /* hairline */
+  --rule-strong:      oklch(0.78  0.005 260);
+  --accent-signal:    oklch(0.62  0.22  264);  /* electric indigo — agents live */
+  --accent-signal-bg: oklch(0.94  0.04  264);
+  --accent-warm:      oklch(0.70  0.16  56);   /* amber — confidence */
+  --accent-soft:      oklch(0.78  0.10  178);  /* teal — info */
+  --grain-opacity: 0.020;
 
   /* Aliases to keep existing component CSS classes working. */
   --foreground-rgb: 28 26 22;
@@ -60,20 +76,24 @@
 }
 
 /*
- * Broadsheet Terminal — dark "terminal" palette (M0).
- * Cold off-black with a signal-cyan accent. Activated when
- * `<html class="dark">` is present (bootstrapped before React
- * mounts by the inline script in index.html).
+ * Atelier dark — deep cobalt, warm paper text, electric-cyan accent.
+ * Activated when `<html class="dark">` is set (bootstrapped before
+ * React mounts by the inline script in index.html).
  */
 .dark {
-  --background: oklch(0.16 0.01 240);       /* cold off-black */
-  --background-tint: oklch(0.21 0.012 235); /* card surface */
-  --foreground: oklch(0.94 0.008 80);       /* warm paper text */
-  --foreground-soft: oklch(0.68 0.01 80);
-  --rule: oklch(0.32 0.012 235);
-  --accent-signal: oklch(0.82 0.18 200);    /* signal cyan */
-  --accent-signal-bg: oklch(0.32 0.08 220);
-  --grain-opacity: 0.06;
+  --background:       oklch(0.15  0.012 264);  /* deep cobalt */
+  --background-tint:  oklch(0.20  0.014 264);
+  --background-deep:  oklch(0.11  0.010 264);
+  --foreground:       oklch(0.96  0.005 95);   /* warm paper */
+  --foreground-soft:  oklch(0.74  0.008 95);
+  --foreground-mute:  oklch(0.56  0.010 95);
+  --rule:             oklch(0.28  0.012 264);
+  --rule-strong:      oklch(0.38  0.012 264);
+  --accent-signal:    oklch(0.78  0.18  230);  /* electric cyan */
+  --accent-signal-bg: oklch(0.32  0.10  230);
+  --accent-warm:      oklch(0.80  0.16  70);
+  --accent-soft:      oklch(0.74  0.12  178);
+  --grain-opacity: 0.040;
 
   --foreground-rgb: 240 235 220;
   --card: var(--background-tint);
@@ -156,33 +176,48 @@
 
   body {
     @apply bg-background text-foreground;
-    /* Broadsheet Terminal — IBM Plex Sans (body grotesk) with the
-     * single-story 'a' alt (ss01) and stylistic 'g' (cv11). */
-    font-family: 'IBM Plex Sans', system-ui, -apple-system, sans-serif;
+    /* Atelier — Geist for body and UI. Modern variable sans with a
+     * touch of personality at hero scale. SS01 + CV11 keep the
+     * single-story `a` and unambiguous `g` we already counted on
+     * across the codebase. */
+    font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
     font-feature-settings: "ss01", "cv11";
-    font-size: 14px;
-    line-height: 1.5;
+    font-size: 15px;
+    line-height: 1.55;
   }
 
-  /* Display: Fraunces variable opsz serif for editorial headlines. */
+  /* Display: Geist at heavier weights with negative tracking for the
+   * Atelier hero ("I read N stories overnight…"). Optical sizing is a
+   * no-op on Geist (not a variable opsz font), but the variation-
+   * settings declaration is harmless and forward-compatible. */
   .display, h1.masthead {
-    font-family: 'Fraunces', 'Times New Roman', serif;
-    font-optical-sizing: auto;
-    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    font-weight: 600;
     letter-spacing: -0.025em;
   }
 
-  /* Mono: JetBrains Mono for telemetry, code, mastheads. */
+  /* Mono: IBM Plex Mono for telemetry, code, and the Mission Control
+   * data rail. Replaces JetBrains Mono so we ship a single mono face. */
   .mono, code, kbd, [data-mono] {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-feature-settings: "calt", "ss02";
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-feature-settings: "ss02";
   }
 
-  /* Default headings fall back to Fraunces so generic h1/h2/h3 nodes
-   * carry editorial voice without a class. */
+  /* Default headings use Geist now. Fraunces is reserved for the
+   * `.editorial` class (research-report prose, drop-caps inside long
+   * articles) — it should NOT be the house voice. */
   h1, h2, h3, .heading {
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+  }
+
+  /* Editorial moments — opt-in serif. Use inside MarkdownReport prose
+   * and the research report drop-cap only. */
+  .editorial {
     font-family: 'Fraunces', 'Times New Roman', serif;
     font-optical-sizing: auto;
+    font-variation-settings: "opsz" 96, "SOFT" 50;
   }
 }
 
@@ -193,17 +228,17 @@
   :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
     h1 {
       font-size: var(--text-2xl);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
       line-height: 1.5;
-      font-family: 'Fraunces', 'Times New Roman', serif;
+      font-family: 'Geist', 'Inter', system-ui, sans-serif;
       letter-spacing: -0.025em;
     }
 
     h2 {
       font-size: var(--text-xl);
-      font-weight: var(--font-weight-medium);
+      font-weight: var(--font-weight-semibold);
       line-height: 1.5;
-      font-family: 'Fraunces', 'Times New Roman', serif;
+      font-family: 'Geist', 'Inter', system-ui, sans-serif;
       letter-spacing: -0.02em;
     }
 
@@ -211,7 +246,7 @@
       font-size: var(--text-lg);
       font-weight: var(--font-weight-medium);
       line-height: 1.5;
-      font-family: 'Fraunces', 'Times New Roman', serif;
+      font-family: 'Geist', 'Inter', system-ui, sans-serif;
       letter-spacing: -0.015em;
     }
 
@@ -283,4 +318,18 @@ html {
 :where(button, a, input, textarea, select, summary, [role="tab"], [role="button"], [role="link"], [role="menuitem"], [tabindex]):focus-visible {
   outline: 2px solid var(--accent-signal);
   outline-offset: 2px;
+}
+
+/* ------------------------------------------------------------------
+ *  Source-name color override (DESIGN_REVIEW S-4).
+ *
+ *  The card-header source span is class-tagged `.text-gray-500` for
+ *  Playwright assertion scope (e2e/news-feed.spec.ts locates
+ *  `[data-slot="card"] .text-gray-500`). On the warm-paper Atelier
+ *  background the default Tailwind gray reads as too-muted, so we
+ *  remap it to `--foreground-soft` inside cards. The class stays in
+ *  the DOM, so the assertion locator still resolves.
+ * ------------------------------------------------------------------ */
+[data-slot="card"] .text-gray-500 {
+  color: var(--foreground-soft);
 }

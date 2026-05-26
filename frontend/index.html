@@ -3,15 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <!-- Favicon stack (design-review #16). SVG preferred by modern
-         browsers (theme-aware via prefers-color-scheme inside the
-         SVG); the 192px PNG covers iOS / older Android home-screen
-         shortcuts. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="192x192" href="/favicon-192.png" />
     <link rel="apple-touch-icon" href="/favicon-192.png" />
     <title>TechPulse AI &mdash; Agentic Tech News Desk</title>
-    <!-- Open Graph + Twitter share metadata (design-review #16). -->
     <meta name="description" content="A reader&#39;s terminal for the agentic era. Decompose any question, dispatch subagents across tech news, get a cited report." />
     <meta property="og:title" content="TechPulse AI &mdash; Agentic Tech News Desk" />
     <meta property="og:description" content="A reader&#39;s terminal for the agentic era. Decompose any question, dispatch subagents across tech news, get a cited report." />
@@ -24,16 +19,6 @@
     <meta name="twitter:image" content="https://techpulse-ai-phi.vercel.app/favicon-192.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <!--
-      FOUC-free theme bootstrap. Runs synchronously BEFORE React mounts
-      so the <html class="dark"> class is applied on the very first
-      paint and the page never flashes the light-default styling.
-
-      Read-only: we do NOT write to localStorage here. The downstream
-      Settings persistence test asserts a fresh browser context has
-      empty localStorage on first paint; auto-writing the default
-      would break that contract.
-    -->
     <script>
       (function () {
         try {
@@ -44,6 +29,17 @@
           }
         } catch (e) {
           try { document.documentElement.classList.add("dark"); } catch (_) {}
+        }
+      })();
+    </script>
+    <script>
+      (function () {
+        try {
+          var stored = localStorage.getItem("techpulse_mode");
+          var mode = (stored === "atelier" || stored === "mission") ? stored : "atelier";
+          document.documentElement.setAttribute("data-mode", mode);
+        } catch (e) {
+          try { document.documentElement.setAttribute("data-mode", "atelier"); } catch (_) {}
         }
       })();
     </script>

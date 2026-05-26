@@ -145,17 +145,12 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
     <article
       data-slot="card"
       data-testid="news-card"
-      className="group relative p-3 border-t border-[var(--rule)] hover:bg-[var(--background-tint)] transition-colors"
+      className="group relative p-3 bg-[var(--background-tint)] border border-transparent hover:border-[var(--rule)] rounded-lg transition-colors"
     >
-      {/* Letterbox image -- 16:10, black background fallback. The save
-          toggle is absolute top-right inside the image frame.
-
-          Polish iter (design-review #9): when ``imageUrl`` is empty
-          (the upstream RSS feed never shipped an ``image_url``) we
-          render a quiet ink-on-paper frame instead of the loud grey
-          "Tech News" SVG placeholder. The save toggle still anchors
-          to the same frame so the grid alignment is preserved. */}
-      <div className="relative aspect-[16/10] bg-foreground/90 overflow-hidden mb-3">
+      {/* Image — 16:10, soft tinted fallback frame, rounded corners.
+          (REDESIGN Phase D: dropped the black letterbox + mono "[ no image ]"
+          pill in favor of a quiet sub-tint placeholder.) */}
+      <div className="relative aspect-[16/10] bg-[var(--background-deep)] overflow-hidden mb-3 rounded-md">
         {article.imageUrl ? (
           <ImageWithFallback
             src={article.imageUrl}
@@ -164,9 +159,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <span className="font-mono-tx text-[10px] uppercase-eyebrow text-background/60">
-              [ no image ]
-            </span>
+            <span className="text-[11px] text-foreground-mute">no image</span>
           </div>
         )}
         <button
@@ -175,9 +168,9 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           onClick={toggleSaved}
           aria-label={isSaved ? "Unsave article" : "Save article"}
           aria-pressed={isSaved}
-          className="absolute top-2 right-2 font-mono-tx text-[10px] uppercase-eyebrow px-2 py-1 bg-background/90 border border-[var(--rule)] text-foreground hover:bg-background"
+          className="absolute top-2 right-2 text-[11px] font-medium px-2.5 py-1 bg-background/90 backdrop-blur border border-[var(--rule)] text-foreground hover:bg-background rounded-md transition-colors"
         >
-          {isSaved ? "[ saved ]" : "[+ save ]"}
+          {isSaved ? "Saved" : "Save"}
         </button>
       </div>
 
@@ -196,66 +189,70 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
         )}
       </div>
 
-      {/* Title -- 22px Fraunces. Hover flips the title to signal color
-          and underlines it. data-slot="card-title" preserved for the
-          duplicate-titles / no-seed-data rubric checks. */}
+      {/* Title — Geist 18 px in Atelier (was Fraunces 22 px). Hover flips
+          to underlined foreground. data-slot="card-title" preserved for
+          the duplicate-titles / no-seed-data rubric checks. */}
       <h2
         data-slot="card-title"
-        style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-        className="font-display text-[22px] leading-[1.15] tracking-tight font-medium text-foreground mb-2 line-clamp-2 group-hover:text-signal group-hover:underline"
+        style={{
+          overflowWrap: "anywhere",
+          wordBreak: "break-word",
+          fontSize: "18px",
+          lineHeight: 1.3,
+          letterSpacing: "-0.02em",
+          fontWeight: 600,
+        }}
+        className="font-display text-foreground mb-2 line-clamp-2 group-hover:underline"
       >
         {article.title}
       </h2>
 
-      {/* Summary -- Fraunces opsz body, 15px, 1.55 leading. Preserves
-          data-testid="news-card-summary" and the min-h-[3.5rem] floor
-          so the grid reads as a uniform rhythm. */}
+      {/* Summary — clean Geist 14 px body, muted ink, line-clamped. */}
       {article.summaryShort ? (
         <p
           data-testid="news-card-summary"
           style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
-          className="font-display text-[15px] leading-[1.55] text-foreground-soft mb-3 line-clamp-3 min-h-[3.5rem]"
+          className="text-[14px] leading-[1.55] text-foreground-soft mb-3 line-clamp-3 min-h-[3.5rem]"
         >
           {article.summaryShort}
         </p>
       ) : (
         <p
           data-testid="news-card-summary"
-          className="text-[14px] italic text-foreground-soft mb-3 min-h-[3.5rem]"
+          className="text-[14px] italic text-foreground-mute mb-3 min-h-[3.5rem]"
         >
           Tap "read at" for the full story.
         </p>
       )}
 
-      {/* Detailed-view "Read More" expander. Preserved from the previous
-          implementation so the rubric "Read More" click in
-          news-feed.spec.ts surfaces the full body. The expander is only
-          rendered when there is actually more content (>40 chars of
-          additional body, or non-empty keyInsights). */}
+      {/* Detailed-view "Read More" expander. The visible label MUST stay
+          exactly "Read More" \u2014 news-feed.spec.ts clicks `getByText(/Read More/i)`
+          on the first card to surface the full body. The bracket framing
+          is gone; the button is now a quiet underlined affordance. */}
       {viewMode === "detailed" && hasMore && (
         <div className="mb-3">
           {expanded ? (
             <div className="space-y-2">
               {hasMoreBody && (
                 <p
-                  className="font-display text-[14px] leading-[1.55] text-foreground whitespace-pre-line"
+                  className="text-[14px] leading-[1.55] text-foreground whitespace-pre-line"
                   style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
                 >
                   {expandedBody}
                 </p>
               )}
               {hasInsights && (
-                <div className="border border-[var(--rule)] p-3">
-                  <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft mb-2">
-                    key insights
+                <div className="border border-[var(--rule)] p-3 rounded-md">
+                  <div className="text-[11px] uppercase tracking-wide text-foreground-mute mb-2">
+                    Key insights
                   </div>
                   <ul className="space-y-1.5">
                     {article.keyInsights.map((insight, idx) => (
                       <li
                         key={idx}
-                        className="font-display text-[14px] leading-[1.55] text-foreground flex items-start gap-2"
+                        className="text-[14px] leading-[1.55] text-foreground flex items-start gap-2"
                       >
-                        <span className="text-signal mt-0.5">.</span>
+                        <span style={{ color: "var(--accent-signal)" }} className="mt-1.5 leading-none">\u25cf</span>
                         <span style={{ overflowWrap: "anywhere" }}>{insight}</span>
                       </li>
                     ))}
@@ -265,43 +262,50 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
               <button
                 type="button"
                 onClick={() => setExpanded(false)}
-                className="w-full font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft hover:text-signal py-1"
+                className="w-full text-[12px] text-foreground-soft hover:text-foreground py-1 underline-offset-4 hover:underline"
               >
-                [ show less ]
+                Show less
               </button>
             </div>
           ) : (
             <button
               type="button"
               onClick={() => setExpanded(true)}
-              className="w-full font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft hover:text-signal py-1"
+              className="w-full text-[12px] text-foreground-soft hover:text-foreground py-1 underline-offset-4 hover:underline"
             >
-              [ Read More ]
+              Read More
             </button>
           )}
         </div>
       )}
 
-      {/* Footer -- category chips on the left, "read at <host> ->" CTA
-          on the right in signal color. A hairline rule separates the
-          metadata footer from the summary block above. */}
-      <div className="pt-2 border-t border-[var(--rule)] flex items-center justify-between gap-2 font-mono-tx text-[11px] uppercase-eyebrow">
-        <div className="flex gap-1.5 flex-wrap">
-          {article.category.slice(0, 3).map((cat) => (
-            <span
-              key={cat}
-              className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground-soft"
-            >
-              {cat}
+      {/* Footer \u2014 tag chips + read CTA. Hairline rule, signal-accented CTA. */}
+      <div className="pt-2 border-t border-[var(--rule)] flex items-center justify-between gap-2 text-[11px]">
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {/* DESIGN_REVIEW C-3 — show the lead chip in full, pluralize
+              the rest as "+N" so the footer doesn't get visually noisy
+              when an article carries 3+ categories. */}
+          {article.category.length > 0 && (
+            <span className="px-2 py-0.5 bg-background/60 text-foreground-soft rounded-full">
+              {article.category[0]}
             </span>
-          ))}
+          )}
+          {article.category.length > 1 && (
+            <span
+              className="text-foreground-mute"
+              aria-label={`plus ${article.category.length - 1} more categories: ${article.category.slice(1).join(", ")}`}
+            >
+              · +{article.category.length - 1}
+            </span>
+          )}
         </div>
         <a
           data-testid="news-card-read-more"
           href={article.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-signal hover:underline"
+          className="inline-flex items-center gap-1 font-medium hover:underline"
+          style={{ color: "var(--accent-signal)" }}
         >
           read at {hostname(article.url)} {'\u2192'}
         </a>

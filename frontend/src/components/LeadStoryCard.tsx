@@ -124,19 +124,13 @@ export function LeadStoryCard({ article }: LeadStoryCardProps) {
     <article
       data-slot="card"
       data-testid="news-card-lead"
-      className="group relative p-3 border-t-2 border-foreground transition-colors hover:bg-[var(--background-tint)]"
+      className="group relative p-3 transition-colors hover:bg-[var(--background-tint)] rounded-lg"
     >
-      {/* Lead-story image -- 16:9 letterbox, black background fallback.
-
-          Polish iter (design-review #9): when the article has no
-          ``image_url`` (Show-HN / Hacker News entries rarely do), we
-          drop the entire image slot rather than render a loud "No
-          image" placeholder. The save toggle migrates inline next to
-          the source eyebrow so the affordance is preserved without
-          the empty grey block. Headline + deck + body still fill the
-          full lead width. */}
+      {/* Lead image — 16:9, rounded 8 px (REDESIGN Phase D). The heavy
+          black-letterbox fallback is gone; when an image is present we
+          show it inside a softly tinted frame. */}
       {hasImage && (
-        <div className="relative aspect-[16/9] bg-foreground/90 overflow-hidden mb-3">
+        <div className="relative aspect-[16/9] bg-[var(--background-tint)] overflow-hidden mb-4 rounded-lg">
           <ImageWithFallback
             src={article.imageUrl}
             alt={article.title}
@@ -148,9 +142,9 @@ export function LeadStoryCard({ article }: LeadStoryCardProps) {
             onClick={toggleSaved}
             aria-label={isSaved ? "Unsave article" : "Save article"}
             aria-pressed={isSaved}
-            className="absolute top-2 right-2 font-mono-tx text-[10px] uppercase-eyebrow px-2 py-1 bg-background/90 border border-[var(--rule)] text-foreground hover:bg-background"
+            className="absolute top-3 right-3 text-[11px] font-medium px-2.5 py-1 bg-background/90 backdrop-blur border border-[var(--rule)] text-foreground hover:bg-background rounded-md transition-colors"
           >
-            {isSaved ? "[ saved ]" : "[+ save ]"}
+            {isSaved ? "Saved" : "Save"}
           </button>
         </div>
       )}
@@ -175,54 +169,70 @@ export function LeadStoryCard({ article }: LeadStoryCardProps) {
             onClick={toggleSaved}
             aria-label={isSaved ? "Unsave article" : "Save article"}
             aria-pressed={isSaved}
-            className="ml-auto font-mono-tx text-[10px] uppercase-eyebrow px-2 py-1 border border-[var(--rule)] text-foreground hover:text-signal hover:border-[var(--accent-signal)]"
+            className="ml-auto text-[11px] font-medium px-2.5 py-1 border border-[var(--rule)] text-foreground hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
           >
-            {isSaved ? "[ saved ]" : "[+ save ]"}
+            {isSaved ? "Saved" : "Save"}
           </button>
         )}
       </div>
 
-      {/* Headline -- 44px Fraunces. NOT data-slot="card-title" so the
-          Linear-dense title-size test scopes to the secondaries' titles. */}
-      <h2 className="font-display text-[44px] leading-[1.05] tracking-tight font-medium text-foreground mb-3 group-hover:text-signal">
+      {/* Headline \u2014 Geist 32 px in Atelier (was Fraunces 44 px). Still
+          NOT data-slot="card-title" so the Linear-dense title-size test
+          continues to scope to the secondary cards' titles. */}
+      <h2
+        className="font-display text-foreground mb-3 group-hover:text-foreground"
+        style={{ fontSize: "32px", lineHeight: 1.15, letterSpacing: "-0.025em", fontWeight: 600 }}
+      >
         {article.title}
       </h2>
 
-      {/* Deck line -- Fraunces italic, 20px, two-line clamp. */}
+      {/* Deck line \u2014 Geist 18 px, no italic, muted ink. */}
       {deck && (
-        <p className="font-display italic text-[20px] leading-[1.15] text-foreground-soft mb-4 line-clamp-2">
+        <p
+          className="text-foreground-soft mb-4 line-clamp-2"
+          style={{ fontSize: "18px", lineHeight: 1.35 }}
+        >
           {deck}
         </p>
       )}
 
-      {/* Body paragraph with editorial drop cap. */}
+      {/* Body paragraph \u2014 clean 15 px copy, no drop-cap. */}
       {body && (
         <p
           data-testid="news-card-summary"
-          className="editorial-drop font-display text-[15px] leading-[1.55] text-foreground mb-4 line-clamp-6"
+          className="text-[15px] leading-[1.6] text-foreground mb-4 line-clamp-6"
         >
           {body}
         </p>
       )}
 
-      {/* Footer -- thicker rule, 12px mono, category chips + read CTA. */}
-      <div className="pt-3 border-t-2 border-foreground flex items-center justify-between gap-2 font-mono-tx text-[12px] uppercase-eyebrow">
-        <div className="flex gap-1.5 flex-wrap">
-          {article.category.slice(0, 3).map((cat) => (
-            <span
-              key={cat}
-              className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground-soft"
-            >
-              {cat}
+      {/* Footer \u2014 hairline rule, soft tag chips + read CTA in signal accent. */}
+      <div className="pt-3 border-t border-[var(--rule)] flex items-center justify-between gap-2 text-[12px]">
+        <div className="flex gap-1.5 flex-wrap items-center">
+          {/* DESIGN_REVIEW C-3 — show the lead chip in full, pluralize
+              the rest. Lead card is the page's most-prominent footer
+              so the chip noise reduction matters here especially. */}
+          {article.category.length > 0 && (
+            <span className="px-2 py-0.5 bg-[var(--background-tint)] text-foreground-soft rounded-full">
+              {article.category[0]}
             </span>
-          ))}
+          )}
+          {article.category.length > 1 && (
+            <span
+              className="text-foreground-mute"
+              aria-label={`plus ${article.category.length - 1} more categories: ${article.category.slice(1).join(", ")}`}
+            >
+              · +{article.category.length - 1}
+            </span>
+          )}
         </div>
         <a
           data-testid="news-card-read-more"
           href={article.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 text-signal hover:underline"
+          className="inline-flex items-center gap-1 font-medium hover:underline"
+          style={{ color: "var(--accent-signal)" }}
         >
           read at {hostname(article.url)} {'\u2192'}
         </a>

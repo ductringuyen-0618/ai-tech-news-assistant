@@ -15,6 +15,10 @@ import { ResearchMode } from "./components/ResearchMode";
 import { KnowledgeGraph } from "./components/KnowledgeGraph";
 import { SavedResearchList } from "./components/SavedResearchList";
 import { ThemeProvider } from "./components/ThemeProvider";
+import { ModeProvider, useMode } from "./components/ModeProvider";
+import { ModeToggle } from "./components/ModeToggle";
+import { MissionShell } from "./components/mission/MissionShell";
+import { DenseArticleRow } from "./components/mission/DenseArticleRow";
 import { CommandPaletteProvider } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
 import { WelcomeScreen } from "./components/WelcomeScreen";
@@ -35,6 +39,10 @@ import { API_ENDPOINTS, apiFetch } from "./config/api";
  * that the 35 Playwright tests rely on.
  */
 function AppShell() {
+  // REDESIGN Phase E — read current surface mode so the feed tab can
+  // swap its layout. `mode === "mission"` flips /feed from the
+  // broadsheet grid to a dense 3-column workspace.
+  const { mode } = useMode();
   const [articles, setArticles] = useState<any[]>([]);
   const [filteredArticles, setFilteredArticles] = useState<any[]>([]);
   // Start with no category filters so the News Feed shows every ingested
@@ -564,6 +572,12 @@ function AppShell() {
                 ) : (
                   <span className="text-foreground-soft">FILED</span>
                 )}
+                {/* REDESIGN Phase B — Atelier ↔ Mission Control toggle.
+                    Persists to localStorage.techpulse_mode and mirrors
+                    onto `<html data-mode>` so CSS variable overrides
+                    flip immediately. Phase E will use this attribute
+                    to switch the feed layout to the dense 3-col shell. */}
+                <ModeToggle />
               </span>
             </div>
             {/* Row 2 — headline + stat pills. */}
@@ -615,7 +629,13 @@ function AppShell() {
                 onTryResearch={() => {
                   setActiveTab("research");
                 }}
-                onBrowseFeed={() => {
+                onBrowseFeed={(topic?: string) => {
+                  // DESIGN_REVIEW C-2 — when called from a digest card,
+                  // pre-fill the feed filter so the user lands on stories
+                  // for that topic instead of the whole feed.
+                  if (topic && typeof topic === "string" && topic.length > 0) {
+                    setSelectedCategories([topic]);
+                  }
                   setActiveTab("feed");
                 }}
                 onSkip={() => {
@@ -759,8 +779,37 @@ function AppShell() {
                   Lead story always renders first so the LeadStoryCard sits
                   before any secondary NewsCard in the DOM (this matters for
                   the news-feed.spec.ts "Linear-dense" assertion -- see
-                  NewsCard.tsx header for the full explanation). */}
-              {loading ? (
+                  NewsCard.tsx header for the full explanation).
+
+                  REDESIGN Phase E: when mode === "mission", the entire
+                  body is replaced with the MissionShell + DenseArticleRow
+                  list. The toolbar above (search, filters, trending rail)
+                  is preserved so user controls work identically across
+                  modes. */}
+              {mode === "mission" ? (
+                loading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  </div>
+                ) : (
+                  <MissionShell
+                    heading={
+                      <>
+                        <span>Newsfeed</span>
+                        <span className="tabular-nums">
+                          {filteredArticles.length} stories · last cycle
+                        </span>
+                      </>
+                    }
+                  >
+                    <div data-testid="news-feed-list" className="flex flex-col">
+                      {filteredArticles.map((article) => (
+                        <DenseArticleRow key={article.id} article={article} />
+                      ))}
+                    </div>
+                  </MissionShell>
+                )
+              ) : loading ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
                 </div>
@@ -827,10 +876,13 @@ function AppShell() {
                   )}
                 </div>
               ) : (
-                /* Compact view -- single-column mono list. Each row is a
-                   timestamp + a Fraunces 18px title (hover -> signal) + a
-                   mono source name on the right. No images, no chrome. */
-                <div data-testid="news-feed-list" className="border-t border-[var(--rule)]">
+                /* Compact view -- single-column scan list. Each row sits on
+                   the Atelier card surface (DESIGN_REVIEW S-3): no hairline
+                   dividers, hover tints the row, no images, no chrome.
+                   Matches the Detailed-view card idiom so toggling between
+                   modes feels like a density change rather than a style
+                   change. */
+                <div data-testid="news-feed-list" className="flex flex-col gap-1">
                   {filteredArticles.map((article) => {
                     const date = new Date(article.publishedAt);
                     const hours = Math.floor(
@@ -847,7 +899,7 @@ function AppShell() {
                         key={article.id}
                         data-slot="card"
                         data-testid="news-card"
-                        className="flex items-baseline gap-3 py-3 px-3 border-b border-[var(--rule)] hover:bg-[var(--background-tint)] transition-colors"
+                        className="flex items-baseline gap-3 py-2.5 px-3 rounded-md bg-[var(--background-tint)]/60 hover:bg-[var(--background-tint)] transition-colors"
                       >
                         <span className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft w-24 shrink-0">
                           {stamp}
@@ -857,11 +909,11 @@ function AppShell() {
                           target="_blank"
                           rel="noopener noreferrer"
                           data-slot="card-title"
-                          className="font-display text-[18px] leading-snug text-foreground hover:text-signal flex-1"
+                          className="font-display text-[16px] leading-snug text-foreground hover:text-signal flex-1"
                         >
                           {article.title}
                         </a>
-                        <span className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft text-gray-500">
+                        <span className="font-mono-tx text-[11px] uppercase-eyebrow text-gray-500">
                           {article.source}
                         </span>
                       </div>
@@ -975,7 +1027,9 @@ function AppShell() {
 export default function App() {
   return (
     <ThemeProvider>
-      <AppShell />
+      <ModeProvider>
+        <AppShell />
+      </ModeProvider>
     </ThemeProvider>
   );
 }

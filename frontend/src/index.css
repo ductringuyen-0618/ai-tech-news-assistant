@@ -2864,12 +2864,20 @@ body {
  * docs/designs/frontend-overhaul.md §4 step 5.
  * ============================================================ */
 @layer utilities {
+  /* REDESIGN Phase A — re-pointed to the Atelier type stack.
+   * `font-display` keeps its name (lots of components reference it)
+   * but now resolves to Geist with negative tracking + 600 weight.
+   * `font-mono-tx` swaps JetBrains Mono for IBM Plex Mono so we ship
+   * a single mono face. Fraunces is no longer auto-applied; opt in
+   * via the new `.editorial` class declared in globals.css. */
   .font-display {
-    font-family: 'Fraunces', 'Times New Roman', serif;
-    font-optical-sizing: auto;
+    font-family: 'Geist', 'Inter', system-ui, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.025em;
   }
   .font-mono-tx {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: 'IBM Plex Mono', ui-monospace, monospace;
+    font-feature-settings: "ss02";
   }
   .text-signal { color: var(--accent-signal); }
   .bg-signal-wash { background: var(--accent-signal-bg); }
@@ -2923,6 +2931,11 @@ body {
     line-height: 0.82;
     padding: 0.08em 0.12em 0 0;
     color: var(--accent-signal);
+  }
+  /* DESIGN_REVIEW S-7 — looser leading on the editorial paragraph so
+   * the Fraunces drop-cap descender doesn't crowd the Geist body. */
+  .editorial-drop {
+    line-height: 1.7;
   }
 }
 
@@ -3188,6 +3201,10 @@ body {
     line-height: 0.82;
     padding: 0.08em 0.12em 0 0;
     color: var(--accent-signal);
+  }
+  /* DESIGN_REVIEW S-7 — looser leading inside research-report scope. */
+  .research-report p.editorial-drop {
+    line-height: 1.7;
   }
   .research-report blockquote {
     font-family: 'Fraunces', 'Times New Roman', serif;

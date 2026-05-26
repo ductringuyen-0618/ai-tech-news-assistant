@@ -199,8 +199,11 @@ class Settings(BaseSettings):
     rss_sources: List[Dict[str, str]] = Field(
         default=[
             {
+                # Feedburner deprecated and now serves 404; canonical
+                # feed lives on oreilly.com directly. (probe_feeds.py
+                # caught this during the 4/5-feeds-accessible triage.)
                 "name": "O'Reilly Radar",
-                "url": "https://feeds.feedburner.com/oreilly/radar",
+                "url": "https://www.oreilly.com/radar/feed/",
                 "description": "O'Reilly Radar tech insights"
             },
             {

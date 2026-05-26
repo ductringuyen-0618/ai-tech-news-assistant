@@ -65,11 +65,20 @@ class SummarizationService:
         self.max_length: int = getattr(settings, "max_summary_length", 200)
         self.temperature: float = getattr(settings, "temperature", 0.3)
 
-        logger.info(
-            "SummarizationService initialised (provider=ollama, model=%s, host=%s)",
-            self.model,
-            self.base_url,
-        )
+        # Log whichever provider _call_llm will actually use so prod
+        # boot logs don't claim "provider=ollama" when Groq is in play.
+        from ..core.config import LLMProvider as _LLMProvider
+        if settings.default_llm_provider == _LLMProvider.GROQ:
+            logger.info(
+                "SummarizationService initialised (provider=groq, model=%s)",
+                getattr(settings, "groq_model", ""),
+            )
+        else:
+            logger.info(
+                "SummarizationService initialised (provider=ollama, model=%s, host=%s)",
+                self.model,
+                self.base_url,
+            )
 
     # ------------------------------------------------------------------ #
     #  Public API
@@ -162,9 +171,95 @@ class SummarizationService:
         return results
 
     async def health_check(self) -> Dict[str, Any]:
+        """Probe whichever LLM provider is actually configured.
+
+        ``_call_llm`` already dispatches between Groq (production default
+        on Fly) and Ollama (local dev). The health check used to probe
+        Ollama unconditionally, which made ``/health/detailed`` report
+        the summarization component as ``unhealthy`` on Fly even though
+        Groq was happily handling every request. We now mirror the same
+        dispatch: when ``settings.default_llm_provider == GROQ`` probe
+        Groq's ``/models`` endpoint; otherwise probe Ollama.
         """
-        Verify Ollama is reachable and the configured model is loaded.
-        """
+        from ..core.config import LLMProvider as _LLMProvider
+
+        if settings.default_llm_provider == _LLMProvider.GROQ:
+            return await self._health_check_groq()
+        return await self._health_check_ollama()
+
+    async def _health_check_groq(self) -> Dict[str, Any]:
+        """Probe Groq via /models. Cheap, requires only the API key."""
+        from .groq_client import _resolve_api_key  # type: ignore[attr-defined]
+
+        groq_model = getattr(settings, "groq_model", "")
+        groq_base = getattr(
+            settings, "groq_base_url", "https://api.groq.com/openai/v1"
+        ).rstrip("/")
+        result: Dict[str, Any] = {
+            "provider": "groq",
+            "model": groq_model,
+            "host": groq_base,
+            "max_length": self.max_length,
+            "temperature": self.temperature,
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+        }
+        try:
+            api_key = _resolve_api_key()
+        except Exception as exc:  # LLMError when key is missing/empty
+            result.update(
+                {
+                    "status": "unhealthy",
+                    "api_accessible": False,
+                    "error": str(exc),
+                }
+            )
+            return result
+
+        try:
+            async with httpx.AsyncClient(timeout=5) as client:
+                resp = await client.get(
+                    f"{groq_base}/models",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                )
+            if resp.status_code != 200:
+                result.update(
+                    {
+                        "status": "unhealthy",
+                        "api_accessible": False,
+                        "error": f"/models returned {resp.status_code}",
+                    }
+                )
+                return result
+            models = [
+                m.get("id", "")
+                for m in resp.json().get("data", [])
+                if isinstance(m, dict)
+            ]
+            model_loaded = bool(groq_model) and groq_model in models
+            result.update(
+                {
+                    "status": "healthy" if model_loaded else "degraded",
+                    "api_accessible": True,
+                    "model_loaded": model_loaded,
+                    # Don't dump the whole catalogue — Groq returns 20+
+                    # entries. The configured model presence is what
+                    # matters for the health-check signal.
+                    "model_count": len(models),
+                }
+            )
+            return result
+        except Exception as exc:  # noqa: BLE001
+            result.update(
+                {
+                    "status": "unhealthy",
+                    "api_accessible": False,
+                    "error": str(exc),
+                }
+            )
+            return result
+
+    async def _health_check_ollama(self) -> Dict[str, Any]:
+        """Probe Ollama (local-dev path)."""
         result: Dict[str, Any] = {
             "provider": "ollama",
             "model": self.model,

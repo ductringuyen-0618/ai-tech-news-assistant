@@ -59,6 +59,17 @@ async def health_check() -> Dict[str, Any]:
         database_status = "connected"
         try:
             db_path = settings.get_database_path()
+            # ``get_database_path()`` may return a SQLAlchemy-style URL
+            # (e.g. "sqlite:////data/news.db") because production sets
+            # DATABASE_URL=sqlite:////data/news.db on Fly. sqlite3.connect
+            # doesn't understand the URL scheme, so strip it the same
+            # way ArticleRepository does — otherwise this probe always
+            # raises and the basic /health endpoint flips to "degraded"
+            # even when the DB is fine.
+            if db_path.startswith("sqlite:///"):
+                db_path = db_path[len("sqlite:///"):]
+            elif db_path.startswith("sqlite://"):
+                db_path = db_path[len("sqlite://"):]
             conn = sqlite3.connect(db_path)
             conn.close()
         except Exception:

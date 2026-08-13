@@ -518,9 +518,9 @@ def get_news_service():
 
 
 def get_embedding_service():
-    """Get embedding service instance."""
-    from ...services import EmbeddingService
-    return EmbeddingService()
+    """Get the shared embedding service singleton (model loads once, not per-request)."""
+    from ...services.embedding_service import get_shared_embedding_service
+    return get_shared_embedding_service()
 
 
 def get_summarization_service():

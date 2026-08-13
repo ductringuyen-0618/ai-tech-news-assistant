@@ -471,12 +471,18 @@ async def _phase_embed(
     """Phase 3: generate + insert a 384-dim embedding for every
     article without a row in ``article_embeddings``.
 
-    Reuses the same logic as :mod:`scripts.backfill_embeddings`: title
-    + body concatenated, ``all-MiniLM-L6-v2`` model, upsert into
-    ``article_embeddings`` keyed on ``article_id``. We don't re-export
-    a helper from the script because the script is intentionally a
-    one-shot CLI; copying the ~20-line inner loop here keeps the
-    orchestrator independent.
+    Title + body concatenated, ``all-MiniLM-L6-v2`` model, upsert into
+    ``article_embeddings`` keyed on ``article_id``. Uses the same
+    process-wide :func:`~src.services.embedding_service.get_shared_embedding_service`
+    singleton the search/RAG routes depend on, rather than the legacy
+    ``vectorstore.embeddings.EmbeddingGenerator`` this used to construct
+    fresh every run. That legacy path loaded its own independent
+    SentenceTransformer copy once per daily run and never released it
+    (no ``cleanup()`` call), so memory crept up a little further with
+    every ingestion cycle. Sharing the singleton means the model loads
+    once, ever, for the life of the process -- and ingestion no longer
+    holds a second copy of the model alongside the one search already
+    keeps warm.
     """
     _ensure_embeddings_table(db_path)
     candidates = _select_unembedded(db_path, limit=MAX_PER_PHASE)
@@ -486,11 +492,12 @@ async def _phase_embed(
     if not candidates:
         return
 
-    from vectorstore.embeddings import EmbeddingGenerator
+    from src.models.embedding import EmbeddingRequest
+    from src.services.embedding_service import get_shared_embedding_service
 
-    gen = EmbeddingGenerator()
+    svc = get_shared_embedding_service()
     try:
-        await gen.load_model()
+        await svc.initialize()
     except Exception as exc:  # noqa: BLE001
         report.add_error(f"model load failed: {exc}"[:200])
         logger.error("[embed] model load failed: %s", exc)
@@ -501,11 +508,10 @@ async def _phase_embed(
         if not text.strip():
             continue
         try:
-            vectors = await gen.generate_embeddings([text])
-            vec = vectors[0]
-            # ``vec`` is a numpy array in the real path; lists also work.
-            as_list = vec.tolist() if hasattr(vec, "tolist") else list(vec)
-            _upsert_embedding(db_path, article_id, as_list, gen.model_name)
+            resp = await svc.generate_embeddings(
+                EmbeddingRequest(texts=[text], batch_size=1)
+            )
+            _upsert_embedding(db_path, article_id, resp.embeddings[0], resp.model_name)
             report.processed += 1
         except Exception as exc:  # noqa: BLE001 - per-item isolation
             report.failed += 1

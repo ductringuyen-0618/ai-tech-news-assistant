@@ -8,6 +8,7 @@ Handles the core embedding operations with proper error handling and performance
 
 import asyncio
 import logging
+from functools import lru_cache
 from typing import List, Dict, Any
 from datetime import datetime, timezone
 
@@ -320,3 +321,18 @@ class EmbeddingService:
                 "error": str(e),
                 "model_loaded": self._initialized
             }
+
+
+@lru_cache(maxsize=1)
+def get_shared_embedding_service() -> "EmbeddingService":
+    """Process-wide EmbeddingService singleton.
+
+    Route dependency functions used to `return EmbeddingService()` fresh
+    on every call, which reloaded the SentenceTransformer model (torch +
+    HF weights) from disk on every request that touched embeddings. That
+    churn doesn't fully release back to the OS between loads, so the
+    process's resident memory ratchets upward over time. Routes should
+    depend on this singleton instead so the model loads once and is
+    reused for the life of the process.
+    """
+    return EmbeddingService()

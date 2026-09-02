@@ -57,7 +57,7 @@ npm run dev
 
 Ready when the Vite banner prints `Local: http://localhost:3000/`. The UI calls `http://localhost:8000` unless `VITE_API_BASE_URL` says otherwise, so a backend on any other port leaves every panel empty with `ERR_CONNECTION_REFUSED` in the console.
 
-Do not start the frontend through `.claude/launch.json`. That entry passes `--port 5173`, which overrides `server.port` and serves a port nothing else in the repo targets. Vite has no `strictPort`, so a busy 3000 silently becomes 3001 and every scripted drive then points at nothing. Check the banner, do not assume.
+`.claude/launch.json` targets port 3000, matching `server.port`, and `vite.config.ts` sets `strictPort: true`, so a busy 3000 fails loudly instead of silently falling back to 3001. Check the banner, do not assume.
 
 **Teardown** is in [Cleanup](#cleanup).
 

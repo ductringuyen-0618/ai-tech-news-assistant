@@ -222,11 +222,7 @@ function formatRelativeTime(timestamp: number): string {
   return `${Math.round(diff / 3_600_000)}h ago`;
 }
 
-interface ResearchModeProps {
-  // No props needed.
-}
-
-export function ResearchMode({}: ResearchModeProps) {
+export function ResearchMode() {
   const reduceMotion = useReducedMotion();
   const [query, setQuery] = useState("");
   const [isResearching, setIsResearching] = useState(false);

@@ -38,7 +38,10 @@ export default defineConfig({
   outputDir: `${ARTIFACT_ROOT}/test-results`,
   reporter: [["list"], ["html", { open: "never", outputFolder: `${ARTIFACT_ROOT}/playwright-report` }]],
   use: {
-    baseURL: "http://localhost:3000",
+    // Overridable so verify.ps1 can point the suite at a non-default
+    // frontend port (e.g. when 3000 is already taken by something outside
+    // this repo) without touching this file.
+    baseURL: process.env.PLAYWRIGHT_BASE_URL || "http://localhost:3000",
     headless: false,
     video: "on",
     screenshot: "only-on-failure",

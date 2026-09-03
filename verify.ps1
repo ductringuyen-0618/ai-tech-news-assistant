@@ -3,23 +3,46 @@
 # What it does, in order:
 #   1. Frontend production build (vite build) - catches type / CSS errors.
 #   2. Backend import smoke (python -c "from src.main import app").
-#   3. Boots backend on :8000 and frontend on :5173 as background jobs.
-#   4. Curls /api/health and /api/news/?page_size=3 to confirm endpoints.
+#   3. Boots backend on :8000 and frontend on :3000 (-FrontendPort to
+#      override) as background jobs.
+#   4. Curls /health and /api/news/?page_size=3 to confirm endpoints.
 #   5. Installs Playwright chromium browser if missing.
 #   6. Runs the full Playwright suite excluding the visual-baseline file
-#      (which is expected to diff on every redesign).
+#      (which is expected to diff on every redesign) and the @exhaustive
+#      click-sweep (slow; run explicitly via .claude/skills/verify-feature
+#      when verifying a feature, not part of this fast loop).
 #   7. Reports pass / fail count.
 #   8. Asks whether you want to regenerate the visual baselines now.
 #   9. Cleans up background processes.
 #
 # Usage:   .\verify.ps1
+#          .\verify.ps1 -FrontendPort 3001   # if 3000 is already taken by
+#                                             # something outside this repo
 # Bypass execution policy if needed:
 #   powershell -ExecutionPolicy Bypass -File .\verify.ps1
+
+param(
+    # Must match vite.config.ts's dev port (3000) unless something else on
+    # the machine already owns it, in which case pick a free port here --
+    # this also drives playwright.config.ts's baseURL via $env:PLAYWRIGHT_BASE_URL
+    # below, and scopes the cleanup step's port-based process kill so it
+    # never touches an unrelated process on 3000.
+    [int]$FrontendPort = 3000
+)
 
 $ErrorActionPreference = "Continue"
 $root = $PSScriptRoot
 $backend = Join-Path $root "backend"
 $frontend = Join-Path $root "frontend"
+# The backend's actual dependencies (fastapi, pydantic, uvicorn, ...) live
+# in backend/venv, not on the system PATH -- a bare `python` call here
+# silently runs against whatever interpreter PATH resolves to and fails
+# with ModuleNotFoundError.
+$backendPython = Join-Path $backend "venv\Scripts\python.exe"
+if (-not (Test-Path $backendPython)) {
+    Write-Host "backend venv not found at $backendPython -- falling back to 'python' on PATH (likely to fail import checks)" -ForegroundColor Yellow
+    $backendPython = "python"
+}
 
 function Section($title) {
     Write-Host ""
@@ -53,7 +76,7 @@ Pop-Location
 # --- Phase 2: backend smoke --------------------------------------------------
 Section "Phase 2 / 5  --  Backend import + boot smoke"
 Push-Location $backend
-$importOut = & python -c "import sys; sys.path.insert(0, '.'); from src.main import app; print(len(app.routes))" 2>&1
+$importOut = & $backendPython -c "import sys; sys.path.insert(0, '.'); from src.main import app; print(len(app.routes))" 2>&1
 $importOk = $LASTEXITCODE -eq 0
 Status $importOk "backend imports cleanly ($importOut routes)"
 if (-not $importOk) { $failures += "backend import failed" }
@@ -64,13 +87,13 @@ Section "Phase 3 / 5  --  Booting servers (background)"
 
 $backendJob = Start-Job -ScriptBlock {
     Set-Location $using:backend
-    python -m uvicorn src.main:app --host 127.0.0.1 --port 8000 2>&1
+    & $using:backendPython -m uvicorn src.main:app --host 127.0.0.1 --port 8000 2>&1
 }
 Write-Host "  backend job: $($backendJob.Id)"
 
 $frontendJob = Start-Job -ScriptBlock {
     Set-Location $using:frontend
-    & "$using:frontend\node_modules\.bin\vite.cmd" --host 127.0.0.1 --port 5173 2>&1
+    & "$using:frontend\node_modules\.bin\vite.cmd" --host 127.0.0.1 --port $using:FrontendPort 2>&1
 }
 Write-Host "  frontend job: $($frontendJob.Id)"
 
@@ -79,11 +102,11 @@ Start-Sleep -Seconds 10
 
 # Health checks
 try {
-    $r = Invoke-WebRequest -Uri "http://127.0.0.1:8000/api/health" -UseBasicParsing -TimeoutSec 6 -ErrorAction Stop
-    Status ($r.StatusCode -eq 200) "GET /api/health -> $($r.StatusCode)"
+    $r = Invoke-WebRequest -Uri "http://127.0.0.1:8000/health" -UseBasicParsing -TimeoutSec 6 -ErrorAction Stop
+    Status ($r.StatusCode -eq 200) "GET /health -> $($r.StatusCode)"
     if ($r.StatusCode -ne 200) { $failures += "backend health failed" }
 } catch {
-    Status $false "GET /api/health -> $($_.Exception.Message)"
+    Status $false "GET /health -> $($_.Exception.Message)"
     $failures += "backend health failed"
 }
 
@@ -97,11 +120,11 @@ try {
 }
 
 try {
-    $r = Invoke-WebRequest -Uri "http://127.0.0.1:5173/" -UseBasicParsing -TimeoutSec 6 -ErrorAction Stop
-    Status ($r.StatusCode -eq 200) "GET http://127.0.0.1:5173/ -> $($r.StatusCode)"
+    $r = Invoke-WebRequest -Uri "http://127.0.0.1:$FrontendPort/" -UseBasicParsing -TimeoutSec 6 -ErrorAction Stop
+    Status ($r.StatusCode -eq 200) "GET http://127.0.0.1:$FrontendPort/ -> $($r.StatusCode)"
     if ($r.StatusCode -ne 200) { $failures += "frontend serve failed" }
 } catch {
-    Status $false "GET http://127.0.0.1:5173/ -> $($_.Exception.Message)"
+    Status $false "GET http://127.0.0.1:$FrontendPort/ -> $($_.Exception.Message)"
     $failures += "frontend serve failed"
 }
 
@@ -114,9 +137,15 @@ Push-Location $frontend
 Write-Host "  ensuring chromium is installed..." -ForegroundColor DarkGray
 & npx --yes playwright install chromium 2>&1 | Out-Null
 
-# Run the functional suite (exclude visual-baselines which always diff)
-Write-Host "  running playwright test (excluding m3-visual-baselines)..." -ForegroundColor DarkGray
-$pwOut = & npx playwright test --reporter=line --grep-invert "visual.baseline" 2>&1 | Out-String
+# playwright.config.ts's baseURL defaults to localhost:3000 but reads this
+# env var first, so a non-default -FrontendPort actually reaches Playwright.
+$env:PLAYWRIGHT_BASE_URL = "http://localhost:$FrontendPort"
+
+# Run the functional suite (exclude visual-baselines, which always diff,
+# and the @exhaustive click-sweep, which is slow and belongs to feature
+# verification -- see .claude/skills/verify-feature -- not the fast loop)
+Write-Host "  running playwright test (excluding m3-visual-baselines, @exhaustive)..." -ForegroundColor DarkGray
+$pwOut = & npx playwright test --reporter=line --grep-invert "visual.baseline|@exhaustive" 2>&1 | Out-String
 $pwOk = $LASTEXITCODE -eq 0
 Write-Host $pwOut
 if ($pwOk) {
@@ -131,8 +160,17 @@ Pop-Location
 Section "Phase 5 / 5  --  Visual baselines"
 Write-Host "  Visual baselines (m3-visual-baselines.spec.ts) will diff after a redesign."
 Write-Host "  Press 'r' to regenerate now, anything else to skip:" -NoNewline
-$key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
-Write-Host ""
+try {
+    $key = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+    Write-Host ""
+} catch {
+    # Non-interactive session (no console to read a keypress from, e.g. an
+    # agent-driven run): fall through to "skip" instead of throwing and
+    # skipping Cleanup below, which would strand the backend/frontend jobs.
+    Write-Host ""
+    Write-Host "  (non-interactive session, skipping baseline regeneration prompt)" -ForegroundColor DarkGray
+    $key = [PSCustomObject]@{ Character = 'n' }
+}
 if ($key.Character -eq 'r' -or $key.Character -eq 'R') {
     Push-Location $frontend
     Write-Host "  regenerating snapshots..." -ForegroundColor Yellow
@@ -154,7 +192,7 @@ Get-Process | Where-Object { $_.ProcessName -in @("node", "python") } |
     ForEach-Object {
         try {
             $conns = Get-NetTCPConnection -OwningProcess $_.Id -ErrorAction SilentlyContinue
-            if ($conns | Where-Object { $_.LocalPort -in @(8000, 5173) }) {
+            if ($conns | Where-Object { $_.LocalPort -in @(8000, $FrontendPort) }) {
                 Write-Host "  stopping $($_.ProcessName) PID $($_.Id)" -ForegroundColor DarkGray
                 Stop-Process -Id $_.Id -Force
             }

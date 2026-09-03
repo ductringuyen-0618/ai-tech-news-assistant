@@ -56,9 +56,7 @@ def _get_repository() -> ArticleRepository:
     global _repository
     if _repository is None:
         settings = get_settings()
-        # ``database_path`` is the canonical alias the rest of the codebase
-        # uses (see ``src/core/config.py``).
-        _repository = ArticleRepository(db_path=settings.database_path)
+        _repository = ArticleRepository(db_path=settings.get_database_file_path())
     return _repository
 
 

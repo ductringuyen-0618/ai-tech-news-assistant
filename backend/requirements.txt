@@ -1,5 +1,13 @@
 # FastAPI Core
-fastapi==0.104.1
+# fastapi>=0.108.0 dropped its own anyio<4.0.0 pin (delegated to starlette,
+# which caps it far more loosely). The old ==0.104.1 pin forced anyio<4
+# app-wide, which is incompatible with anthropic's httpx2 dep (anyio>=4.10)
+# and google-genai (anyio>=4.8.0) -- both pulled in transitively by
+# deepagents below. This was the actual root cause of the ResolutionImpossible
+# CI kept reporting as a langchain-core conflict (that message names whichever
+# package pip's resolver got stuck reporting on, not necessarily the true
+# minimal conflict).
+fastapi>=0.115.0,<1.0.0
 uvicorn[standard]==0.24.0
 # Removed pydantic - uses pre-built wheel in FastAPI dependency
 # pydantic==2.6.4

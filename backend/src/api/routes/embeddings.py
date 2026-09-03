@@ -9,6 +9,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends
 from typing import Dict, Any, List, Optional
 
 from ...services import EmbeddingService
+from ...services.embedding_service import get_shared_embedding_service
 from ...repositories import EmbeddingRepository, ArticleRepository
 from ...models.embedding import (
     EmbeddingRequest,
@@ -24,8 +25,8 @@ router = APIRouter(prefix="/embeddings", tags=["Embeddings"])
 
 # Dependency injection
 def get_embedding_service() -> EmbeddingService:
-    """Get embedding service instance."""
-    return EmbeddingService()
+    """Get the shared embedding service singleton (model loads once, not per-request)."""
+    return get_shared_embedding_service()
 
 def get_embedding_repository() -> EmbeddingRepository:
     """Get embedding repository instance."""

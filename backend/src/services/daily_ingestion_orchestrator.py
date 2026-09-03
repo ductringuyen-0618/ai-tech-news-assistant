@@ -44,11 +44,40 @@ import json
 import logging
 import os
 import sqlite3
+import sys
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable, List, Optional
 
+try:
+    import resource as _resource  # POSIX-only (Fly's Linux containers).
+except ImportError:  # pragma: no cover - Windows dev machines
+    _resource = None
+
 logger = logging.getLogger(__name__)
+
+
+def _process_rss_mb() -> Optional[float]:
+    """Process-lifetime peak resident set size, in MB.
+
+    ``ru_maxrss`` is a high-water mark that never decreases for the life
+    of the process (Linux reports it in KB; other POSIX platforms report
+    bytes). Since this app runs as one long-lived process with a new
+    ingestion cycle every day (``auto_stop_machines = "off"``), sampling
+    this after every phase gives a cheap trajectory of whether a given
+    run -- or the process's memory footprint over many days -- is
+    actually growing. Returns ``None`` on platforms without ``resource``
+    (e.g. local Windows dev) instead of raising.
+    """
+    if _resource is None:
+        return None
+    try:
+        peak = _resource.getrusage(_resource.RUSAGE_SELF).ru_maxrss
+    except Exception:  # pragma: no cover - defensive, should not happen
+        return None
+    # Linux reports KB; Darwin reports bytes. Fly machines are Linux.
+    divisor = 1024 if sys.platform.startswith("linux") else 1024 * 1024
+    return round(peak / divisor, 1)
 
 
 # Per-phase work cap. Keeps one run bounded; subsequent runs catch up
@@ -74,6 +103,10 @@ class PhaseReport:
     failed: int = 0
     duration_ms: int = 0
     errors: List[str] = field(default_factory=list)
+    # Process-lifetime peak RSS (MB) sampled right after this phase
+    # finished. See :func:`_process_rss_mb`. ``None`` on platforms
+    # without ``resource`` (local Windows dev).
+    rss_mb: Optional[float] = None
 
     def add_error(self, msg: str) -> None:
         """Append an error string, capping the list at 5."""
@@ -87,6 +120,7 @@ class PhaseReport:
             "failed": self.failed,
             "duration_ms": self.duration_ms,
             "errors": list(self.errors),
+            "rss_mb": self.rss_mb,
         }
 
 
@@ -273,12 +307,14 @@ async def _run_phase(
         logger.exception("phase %s crashed", name)
         pr.add_error(f"phase crashed: {exc}")
     pr.duration_ms = int((datetime.now() - started).total_seconds() * 1000)
+    pr.rss_mb = _process_rss_mb()
     logger.info(
-        "[%s] processed=%d failed=%d duration_ms=%d",
+        "[%s] processed=%d failed=%d duration_ms=%d rss_mb=%s",
         name,
         pr.processed,
         pr.failed,
         pr.duration_ms,
+        pr.rss_mb,
     )
     return pr
 
@@ -471,12 +507,18 @@ async def _phase_embed(
     """Phase 3: generate + insert a 384-dim embedding for every
     article without a row in ``article_embeddings``.
 
-    Reuses the same logic as :mod:`scripts.backfill_embeddings`: title
-    + body concatenated, ``all-MiniLM-L6-v2`` model, upsert into
-    ``article_embeddings`` keyed on ``article_id``. We don't re-export
-    a helper from the script because the script is intentionally a
-    one-shot CLI; copying the ~20-line inner loop here keeps the
-    orchestrator independent.
+    Title + body concatenated, ``all-MiniLM-L6-v2`` model, upsert into
+    ``article_embeddings`` keyed on ``article_id``. Uses the same
+    process-wide :func:`~src.services.embedding_service.get_shared_embedding_service`
+    singleton the search/RAG routes depend on, rather than the legacy
+    ``vectorstore.embeddings.EmbeddingGenerator`` this used to construct
+    fresh every run. That legacy path loaded its own independent
+    SentenceTransformer copy once per daily run and never released it
+    (no ``cleanup()`` call), so memory crept up a little further with
+    every ingestion cycle. Sharing the singleton means the model loads
+    once, ever, for the life of the process -- and ingestion no longer
+    holds a second copy of the model alongside the one search already
+    keeps warm.
     """
     _ensure_embeddings_table(db_path)
     candidates = _select_unembedded(db_path, limit=MAX_PER_PHASE)
@@ -486,11 +528,12 @@ async def _phase_embed(
     if not candidates:
         return
 
-    from vectorstore.embeddings import EmbeddingGenerator
+    from src.models.embedding import EmbeddingRequest
+    from src.services.embedding_service import get_shared_embedding_service
 
-    gen = EmbeddingGenerator()
+    svc = get_shared_embedding_service()
     try:
-        await gen.load_model()
+        await svc.initialize()
     except Exception as exc:  # noqa: BLE001
         report.add_error(f"model load failed: {exc}"[:200])
         logger.error("[embed] model load failed: %s", exc)
@@ -501,11 +544,10 @@ async def _phase_embed(
         if not text.strip():
             continue
         try:
-            vectors = await gen.generate_embeddings([text])
-            vec = vectors[0]
-            # ``vec`` is a numpy array in the real path; lists also work.
-            as_list = vec.tolist() if hasattr(vec, "tolist") else list(vec)
-            _upsert_embedding(db_path, article_id, as_list, gen.model_name)
+            resp = await svc.generate_embeddings(
+                EmbeddingRequest(texts=[text], batch_size=1)
+            )
+            _upsert_embedding(db_path, article_id, resp.embeddings[0], resp.model_name)
             report.processed += 1
         except Exception as exc:  # noqa: BLE001 - per-item isolation
             report.failed += 1

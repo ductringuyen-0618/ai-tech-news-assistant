@@ -10,6 +10,7 @@ from typing import Dict, Any, List, Optional
 from enum import Enum
 
 from ...services import EmbeddingService
+from ...services.embedding_service import get_shared_embedding_service
 from ...repositories import ArticleRepository, EmbeddingRepository
 from ...models.article import Article
 from ...models.embedding import SimilarityResult
@@ -45,8 +46,8 @@ class HybridSearchRequest(BaseModel):
 
 # Dependency injection
 def get_embedding_service() -> EmbeddingService:
-    """Get embedding service instance."""
-    return EmbeddingService()
+    """Get the shared embedding service singleton (model loads once, not per-request)."""
+    return get_shared_embedding_service()
 
 def get_embedding_repository() -> EmbeddingRepository:
     """Get embedding repository instance."""

@@ -154,18 +154,28 @@ def _install_phase_mocks(
     import src.services.summarization_service as _summ
     monkeypatch.setattr(_summ, "SummarizationService", fake_summ_cls)
 
-    # --- Phase 3: EmbeddingGenerator ----------------------------------
-    fake_gen_cls = MagicMock()
-    fake_gen_inst = MagicMock()
-    fake_gen_inst.model_name = "all-MiniLM-L6-v2"
-    fake_gen_inst.load_model = AsyncMock(return_value=None)
-    fake_gen_inst.generate_embeddings = AsyncMock(
-        side_effect=embed_fn or (lambda texts: [[0.1] * 384 for _ in texts])
-    )
-    fake_gen_cls.return_value = fake_gen_inst
+    # --- Phase 3: shared EmbeddingService singleton --------------------
+    fake_svc_inst = MagicMock()
+    fake_svc_inst.model_name = "all-MiniLM-L6-v2"
+    fake_svc_inst.initialize = AsyncMock(return_value=None)
 
-    import vectorstore.embeddings as _emb
-    monkeypatch.setattr(_emb, "EmbeddingGenerator", fake_gen_cls)
+    _vector_fn = embed_fn or (lambda texts: [[0.1] * 384 for _ in texts])
+
+    def _fake_generate_embeddings(request):
+        vectors = _vector_fn(request.texts)
+        resp = MagicMock()
+        resp.embeddings = vectors
+        resp.model_name = "all-MiniLM-L6-v2"
+        return resp
+
+    fake_svc_inst.generate_embeddings = AsyncMock(
+        side_effect=_fake_generate_embeddings
+    )
+
+    import src.services.embedding_service as _emb
+    monkeypatch.setattr(
+        _emb, "get_shared_embedding_service", lambda: fake_svc_inst
+    )
 
     # --- Phase 4: EntityExtractionService.process_article -------------
     fake_ent_cls = MagicMock()
@@ -181,7 +191,7 @@ def _install_phase_mocks(
     return {
         "ingestion": fake_service_inst,
         "summarize": fake_summ_inst,
-        "embed": fake_gen_inst,
+        "embed": fake_svc_inst,
         "entity": fake_ent_inst,
     }
 

@@ -34,7 +34,7 @@ def get_article_repository() -> ArticleRepository:
     """Get article repository instance."""
     from ...core.config import get_settings
     settings = get_settings()
-    return ArticleRepository(settings.get_database_path())
+    return ArticleRepository(settings.get_database_file_path())
 
 
 @router.get("/", response_model=PaginatedResponse[Article])
@@ -218,9 +218,7 @@ async def get_news_categories() -> BaseResponse[Dict[str, Any]]:
     try:
         from ...core.config import get_settings
         settings = get_settings()
-        db_path = settings.get_database_path()
-        if db_path.startswith("sqlite:///"):
-            db_path = db_path.replace("sqlite:///", "")
+        db_path = settings.get_database_file_path()
 
         seen: set[str] = set()
         with sqlite3.connect(db_path) as conn:
@@ -347,9 +345,7 @@ async def get_front_page(
     )
 
     settings = get_settings()
-    db_path = settings.get_database_path()
-    if db_path.startswith("sqlite:///"):
-        db_path = db_path.replace("sqlite:///", "")
+    db_path = settings.get_database_file_path()
 
     try:
         if recompute:

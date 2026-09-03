@@ -78,7 +78,7 @@ async def lifespan(app: FastAPI):
     logger.info(
         "Application configuration loaded",
         extra={
-            "database_path": settings.sqlite_database_path,
+            "database_path": settings.get_database_file_path(),
             "log_level": settings.log_level,
             "cors_origins": settings.allowed_origins,
             "error_middleware_enabled": settings.enable_error_middleware,
@@ -95,7 +95,7 @@ async def lifespan(app: FastAPI):
     # iteration and live in src/database/models.py only for type hints).
     try:
         from src.repositories.article_repository import ArticleRepository
-        ArticleRepository(db_path=settings.sqlite_database_path)
+        ArticleRepository(db_path=settings.get_database_file_path())
         logger.info("Database schema ensured (ArticleRepository init)")
     except Exception as exc:  # pragma: no cover
         logger.error(f"Database schema init failed: {type(exc).__name__}: {exc}")
@@ -127,9 +127,7 @@ async def lifespan(app: FastAPI):
     try:
         import sqlite3 as _sql
         from src.services.entity_extraction_service import PHRASE_NOISE
-        db_path = settings.sqlite_database_path
-        if db_path.startswith("sqlite:///"):
-            db_path = db_path.replace("sqlite:///", "")
+        db_path = settings.get_database_file_path()
         with _sql.connect(db_path) as _conn:
             has_table = _conn.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' "
@@ -166,7 +164,7 @@ async def lifespan(app: FastAPI):
         from src.repositories.saved_research_repository import (
             SavedResearchRepository,
         )
-        saved_repo = SavedResearchRepository(settings.sqlite_database_path)
+        saved_repo = SavedResearchRepository(settings.get_database_file_path())
         inserted = saved_repo.seed_if_empty()
         if inserted > 0:
             logger.info(

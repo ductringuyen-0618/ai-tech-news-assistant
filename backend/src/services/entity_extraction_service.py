@@ -338,13 +338,7 @@ class EntityExtractionService:
         ollama_timeout: Optional[int] = None,
     ):
         settings = get_settings()
-        raw_path = db_path or getattr(
-            settings, "sqlite_database_path", "./news.db"
-        )
-        # Accept either bare path or "sqlite:///..." URL form.
-        if raw_path.startswith("sqlite:///"):
-            raw_path = raw_path.replace("sqlite:///", "")
-        self.db_path: str = raw_path
+        self.db_path: str = db_path or settings.get_database_file_path()
 
         self.base_url: str = (
             ollama_host or getattr(settings, "ollama_host", "http://localhost:11434")

@@ -21,8 +21,10 @@ def ensure_data_directory():
     """Ensure the data directory exists."""
     settings = get_settings()
     if settings.database_type.value == "sqlite":
-        # Extract directory from database URL
-        db_url = settings.database_url or "sqlite:///./data/ai_news.db"
+        # Extract directory from the database URL. Resolved via the same
+        # shared helper as database/base.py's engine so this never drifts
+        # to a different default file (see get_database_sqlalchemy_url).
+        db_url = settings.get_database_sqlalchemy_url()
         if db_url.startswith("sqlite:///"):
             db_path = db_url.replace("sqlite:///", "")
             data_dir = Path(db_path).parent

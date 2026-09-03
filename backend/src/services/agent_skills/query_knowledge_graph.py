@@ -56,10 +56,7 @@ def _resolve_db_path() -> str:
     this skill reads from the same DB the extractor wrote to.
     """
     settings = get_settings()
-    raw = getattr(settings, "sqlite_database_path", None) or settings.database_path
-    if raw and raw.startswith("sqlite:///"):
-        raw = raw.replace("sqlite:///", "")
-    return raw
+    return settings.get_database_file_path()
 
 
 def _find_seed_entity(

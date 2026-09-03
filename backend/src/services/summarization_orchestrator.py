@@ -93,9 +93,7 @@ class SummarizationOrchestrator:
             from ..core.config import get_settings
 
             settings = get_settings()
-            path = db_path or getattr(
-                settings, "sqlite_database_path", "./data/articles.db"
-            )
+            path = db_path or settings.get_database_file_path()
             repository = ArticleRepository(path)
 
         self.repo = repository

@@ -40,11 +40,19 @@ huggingface-hub>=0.20.0  # Direct access to HuggingFace model hub (FREE)
 chromadb>=0.4.22  # Python 3.13 compatible, persistent storage
 
 # LangChain for Multi-Agent Orchestration (FREE, open source)
-langchain>=0.1.0  # Core LangChain framework
-langchain-community>=0.3.20  # Community integrations (>=0.3.20 dropped numpy<2 cap)
-langchain-core>=0.1.23  # Core abstractions
-langchain-groq>=0.0.1  # Groq LLM integration
-langchain-chroma>=0.1.0  # ChromaDB integration
+# Floors bumped to each package's langchain-core-1.x-compatible line (was
+# >=0.1.0 / >=0.3.20 / >=0.1.23 / >=0.0.1 / >=0.1.0, all stale pre-1.0
+# floors). deepagents (below) requires langchain-core<2.0.0,>=1.3.2; the
+# old, very permissive floors let pip's resolver wander back into
+# pre-1.0 langchain-chroma/langchain-community/langchain-groq releases
+# that require langchain-core<0.4.0, an unsatisfiable combination with
+# deepagents. Pinning these floors to versions that only ever depend on
+# the new langchain-core 1.x line removes that dead branch entirely.
+langchain>=1.2.0  # Core LangChain framework
+langchain-community>=0.4.0  # Community integrations (>=0.4.0 is the langchain-core 1.x line)
+langchain-core>=1.3.2  # Core abstractions (matches deepagents' own floor)
+langchain-groq>=1.0.0  # Groq LLM integration
+langchain-chroma>=1.0.0  # ChromaDB integration
 # Note: All LangChain packages are FREE. Only pay for LLM API calls (Groq is cheapest)
 
 # Deep Agents SDK (Mission 2 - per-article subagents). The deepagents

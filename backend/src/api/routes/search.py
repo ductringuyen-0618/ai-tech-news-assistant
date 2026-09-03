@@ -57,7 +57,7 @@ def get_article_repository() -> ArticleRepository:
     """Get article repository instance."""
     from ...core.config import get_settings
     settings = get_settings()
-    return ArticleRepository(settings.get_database_path())
+    return ArticleRepository(settings.get_database_file_path())
 
 
 @router.get("/", response_model=BaseResponse[Dict[str, Any]])

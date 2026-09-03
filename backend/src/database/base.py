@@ -5,7 +5,6 @@ Database Base Configuration
 SQLAlchemy base configuration and database connection management.
 """
 
-import os
 import logging
 from typing import Generator
 from sqlalchemy import create_engine, MetaData
@@ -38,16 +37,16 @@ def get_database_url() -> str:
         db_type = db_type.value
     
     if db_type == "sqlite":
-        db_path = settings.database_url or "sqlite:///./data/ai_news.db"
-        # Ensure the directory exists
-        if db_path.startswith("sqlite:///"):
-            db_file_path = db_path.replace("sqlite:///", "")
-            # Only create directory if it's not in-memory (:memory:)
-            if db_file_path and db_file_path != ":memory:":
-                dir_path = os.path.dirname(db_file_path)
-                if dir_path:
-                    os.makedirs(dir_path, exist_ok=True)
-        return db_path
+        # Use the single shared resolution helper (DATABASE_URL, else
+        # SQLITE_DATABASE_PATH, default "./data/articles.db") instead of
+        # hardcoding a different default file here -- this used to default
+        # to "sqlite:///./data/ai_news.db" while every other DB access
+        # path (news, search, ingest stats, etc.) resolved to
+        # "./data/articles.db" via settings.get_database_path(), so a
+        # fresh checkout with no .env wrote articles to one SQLite file
+        # and read them from another. It also ensures the parent
+        # directory exists, so callers don't need to.
+        return settings.get_database_sqlalchemy_url()
     elif db_type == "postgresql":
         return settings.database_url or "postgresql://user:password@localhost/ai_news"
     else:

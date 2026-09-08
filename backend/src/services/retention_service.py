@@ -83,10 +83,10 @@ class RetentionService:
         max_deletes: Optional[int] = None,
     ) -> None:
         settings = get_settings()
-        # Prefer DATABASE_URL (which the rest of the app uses), fall back to
-        # SQLITE_DATABASE_PATH.
-        configured = settings.database_url or settings.sqlite_database_path
-        self.db_path = _resolve_db_path(db_path or configured)
+        # Resolve via the single shared helper (DATABASE_URL, else
+        # SQLITE_DATABASE_PATH) so this always agrees with every other
+        # DB access path in the app.
+        self.db_path = _resolve_db_path(db_path) if db_path else settings.get_database_file_path()
         self.retention_days = (
             retention_days
             if retention_days is not None

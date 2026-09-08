@@ -41,10 +41,7 @@ router = APIRouter(prefix="/digest", tags=["Digest"])
 
 def _resolve_db_path() -> str:
     settings = get_settings()
-    raw = getattr(settings, "sqlite_database_path", "./news.db")
-    if isinstance(raw, str) and raw.startswith("sqlite:///"):
-        raw = raw.replace("sqlite:///", "")
-    return raw
+    return settings.get_database_file_path()
 
 
 def _decode_categories(raw: Any) -> List[str]:

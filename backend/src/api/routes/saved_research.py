@@ -51,12 +51,7 @@ def get_saved_research_repository() -> SavedResearchRepository:
     handlers stay testable via ``app.dependency_overrides``.
     """
     settings = get_app_settings()
-    db_path = (
-        settings.database_url
-        or getattr(settings, "sqlite_database_path", None)
-        or "./news.db"
-    )
-    return SavedResearchRepository(db_path)
+    return SavedResearchRepository(settings.get_database_file_path())
 
 
 # ---------------------------------------------------------------------- #

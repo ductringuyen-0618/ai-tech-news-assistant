@@ -39,9 +39,7 @@ class SearchService:
         Args:
             db_path: Path to SQLite database (defaults to settings)
         """
-        self.db_path = db_path or getattr(settings, 'database_url', 'news_assistant.db')
-        if self.db_path.startswith('sqlite:///'):
-            self.db_path = self.db_path.replace('sqlite:///', '')
+        self.db_path = db_path or settings.get_database_file_path()
         
         self.embedding_generator = None
         self._initialized = False

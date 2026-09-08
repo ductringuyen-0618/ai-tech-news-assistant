@@ -36,14 +36,7 @@ class EmbeddingRepository:
         Args:
             db_path: Optional database path. If None, uses configured path.
         """
-        raw_path = db_path or settings.get_database_path()
-        # settings.get_database_path() returns SQLAlchemy URL form
-        # ("sqlite:///./news.db") - strip the prefix so sqlite3 gets a real path.
-        if raw_path.startswith("sqlite:///"):
-            raw_path = raw_path.replace("sqlite:///", "", 1)
-        elif raw_path.startswith("sqlite://"):
-            raw_path = raw_path.replace("sqlite://", "", 1)
-        self.db_path = raw_path
+        self.db_path = db_path or settings.get_database_file_path()
         self._ensure_tables()
         
         # Mock storage for testing

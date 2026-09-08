@@ -27,12 +27,7 @@ router = APIRouter(prefix="/settings", tags=["Settings"])
 def get_settings_service() -> SettingsService:
     """Build a SettingsService bound to the configured SQLite DB."""
     app_settings = get_app_settings()
-    db_path = (
-        app_settings.database_url
-        or getattr(app_settings, "sqlite_database_path", None)
-        or "./news.db"
-    )
-    return SettingsService(SettingsRepository(db_path))
+    return SettingsService(SettingsRepository(app_settings.get_database_file_path()))
 
 
 @router.get("/", response_model=BaseResponse[Dict[str, Any]])

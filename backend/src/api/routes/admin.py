@@ -60,11 +60,6 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 
-def _resolve_db_path(raw: str) -> str:
-    """Strip the SQLAlchemy prefix the rest of the app uses."""
-    if raw.startswith("sqlite:///"):
-        return raw.replace("sqlite:///", "")
-    return raw
 
 
 # --------------------------------------------------------------------- #
@@ -156,8 +151,7 @@ async def wipe_database(
         )
 
     settings = get_settings()
-    configured = settings.database_url or settings.sqlite_database_path
-    db_path = _resolve_db_path(configured)
+    db_path = settings.get_database_file_path()
 
     counts: Dict[str, int] = {
         "articles": 0,
@@ -246,9 +240,7 @@ async def trigger_ingestion(
     defaults match the production cron job.
     """
     settings = get_settings()
-    db_path = _resolve_db_path(
-        settings.database_url or settings.sqlite_database_path
-    )
+    db_path = settings.get_database_file_path()
     report = await run_daily_ingestion(
         db_path,
         summarize=summarize,
@@ -376,9 +368,7 @@ async def ingestion_health(
     no runs have completed yet.
     """
     settings = get_settings()
-    db_path = _resolve_db_path(
-        settings.database_url or settings.sqlite_database_path
-    )
+    db_path = settings.get_database_file_path()
 
     latest = _read_latest_ingestion_run(db_path)
     recent = _read_recent_ingestion_runs(db_path, days=7)

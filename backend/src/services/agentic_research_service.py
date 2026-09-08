@@ -591,7 +591,7 @@ class AgenticResearchService:
             return []
 
         settings = _get_settings()
-        db_path = settings.database_path
+        db_path = settings.get_database_file_path()
         like_clauses = []
         params: List[Any] = []
         for tok in tokens:

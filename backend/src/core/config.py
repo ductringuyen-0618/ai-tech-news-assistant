@@ -7,6 +7,7 @@ It supports environment variables, multiple environments (dev/staging/prod),
 secure secrets management, and configuration validation.
 """
 
+import os
 import secrets
 from enum import Enum
 from typing import List, Optional, Dict, Any
@@ -331,11 +332,83 @@ class Settings(BaseSettings):
         return self
     
     def get_database_path(self) -> str:
-        """Get the appropriate database path based on configuration."""
+        """Get the appropriate database path based on configuration.
+
+        This is THE single source of truth for "where is the database".
+        Precedence: ``DATABASE_URL`` if set, else ``SQLITE_DATABASE_PATH``
+        (default ``./data/articles.db``). Every module that needs a
+        database location — raw sqlite3 path or SQLAlchemy URL — should
+        derive it from this method (via :meth:`get_database_file_path` or
+        :meth:`get_database_sqlalchemy_url` below) rather than reading
+        ``database_url`` / ``sqlite_database_path`` directly. Historically
+        several call sites read ``sqlite_database_path`` on its own
+        (ignoring ``DATABASE_URL``) or hardcoded their own fallback path,
+        which let the write path and read path silently resolve to two
+        different SQLite files under stock defaults.
+        """
         if self.database_url:
             return self.database_url
         return self.sqlite_database_path
-    
+
+    def get_database_file_path(self) -> str:
+        """Resolve the configured database location to a plain filesystem
+        path, suitable for ``sqlite3.connect()``.
+
+        ``get_database_path()`` may return either a bare path
+        (``./data/articles.db``) or a SQLAlchemy-style URL
+        (``sqlite:////data/articles.db``, e.g. when ``DATABASE_URL`` is
+        set on Fly). This strips the ``sqlite://`` / ``sqlite:///``
+        scheme either way so callers always get something ``sqlite3``
+        understands.
+        """
+        raw = self.get_database_path()
+        if raw.startswith("sqlite:///"):
+            path = raw[len("sqlite:///"):]
+        elif raw.startswith("sqlite://"):
+            path = raw[len("sqlite://"):]
+        else:
+            path = raw
+        self._ensure_parent_dir(path)
+        return path
+
+    @staticmethod
+    def _ensure_parent_dir(path: str) -> None:
+        """Create the parent directory for a sqlite file path if needed.
+
+        Every consumer of the resolved database path (raw sqlite3 or
+        SQLAlchemy) connects through here or through
+        :meth:`get_database_sqlalchemy_url`, so this is the one place that
+        needs to guarantee the directory exists. Without it, whichever
+        module happens to open the connection first on a fresh checkout
+        (e.g. ``ArticleRepository`` during app startup) fails with
+        "unable to open database file", and a later module racing in
+        (SQLAlchemy's ``create_all``, which does create its own parent
+        dir) ends up creating the ``articles`` table first with a
+        different, reduced schema.
+        """
+        if not path or path == ":memory:":
+            return
+        dir_path = os.path.dirname(path)
+        if dir_path:
+            os.makedirs(dir_path, exist_ok=True)
+
+    def get_database_sqlalchemy_url(self) -> str:
+        """Resolve the configured database location to a SQLAlchemy
+        connection URL (e.g. ``sqlite:///./data/articles.db``).
+
+        ``get_database_path()`` may return a bare filesystem path when
+        only ``SQLITE_DATABASE_PATH`` is set; this adds the ``sqlite:///``
+        scheme in that case so the SQLAlchemy engine and the raw-sqlite3
+        code paths always agree on the same underlying file.
+        """
+        raw = self.get_database_path()
+        url = raw if "://" in raw else f"sqlite:///{raw}"
+        if url.startswith("sqlite:///"):
+            self._ensure_parent_dir(url[len("sqlite:///"):])
+        elif url.startswith("sqlite://"):
+            self._ensure_parent_dir(url[len("sqlite://"):])
+        return url
+
     def get_llm_config(self, provider: Optional[LLMProvider] = None) -> Dict[str, Any]:
         """Get LLM configuration for specified provider."""
         provider = provider or self.default_llm_provider

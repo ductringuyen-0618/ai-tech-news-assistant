@@ -58,18 +58,13 @@ async def health_check() -> Dict[str, Any]:
         # Basic database connectivity check
         database_status = "connected"
         try:
-            db_path = settings.get_database_path()
-            # ``get_database_path()`` may return a SQLAlchemy-style URL
-            # (e.g. "sqlite:////data/news.db") because production sets
-            # DATABASE_URL=sqlite:////data/news.db on Fly. sqlite3.connect
-            # doesn't understand the URL scheme, so strip it the same
-            # way ArticleRepository does — otherwise this probe always
-            # raises and the basic /health endpoint flips to "degraded"
-            # even when the DB is fine.
-            if db_path.startswith("sqlite:///"):
-                db_path = db_path[len("sqlite:///"):]
-            elif db_path.startswith("sqlite://"):
-                db_path = db_path[len("sqlite://"):]
+            # get_database_file_path() resolves DATABASE_URL (which may be
+            # a SQLAlchemy-style URL, e.g. "sqlite:////data/news.db" on
+            # Fly) or SQLITE_DATABASE_PATH and strips the sqlite:// scheme
+            # so sqlite3.connect() gets a real path — otherwise this probe
+            # would always raise and flip /health to "degraded" even when
+            # the DB is fine.
+            db_path = settings.get_database_file_path()
             conn = sqlite3.connect(db_path)
             conn.close()
         except Exception:
@@ -381,9 +376,7 @@ async def ingestion_health_public() -> Dict[str, Any]:
     green.
     """
     try:
-        db_path = settings.get_database_path()
-        if db_path.startswith("sqlite:///"):
-            db_path = db_path.replace("sqlite:///", "")
+        db_path = settings.get_database_file_path()
         with sqlite3.connect(db_path) as conn:
             row = conn.execute(
                 """
@@ -534,4 +527,4 @@ def get_article_repository():
     from ...repositories import ArticleRepository
     from ...core.config import get_settings
     settings = get_settings()
-    return ArticleRepository(settings.get_database_path())
+    return ArticleRepository(settings.get_database_file_path())

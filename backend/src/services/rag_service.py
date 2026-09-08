@@ -178,7 +178,7 @@ class RAGPipeline:
         import sqlite3
         from types import SimpleNamespace
         try:
-            db_path = getattr(settings, "sqlite_database_path", "./news.db")
+            db_path = settings.get_database_file_path()
             keywords = [w for w in question.split() if len(w) > 3][:5]
             con = sqlite3.connect(db_path)
             con.row_factory = sqlite3.Row

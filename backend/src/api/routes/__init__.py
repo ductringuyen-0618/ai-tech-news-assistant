@@ -45,6 +45,7 @@ _safe_include_router(api_router, "admin", "router")
 _safe_include_router(api_router, "knowledge_graph", "router")
 _safe_include_router(api_router, "research", "router")
 _safe_include_router(api_router, "saved_research", "router")
+_safe_include_router(api_router, "subscribers", "router")
 
 logger.info("API routers initialization complete")
 

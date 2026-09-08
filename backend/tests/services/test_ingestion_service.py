@@ -106,14 +106,32 @@ class TestIngestionServiceInitialization:
         assert service.batch_size == 10
         assert service.timeout == 60
         assert service.result.status == IngestionStatus.PENDING
-        assert len(service.DEFAULT_FEEDS) == 5
-    
+        # NOTE: DEFAULT_FEEDS is a class attribute with no instance
+        # override, so `service.DEFAULT_FEEDS` and
+        # `IngestionService.DEFAULT_FEEDS` are always the same object --
+        # comparing them to each other is a tautology that can't catch a
+        # regression. Assert against a real expected count instead.
+        assert len(service.DEFAULT_FEEDS) == 12
+
     def test_default_feeds_configured(self, ingestion_service):
         """Test default feeds are properly configured."""
         feeds = ingestion_service.DEFAULT_FEEDS
-        
-        assert len(feeds) == 5
-        
+
+        assert len(feeds) >= 5
+
+        # The 7 feeds added to fill previously-empty topic categories --
+        # asserted by name so a regression that silently dropped them
+        # while keeping >= 5 older feeds would still be caught.
+        names = {feed["name"] for feed in feeds}
+        for expected_name in (
+            "Hacker News",
+            "The Hacker News",
+            "IEEE Spectrum Robotics",
+            "STAT News",
+            "Breaking Defense",
+        ):
+            assert expected_name in names, f"missing feed: {expected_name}"
+
         # Check all feeds have required fields
         for feed in feeds:
             assert "name" in feed
@@ -211,17 +229,68 @@ class TestIngestionServiceMethods:
         """Test _process_entry saves new articles."""
         mock_db.query.return_value.filter.return_value.first.return_value = None
         ingestion_service._get_source_id = Mock(return_value=1)
-        
+
         entry = {
             "title": "Test Article",
             "link": "http://example.com/article",
             "summary": "Test summary",
             "author": "Test Author"
         }
-        
+
         ingestion_service._process_entry(entry, "TestSource", None)
-        
+
         assert ingestion_service.result.total_articles_saved == 1
+
+    def test_process_entry_strips_hn_boilerplate_for_hacker_news_source(
+        self, ingestion_service, mock_db
+    ):
+        """The Article URL/Comments URL/Points boilerplate should be
+        stripped for the real Hacker News (hnrss.org) source."""
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        ingestion_service._get_source_id = Mock(return_value=1)
+
+        entry = {
+            "title": "Some HN Story",
+            "link": "http://example.com/hn-story",
+            "summary": (
+                "<p>Article URL: http://example.com/hn-story</p>"
+                "<p>Comments URL: https://news.ycombinator.com/item?id=1</p>"
+                "<p>Points: 205</p><p># Comments: 74</p>"
+            ),
+        }
+
+        ingestion_service._process_entry(entry, "Hacker News", None)
+
+        saved_article = mock_db.add.call_args[0][0]
+        assert "Article URL" not in saved_article.content
+        assert "Points:" not in saved_article.content
+
+    def test_process_entry_does_not_corrupt_non_hn_content_matching_boilerplate_shape(
+        self, ingestion_service, mock_db
+    ):
+        """Regression test: a non-HN article whose body happens to contain
+        a paragraph starting with 'Points:' (e.g. a listicle-style review)
+        must not have that paragraph silently deleted -- the boilerplate
+        stripper must be gated on the source actually being Hacker News,
+        not just on the text shape matching."""
+        mock_db.query.return_value.filter.return_value.first.return_value = None
+        ingestion_service._get_source_id = Mock(return_value=1)
+
+        entry = {
+            "title": "Best Laptops 2026",
+            "link": "http://example.com/best-laptops",
+            "summary": (
+                "<p>Introduction to the review.</p>"
+                "<p>Points: to consider before buying a laptop are listed "
+                "below in this comprehensive guide.</p>"
+                "<p>Conclusion paragraph here.</p>"
+            ),
+        }
+
+        ingestion_service._process_entry(entry, "The Verge", None)
+
+        saved_article = mock_db.add.call_args[0][0]
+        assert "Points: to consider before buying a laptop" in saved_article.content
         mock_db.add.assert_called()
     
     def test_update_source_timestamp(self, ingestion_service, mock_db):

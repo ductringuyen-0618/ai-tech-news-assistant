@@ -21,9 +21,16 @@ interface MissionShellProps {
   children: ReactNode;
   /** Optional heading shown above the feed (e.g. "Newsfeed · 47 stories"). */
   heading?: ReactNode;
+  /**
+   * Whether to render the built-in AgentTelemetry rail. Defaults to true
+   * (unchanged standalone Mission Control behavior). UnifiedFeedView sets
+   * this to false and renders its own collapsible telemetry rail instead,
+   * so the toggle is shared across both densities rather than duplicated.
+   */
+  showTelemetry?: boolean;
 }
 
-export function MissionShell({ children, heading }: MissionShellProps) {
+export function MissionShell({ children, heading, showTelemetry = true }: MissionShellProps) {
   return (
     <div
       data-testid="mission-shell"
@@ -38,7 +45,7 @@ export function MissionShell({ children, heading }: MissionShellProps) {
         )}
         <div className="flex-1 min-h-0 overflow-y-auto">{children}</div>
       </section>
-      <AgentTelemetry />
+      {showTelemetry && <AgentTelemetry />}
     </div>
   );
 }

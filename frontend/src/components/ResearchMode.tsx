@@ -6,6 +6,7 @@ import { API_BASE_URL, API_ENDPOINTS } from "../config/api";
 import { MarkdownReport } from "./MarkdownReport";
 import { SuggestedQueries } from "./SuggestedQueries";
 import { RecentDispatches } from "./RecentDispatches";
+import { CitationHoverCard } from "./CitationHoverCard";
 import {
   SubQuestionsPanel,
   type SubQuestionArticle,
@@ -753,6 +754,30 @@ export function ResearchMode() {
   const followUps =
     phase === "done" && reportText ? buildFollowUps(reportText) : [];
 
+  // Citation [N] -> article id map, derived client-side from the
+  // `search_results` SSE events we already collected. Mirrors the
+  // backend's own numbering: the "## Sources Used" list is built by
+  // deduping candidate articles in first-appearance order across
+  // sub-questions (see `_fanout_summaries`/`_build_source_list` in
+  // agentic_research_service.py). The backend's final report text
+  // carries title/source/url per source but no article id, so we
+  // reconstruct the same order here to resolve [N] -> article id for
+  // the hover-preview fetch (`/api/news/{id}`).
+  const citationArticleIds = useMemo(() => {
+    const seen = new Set<number>();
+    const ordered: number[] = [];
+    for (let i = 0; i < subQuestions.length; i += 1) {
+      const articles = searchResults[i] ?? [];
+      for (const a of articles) {
+        if (!seen.has(a.id)) {
+          seen.add(a.id);
+          ordered.push(a.id);
+        }
+      }
+    }
+    return ordered;
+  }, [subQuestions, searchResults]);
+
   // Masthead timings.
   const openedTimeStr = useMemo(() => {
     if (!submittedAt) return "";
@@ -1100,6 +1125,22 @@ export function ResearchMode() {
                       <MarkdownReport
                         text={reportText}
                         linkifyCitations={phase === "done"}
+                        renderCitation={
+                          phase === "done"
+                            ? (n, anchor) => {
+                                const articleId = citationArticleIds[n - 1];
+                                if (typeof articleId !== "number") return anchor;
+                                return (
+                                  <CitationHoverCard
+                                    articleId={articleId}
+                                    citationNumber={n}
+                                  >
+                                    {anchor}
+                                  </CitationHoverCard>
+                                );
+                              }
+                            : undefined
+                        }
                       />
                       {phase === "Synthesizing" && (
                         <span className="stream-caret" />

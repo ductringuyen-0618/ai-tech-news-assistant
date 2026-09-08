@@ -259,12 +259,6 @@ test.describe("M3.M6 demo — complete mission flow under slowMo", () => {
         await beat(page, 2);
       });
 
-      await test.step("9b. Navigate to Knowledge Graph", async () => {
-        await page.getByRole("tab", { name: /Knowledge/i }).click();
-        await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-        await beat(page, 3);
-      });
-
       await test.step("9c. Navigate to Digest", async () => {
         await page.getByRole("tab", { name: /Digest/i }).click();
         await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});

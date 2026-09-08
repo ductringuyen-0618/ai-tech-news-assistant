@@ -288,6 +288,159 @@ async def get_entity_detail(entity_id: int) -> Dict[str, Any]:
         )
 
 
+@router.get("/related-articles/{article_id}")
+async def get_related_articles(
+    article_id: int,
+    limit: int = Query(default=6, ge=1, le=10),
+) -> Dict[str, Any]:
+    """Return other coverage of the entities mentioned in ``article_id``.
+
+    Built for the article reader's "Related coverage" rail. The frontend
+    only has an article id to work with -- it has no way to know which
+    entity that article is "about" -- so this endpoint does the
+    article -> entity -> other articles hop server-side in one call:
+    it looks up the entities mentioned in ``article_id`` (earliest-extracted
+    first, via ``entity_mentions.position``), treats the first as the
+    "primary" entity for display purposes, and returns other (non-archived)
+    articles that mention any of those same entities, newest first,
+    deduplicated, capped at ``limit``.
+
+    Shape:
+        {
+          "article_id": 588,
+          "primary_entity": {"id": 42, "name": "OpenAI", "type": "company"} | null,
+          "articles": [{"id": 601, "title": "...", "source": "TechCrunch",
+                        "url": "https://...", "published_at": "..."}, ...]
+        }
+
+    Returns an empty ``articles`` list (with ``primary_entity: null``), not
+    a 404, when the article has no extracted entity mentions yet -- entity
+    extraction may simply not have run for it.
+    """
+    db_path = _resolve_db_path()
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            _ensure_entity_tables(conn)
+
+            entity_rows = conn.execute(
+                "SELECT em.entity_id AS id, e.name AS name, e.type AS type "
+                "FROM entity_mentions em "
+                "JOIN entities e ON e.id = em.entity_id "
+                "WHERE em.article_id = ? "
+                "ORDER BY em.position ASC",
+                (article_id,),
+            ).fetchall()
+
+            if not entity_rows:
+                return {
+                    "article_id": article_id,
+                    "primary_entity": None,
+                    "articles": [],
+                }
+
+            entity_ids = [int(r["id"]) for r in entity_rows]
+            placeholders = ",".join("?" * len(entity_ids))
+            article_rows = conn.execute(
+                f"SELECT DISTINCT a.id AS id, a.title AS title, "
+                f"       a.source AS source, a.url AS url, "
+                f"       a.published_at AS published_at, "
+                f"       a.created_at AS created_at "
+                f"FROM entity_mentions em "
+                f"JOIN articles a ON a.id = em.article_id "
+                f"WHERE em.entity_id IN ({placeholders}) "
+                f"  AND a.id != ? AND a.is_archived = 0 "
+                f"ORDER BY COALESCE(a.published_at, a.created_at) DESC "
+                f"LIMIT ?",
+                entity_ids + [article_id, limit],
+            ).fetchall()
+
+        primary = entity_rows[0]
+        return {
+            "article_id": article_id,
+            "primary_entity": {
+                "id": int(primary["id"]),
+                "name": primary["name"],
+                "type": primary["type"],
+            },
+            "articles": [
+                {
+                    "id": int(r["id"]),
+                    "title": r["title"] or "(untitled)",
+                    "source": r["source"] or "Unknown",
+                    "url": r["url"] or "",
+                    "published_at": r["published_at"] or r["created_at"],
+                }
+                for r in article_rows
+            ],
+        }
+    except sqlite3.Error as exc:
+        logger.error("Related articles query failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Related articles query failed: {exc}"
+        )
+
+
+@router.get("/search")
+async def search_entities(
+    q: str = Query(..., min_length=1, max_length=100, description="Name substring to search for"),
+    type: str | None = Query(default=None, description="Restrict to this entity type (company, person, technology, product)"),
+    limit: int = Query(default=8, ge=1, le=25),
+) -> Dict[str, Any]:
+    """Search the full entity catalog by name substring (case-insensitive).
+
+    This is the backing search for the News Feed's entity filter -- unlike
+    ``GET /`` (top-N by mention count, capped at MAX_LIMIT nodes for the
+    graph canvas), this reaches every indexed entity regardless of mention
+    count, so a low-mention company that never makes the top 150 is still
+    findable.
+
+    Shape:
+        {"entities": [{"id": 42, "name": "OpenAI", "type": "company",
+                       "mention_count": 12}, ...]}
+    """
+    db_path = _resolve_db_path()
+
+    try:
+        with sqlite3.connect(db_path) as conn:
+            conn.row_factory = sqlite3.Row
+            _ensure_entity_tables(conn)
+
+            query = (
+                "SELECT id, name, type, mention_count FROM entities "
+                "WHERE name LIKE ? ESCAPE '\\' AND mention_count > 0"
+            )
+            # Escape existing % / _ in the user's query so they're matched
+            # literally rather than as SQL LIKE wildcards.
+            escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+            params: list = [f"%{escaped}%"]
+            if type:
+                query += " AND type = ?"
+                params.append(type)
+            query += " ORDER BY mention_count DESC, name ASC LIMIT ?"
+            params.append(limit)
+
+            rows = conn.execute(query, params).fetchall()
+
+        return {
+            "entities": [
+                {
+                    "id": int(r["id"]),
+                    "name": r["name"],
+                    "type": r["type"],
+                    "mention_count": int(r["mention_count"]),
+                }
+                for r in rows
+            ]
+        }
+    except sqlite3.Error as exc:
+        logger.error("Entity search query failed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Entity search query failed: {exc}"
+        )
+
+
 @router.get("/trending")
 async def get_trending_entities(
     days: int = Query(default=7, ge=1, le=90),

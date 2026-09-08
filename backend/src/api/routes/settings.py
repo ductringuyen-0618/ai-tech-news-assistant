@@ -10,9 +10,9 @@ categories, view mode, trending toggle) survive across browsers and devices.
 from __future__ import annotations
 
 import logging
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 
 from ...core.config import get_settings as get_app_settings
 from ...models.api import BaseResponse
@@ -38,16 +38,19 @@ def get_settings_service() -> SettingsService:
 @router.get("/", response_model=BaseResponse[Dict[str, Any]])
 async def get_user_settings(
     service: SettingsService = Depends(get_settings_service),
+    x_client_id: Optional[str] = Header(default=None, alias="X-Client-Id"),
 ) -> BaseResponse[Dict[str, Any]]:
     """
-    Return the persisted user settings.
+    Return the persisted settings for the requesting client.
 
-    On a fresh DB (no row yet) returns sensible defaults rather than 404 so
-    the frontend can rely on a single shape for both first-run and subsequent
-    visits.
+    Reads the ``X-Client-Id`` header to scope settings per-visitor. When the
+    header is absent (older callers), falls back to the legacy singleton
+    row so behavior is unchanged for them. On a fresh DB (no row yet)
+    returns sensible defaults rather than 404 so the frontend can rely on a
+    single shape for both first-run and subsequent visits.
     """
     try:
-        data = service.get_settings()
+        data = service.get_settings(client_id=x_client_id)
         return BaseResponse[Dict[str, Any]](
             success=True,
             message="Settings loaded",
@@ -62,10 +65,11 @@ async def get_user_settings(
 async def update_user_settings(
     payload: SettingsUpdate,
     service: SettingsService = Depends(get_settings_service),
+    x_client_id: Optional[str] = Header(default=None, alias="X-Client-Id"),
 ) -> BaseResponse[Dict[str, Any]]:
-    """Persist a partial settings update and return the saved shape."""
+    """Persist a partial settings update for the requesting client and return the saved shape."""
     try:
-        data = service.update_settings(payload)
+        data = service.update_settings(payload, client_id=x_client_id)
         return BaseResponse[Dict[str, Any]](
             success=True,
             message="Settings saved",

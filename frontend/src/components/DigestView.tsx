@@ -1,11 +1,15 @@
+import { useState } from "react";
 import {
   Newspaper,
   ExternalLink,
   Layers,
+  ArrowUp,
+  MessageCircle,
 } from "lucide-react";
 import { Badge } from "./ui/badge";
 import { Skeleton } from "./ui/skeleton";
 import { DropCap } from "./DropCap";
+import { API_ENDPOINTS, apiFetch } from "../config/api";
 
 /**
  * DigestView -- M5 newspaper-section restyle of the daily digest.
@@ -50,6 +54,12 @@ interface DigestStory {
   source: string;
   summaryShort: string;
   category: string[];
+  // Structured HN engagement fields -- optional because the digest routes
+  // don't select/return them yet (see parseHnBoilerplate below for the
+  // client-side fallback while that's in flight).
+  points?: number | null;
+  comments_count?: number | null;
+  comments_url?: string | null;
 }
 
 interface DigestTrendingTopic {
@@ -75,6 +85,9 @@ interface CuratedHeadline {
   categories: string[];
   score: number;
   mention_count: number;
+  points?: number | null;
+  comments_count?: number | null;
+  comments_url?: string | null;
 }
 
 interface TopicCluster {
@@ -120,6 +133,171 @@ function relativeTime(iso: string | undefined | null): string {
   }
 }
 
+/**
+ * hnrss.org (the Hacker News frontpage feed) embeds "Article URL: ... /
+ * Comments URL: ... / Points: N / #Comments: M" as literal boilerplate in
+ * every entry's description. Ingestion now strips this and stores it as
+ * structured metadata server-side, but (a) rows ingested before that fix
+ * still carry the raw text in `summary`/`summaryShort`, and (b) the digest
+ * routes don't select/return the structured fields yet -- so this parses
+ * the boilerplate back out client-side as a fallback whenever the
+ * structured fields aren't present on the story.
+ */
+const HN_FIELD_RE =
+  /(Article URL|Comments URL|Points|#\s*Comments)\s*:\s*([^\n]*?)(?=(?:\s*(?:Article URL|Comments URL|Points|#\s*Comments)\s*:)|$)/gi;
+
+function parseHnBoilerplate(text: string | null | undefined): {
+  points?: number;
+  commentsCount?: number;
+  commentsUrl?: string;
+  cleanedText: string;
+} | null {
+  if (!text) return null;
+  const matches = [...text.matchAll(HN_FIELD_RE)];
+  if (matches.length === 0) return null;
+
+  let points: number | undefined;
+  let commentsCount: number | undefined;
+  let commentsUrl: string | undefined;
+
+  for (const m of matches) {
+    const label = m[1].replace(/\s+/g, " ").trim().toLowerCase();
+    const value = m[2].trim();
+    if (label === "points") {
+      const n = parseInt(value, 10);
+      if (!Number.isNaN(n)) points = n;
+    } else if (label === "# comments") {
+      const n = parseInt(value, 10);
+      if (!Number.isNaN(n)) commentsCount = n;
+    } else if (label === "comments url") {
+      commentsUrl = value;
+    }
+  }
+
+  if (points === undefined && commentsCount === undefined && !commentsUrl) {
+    return null;
+  }
+
+  return {
+    points,
+    commentsCount,
+    commentsUrl,
+    cleanedText: text.replace(HN_FIELD_RE, "").trim(),
+  };
+}
+
+interface HnEngagement {
+  points?: number;
+  commentsCount?: number;
+  commentsUrl?: string;
+  cleanedSummary?: string;
+}
+
+/** Resolve HN engagement info for a digest item: prefer structured
+ *  points/comments_count/comments_url fields when the backend supplies
+ *  them, otherwise fall back to parsing the raw boilerplate out of the
+ *  rendered summary text. Returns null when neither is available (i.e.
+ *  a non-HN story). */
+function getHnEngagement(story: {
+  points?: number | null;
+  comments_count?: number | null;
+  comments_url?: string | null;
+  summary?: string;
+  summaryShort?: string;
+}): HnEngagement | null {
+  const parsed = parseHnBoilerplate(story.summary ?? story.summaryShort);
+
+  const points =
+    typeof story.points === "number" ? story.points : parsed?.points;
+  const commentsCount =
+    typeof story.comments_count === "number"
+      ? story.comments_count
+      : parsed?.commentsCount;
+  const commentsUrl =
+    typeof story.comments_url === "string"
+      ? story.comments_url
+      : parsed?.commentsUrl;
+
+  if (points === undefined && commentsCount === undefined && !commentsUrl) {
+    return null;
+  }
+
+  return { points, commentsCount, commentsUrl, cleanedSummary: parsed?.cleanedText };
+}
+
+/** "▲ 205 · 74 comments" engagement pill. When `asLink` is false the pill
+ *  is rendered inside an ancestor <a> (the curated-headline card), so a
+ *  real nested <a> would be invalid HTML -- it opens the comments thread
+ *  via a click handler instead. */
+function HnEngagementBadge({
+  engagement,
+  asLink,
+}: {
+  engagement: HnEngagement;
+  asLink: boolean;
+}) {
+  const { points, commentsCount, commentsUrl } = engagement;
+  if (points === undefined && commentsCount === undefined) return null;
+
+  const content = (
+    <span className="inline-flex items-center gap-1.5 font-mono-tx text-[11px] uppercase-eyebrow">
+      {points !== undefined ? (
+        <span className="inline-flex items-center gap-0.5 text-signal">
+          <ArrowUp className="w-3 h-3" />
+          {points}
+        </span>
+      ) : null}
+      {points !== undefined && commentsCount !== undefined ? (
+        <span className="text-foreground-soft">·</span>
+      ) : null}
+      {commentsCount !== undefined ? (
+        <span className="inline-flex items-center gap-0.5 text-foreground-soft">
+          <MessageCircle className="w-3 h-3" />
+          {commentsCount} comment{commentsCount === 1 ? "" : "s"}
+        </span>
+      ) : null}
+    </span>
+  );
+
+  if (!commentsUrl) return content;
+
+  if (asLink) {
+    return (
+      <a
+        href={commentsUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-signal transition-colors"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <span
+      role="link"
+      tabIndex={0}
+      className="hover:text-signal transition-colors cursor-pointer"
+      onClick={(e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(commentsUrl, "_blank", "noopener,noreferrer");
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          e.stopPropagation();
+          window.open(commentsUrl, "_blank", "noopener,noreferrer");
+        }
+      }}
+    >
+      {content}
+    </span>
+  );
+}
+
 /** Inline section eyebrow: `━ LABEL ───────────...`. The rule
  *  fills the rest of the row to match the M3 transcript
  *  language. */
@@ -131,6 +309,78 @@ function SectionEyebrow({ label }: { label: string }) {
       </span>
       <span className="flex-1 border-t border-[var(--rule)]" />
     </div>
+  );
+}
+
+/**
+ * The digest footer used to say "subscribe at /digest" with no actual
+ * form anywhere on the page -- a dead promise (see
+ * docs/issues/2026-09-review-followups.md #1). This is the capture-only
+ * half: it stores the email via the real backend endpoint. Actual daily
+ * sending needs a third-party ESP + scheduled job, tracked separately in
+ * that same followups doc as a deliberate next step, not done here.
+ */
+function SubscribeForm() {
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (status === "loading") return;
+    setStatus("loading");
+    try {
+      await apiFetch(API_ENDPOINTS.subscribers, {
+        method: "POST",
+        body: JSON.stringify({ email }),
+      });
+      setStatus("done");
+    } catch {
+      setStatus("error");
+    }
+  };
+
+  if (status === "done") {
+    return (
+      <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft text-center">
+        ━ you're on the list — see you in tomorrow's edition ━
+      </p>
+    );
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="flex items-center justify-center gap-2 flex-wrap"
+      data-testid="digest-subscribe-form"
+    >
+      <label htmlFor="digest-subscribe-email" className="sr-only">
+        Email address
+      </label>
+      <input
+        id="digest-subscribe-email"
+        type="email"
+        required
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@example.com"
+        disabled={status === "loading"}
+        className="font-mono-tx text-[12px] bg-transparent border border-[var(--rule)] rounded px-2 py-1 text-foreground placeholder:text-foreground-soft"
+      />
+      <button
+        type="submit"
+        disabled={status === "loading"}
+        className={`font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] rounded px-3 py-1 text-foreground hover:bg-[var(--background-tint)] transition-colors ${
+          status === "loading" ? "opacity-40" : ""
+        }`}
+      >
+        {status === "loading" ? "Subscribing…" : "Subscribe"}
+      </button>
+      {status === "error" && (
+        <span className="font-mono-tx text-[11px] text-foreground-soft w-full text-center">
+          Couldn't subscribe — try again in a moment.
+        </span>
+      )}
+    </form>
   );
 }
 
@@ -225,7 +475,10 @@ export function DigestView({
             data-testid="digest-curated-headlines"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6"
           >
-            {curatedHeadlines.map((story) => (
+            {curatedHeadlines.map((story) => {
+              const engagement = getHnEngagement(story);
+              const displaySummary = engagement?.cleanedSummary || story.summary;
+              return (
               <a
                 key={story.id}
                 data-testid={`digest-curated-story-${story.id}`}
@@ -257,7 +510,7 @@ export function DigestView({
                 >
                   {story.title}
                 </h3>
-                {story.summary ? (
+                {displaySummary ? (
                   <p
                     className="mt-2 text-[14px] text-foreground-soft leading-relaxed line-clamp-2"
                     style={{
@@ -265,16 +518,23 @@ export function DigestView({
                       wordBreak: "break-word",
                     }}
                   >
-                    {story.summary}
+                    {displaySummary}
                   </p>
                 ) : null}
-                <div className="mt-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft flex items-center gap-2">
+                <div className="mt-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft flex items-center gap-2 flex-wrap">
                   <span>{story.source}</span>
                   <span>·</span>
                   <span>{relativeTime(story.published_at)}</span>
+                  {engagement ? (
+                    <>
+                      <span>·</span>
+                      <HnEngagementBadge engagement={engagement} asLink={false} />
+                    </>
+                  ) : null}
                 </div>
               </a>
-            ))}
+              );
+            })}
           </div>
         </section>
       )}
@@ -353,7 +613,10 @@ export function DigestView({
           data-testid="digest-top-stories"
           className="flex flex-col"
         >
-          {digest.topStories.map((story, idx) => (
+          {digest.topStories.map((story, idx) => {
+            const engagement = getHnEngagement(story);
+            const displaySummary = engagement?.cleanedSummary || story.summaryShort;
+            return (
             // NOTE: the `.border-l-4` class on this <li> is
             // load-bearing for digest.spec.ts:41 and :107. The
             // visible left rail is now the mono 3-digit index
@@ -386,9 +649,9 @@ export function DigestView({
                       wordBreak: "break-word",
                     }}
                   >
-                    {story.summaryShort}
+                    {displaySummary}
                   </p>
-                  <div className="flex flex-wrap gap-1.5">
+                  <div className="flex flex-wrap gap-1.5 items-center">
                     <Badge
                       variant="outline"
                       className="h-5 px-1.5 text-[10px] font-mono-tx uppercase-eyebrow border-[var(--rule)] bg-card text-foreground rounded-none"
@@ -407,11 +670,15 @@ export function DigestView({
                           {cat}
                         </Badge>
                       ))}
+                    {engagement ? (
+                      <HnEngagementBadge engagement={engagement} asLink={true} />
+                    ) : null}
                   </div>
                 </div>
               </div>
             </li>
-          ))}
+            );
+          })}
         </ul>
       </section>
 
@@ -506,10 +773,11 @@ export function DigestView({
       </section>
 
       {/* === END OF EDITION =============================== */}
-      <footer className="border-t border-[var(--rule)] pt-4">
+      <footer className="border-t border-[var(--rule)] pt-4 space-y-3">
         <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft text-center">
-          ━ end of brief ━ get tomorrow's edition · subscribe at /digest
+          ━ end of brief ━ get tomorrow's edition ━
         </p>
+        <SubscribeForm />
       </footer>
       <div className="hidden">
         <Newspaper />

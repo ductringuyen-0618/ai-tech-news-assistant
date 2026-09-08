@@ -199,10 +199,23 @@ test.describe("News Feed tab", () => {
   });
 
   test("search input updates the article list", async ({ page }) => {
+    // Regression test for review-07's confirmed bug: submitting a search
+    // updated the "N STORIES" count but left the rendered list
+    // pixel-identical to the unfiltered feed (search/count desync). The
+    // backend now does a real title/content substring match (see
+    // article_repository.list_articles), so this asserts the DOM itself
+    // changes in response to a search, not just that nothing crashed.
     const searchInput = page.getByPlaceholder(/search tech news/i);
     await expect(searchInput).toBeVisible();
 
-    await searchInput.fill("OpenAI");
+    const titlesBefore = await page
+      .locator('[data-slot="card-title"]')
+      .allTextContents();
+
+    // A deliberately unlikely-to-match-everything term so a real filter
+    // is very likely to narrow (or empty) the result set.
+    const NEEDLE = "zzz-nonexistent-query-term-xyz";
+    await searchInput.fill(NEEDLE);
     await searchInput.press("Enter");
 
     // Small debounce â€” the search refetches; let it settle.
@@ -211,8 +224,6 @@ test.describe("News Feed tab", () => {
       timeout: 15_000,
     });
 
-    // After search, either results render OR the empty-state is shown.
-    // What we DON'T accept is a crash / blank page / stuck spinner.
     const cards = page.locator('[data-slot="card"]');
     const emptyState = page.getByText(/No articles found/i);
 
@@ -223,6 +234,19 @@ test.describe("News Feed tab", () => {
       cardsVisible || emptyVisible,
       "Search should either return results or show the empty state â€” never a blank/crashed page"
     ).toBe(true);
+
+    // The core regression check: a nonsense query must NOT leave the same
+    // set of titles on screen. Either the empty-state renders, or the
+    // title set actually changed (fewer/different cards).
+    if (!emptyVisible) {
+      const titlesAfter = await page
+        .locator('[data-slot="card-title"]')
+        .allTextContents();
+      expect(
+        titlesAfter,
+        "Search results should differ from the unfiltered list â€” the list must not stay pixel-identical after a query is submitted"
+      ).not.toEqual(titlesBefore);
+    }
   });
 });
 
@@ -446,9 +470,8 @@ test.describe("rubric â€” News Feed", () => {
     const ctx = await browser.newContext();
     const page = await ctx.newPage();
     const errors = installConsoleErrorListener(page, [
-      // The dev frontend logs an "API Response:" debug line and the
-      // KnowledgeGraph component is allowed to toast "empty" â€” neither is
-      // an error. The ignore list is empty for now; we want every error to
+      // The dev frontend logs an "API Response:" debug line -- not an
+      // error. The ignore list is empty for now; we want every error to
       // surface. If a known-noisy third-party shows up, add a regex here.
     ]);
     await page.goto("/feed");

@@ -26,18 +26,20 @@ _VALID_VIEW_MODES = {"detailed", "compact"}
 
 
 class SettingsService:
-    """Service for reading and updating the singleton settings row."""
+    """Service for reading and updating per-client settings rows."""
 
     def __init__(self, repo: SettingsRepository):
         self._repo = repo
 
-    def get_settings(self) -> Dict[str, Any]:
+    def get_settings(self, client_id: Optional[str] = None) -> Dict[str, Any]:
         """
-        Return the current settings, falling back to sensible defaults when
-        no row has been written yet. Always returns a complete payload so
-        the caller never has to deal with ``None`` fields.
+        Return the current settings for ``client_id``, falling back to
+        sensible defaults when no row has been written yet. When
+        ``client_id`` is ``None``, falls back to the legacy singleton row.
+        Always returns a complete payload so the caller never has to deal
+        with ``None`` fields.
         """
-        row = self._repo.get()
+        row = self._repo.get(client_id=client_id)
         if row is None:
             return {
                 "categories": list(DEFAULT_CATEGORIES),
@@ -58,8 +60,13 @@ class SettingsService:
             "updated_at": row.get("updated_at"),
         }
 
-    def update_settings(self, payload: SettingsUpdate) -> Dict[str, Any]:
-        """Validate and persist a partial settings update."""
+    def update_settings(
+        self, payload: SettingsUpdate, client_id: Optional[str] = None
+    ) -> Dict[str, Any]:
+        """
+        Validate and persist a partial settings update for ``client_id``
+        (or the legacy singleton row when ``client_id`` is ``None``).
+        """
         if payload.view_mode is not None and payload.view_mode not in _VALID_VIEW_MODES:
             raise ValueError(
                 f"Invalid view_mode '{payload.view_mode}'. "
@@ -72,6 +79,7 @@ class SettingsService:
                 raise ValueError("'categories' must be a list of strings.")
 
         row = self._repo.upsert(
+            client_id=client_id,
             categories=payload.categories,
             view_mode=payload.view_mode,
             show_trending_only=payload.show_trending_only,

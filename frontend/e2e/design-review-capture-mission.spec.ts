@@ -26,6 +26,18 @@
  *
  * Closes the "A `--mode=mission` capture spec to round out the
  * screenshot set" follow-up in DESIGN_REVIEW.md §8.
+ *
+ * FOLLOW-UP (2026-09-07): a concurrent effort is merging Atelier and
+ * Mission Control into a single `UnifiedFeedView` with a `density`
+ * toggle (see frontend/src/components/UnifiedFeedView.tsx), replacing
+ * the `techpulse_mode` localStorage flag this spec forces to "mission".
+ * This spec targets a deployed Vercel build (FRONTEND below), not the
+ * local working tree, so it isn't broken by that in-flight change today
+ * -- but once the merge ships and redeploys, the "mission" vs. default
+ * screenshot sets will likely render identically (both showing
+ * UnifiedFeedView), making this spec redundant with
+ * design-review-capture.spec.ts. Left as-is (not deleted/skipped) since
+ * that's a call for the repo owner once the merge lands.
  */
 import { test } from "@playwright/test";
 import * as path from "path";
@@ -44,7 +56,6 @@ const PAGES = [
   { slug: "welcome", path: "/" },
   { slug: "feed", path: "/feed" },
   { slug: "research", path: "/research" },
-  { slug: "knowledge", path: "/knowledge" },
   { slug: "digest", path: "/digest" },
   { slug: "saved", path: "/saved" },
 ];

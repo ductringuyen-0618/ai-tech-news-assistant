@@ -1,27 +1,22 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Tabs, TabsContent } from "./components/ui/tabs";
 import { Button } from "./components/ui/button";
 import { Badge } from "./components/ui/badge";
 import { Toaster } from "./components/ui/sonner";
 import { toast } from "sonner";
-import { NewsCard } from "./components/NewsCard";
-import { LeadStoryCard } from "./components/LeadStoryCard";
 import { Settings } from "./components/Settings";
 import { SearchBar } from "./components/SearchBar";
 import { DigestView } from "./components/DigestView";
 import { TrendingRail } from "./components/TrendingRail";
 import { ResearchMode } from "./components/ResearchMode";
-import { KnowledgeGraph } from "./components/KnowledgeGraph";
 import { SavedResearchList } from "./components/SavedResearchList";
+import SavedArticlesList from "./components/SavedArticlesList";
+import UnifiedFeedView from "./components/UnifiedFeedView";
+import ArticleReader from "./components/ArticleReader";
 import { ThemeProvider } from "./components/ThemeProvider";
-import { ModeProvider, useMode } from "./components/ModeProvider";
-import { ModeToggle } from "./components/ModeToggle";
-import { MissionShell } from "./components/mission/MissionShell";
-import { DenseArticleRow } from "./components/mission/DenseArticleRow";
 import { CommandPaletteProvider } from "./components/CommandPalette";
 import { Sidebar } from "./components/Sidebar";
-import { WelcomeScreen } from "./components/WelcomeScreen";
 import {
   Newspaper,
   TrendingUp,
@@ -30,6 +25,7 @@ import {
   List,
 } from "lucide-react";
 import { API_ENDPOINTS, apiFetch } from "./config/api";
+import { useUrlSearchState } from "./hooks/useUrlSearchState";
 
 /**
  * AppShell — the actual UI. Lives inside <ThemeProvider> via the default
@@ -39,24 +35,42 @@ import { API_ENDPOINTS, apiFetch } from "./config/api";
  * that the 35 Playwright tests rely on.
  */
 function AppShell() {
-  // REDESIGN Phase E — read current surface mode so the feed tab can
-  // swap its layout. `mode === "mission"` flips /feed from the
-  // broadsheet grid to a dense 3-column workspace.
-  const { mode } = useMode();
   const [articles, setArticles] = useState<any[]>([]);
   const [filteredArticles, setFilteredArticles] = useState<any[]>([]);
+  // Infinite-scroll state for the News Feed tab (Facebook-style: cursor
+  // into the DB, appended as the user scrolls near the bottom).
+  const [feedCursor, setFeedCursor] = useState<string | null>(null);
+  const [hasMoreFeed, setHasMoreFeed] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState<boolean>(false);
+  // Search query + topic filters are persisted into the URL
+  // (?q=...&topics=...) via useUrlSearchState so a search/filter is
+  // shareable and survives a refresh. Seed searchQuery/selectedCategories
+  // from whatever was in the URL at mount; a ref remembers whether the
+  // URL specified topics so the backend-settings loader below (which
+  // wants to write selectedCategories too) doesn't clobber a shared link.
+  const [urlSearchState, setUrlSearchState] = useUrlSearchState();
+  const urlHadTopicsAtMount = useRef(urlSearchState.topics.length > 0);
+  const lastAppliedUrlSearchState = useRef(urlSearchState);
   // Start with no category filters so the News Feed shows every ingested
-  // article on first load. Previously we pre-applied ["AI", "Machine
-  // Learning"] which hid every article whose RSS categories didn't include
-  // those exact strings -- 'No articles found' on a fully-populated DB.
-  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
-  // Polish iter 3 / Part D — entities the user has chip-toggled from the
-  // TrendingRail. Kept separate from ``selectedCategories`` (which still
-  // hits the backend ``?category=`` filter) because entity names are NOT
-  // valid categories — we apply them client-side as a substring match on
-  // each article's title + summary.
-  const [selectedEntities, setSelectedEntities] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
+  // article on first load (unless the URL says otherwise). Previously we
+  // pre-applied ["AI", "Machine Learning"] which hid every article whose
+  // RSS categories didn't include those exact strings -- 'No articles
+  // found' on a fully-populated DB.
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(
+    () => urlSearchState.topics
+  );
+  // Entity filter lens -- knowledge-graph entities (companies, people,
+  // etc.) the user has selected, either by chip-toggling the TrendingRail
+  // or by choosing "View in Feed" from a Knowledge Graph entity. Sent to
+  // the backend as repeatable ?entity_id= params, OR-ed together, and
+  // joined against the real entity_mentions table -- this replaced an
+  // older client-side title/summary substring match that could miss
+  // mentions buried in the article body (or loaded feed pages that
+  // hadn't been scrolled to yet under infinite scroll).
+  const [selectedEntities, setSelectedEntities] = useState<
+    { id: number; name: string }[]
+  >([]);
+  const [searchQuery, setSearchQuery] = useState(() => urlSearchState.q);
   const [digest, setDigest] = useState<any>(null);
   // Polish iter 3 / Part C — separate state for the three new digest panels
   // so the existing /api/digest/ call doesn't block the rest of the UI.
@@ -70,7 +84,68 @@ function AppShell() {
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
   const [savedCategories, setSavedCategories] = useState<string[]>([]);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
-  const [totalArticleCount, setTotalArticleCount] = useState<number>(0);
+  // "New since you last visited" -- the newest article timestamp seen as
+  // of the *previous* visit, read once at mount before we stamp today's
+  // newest timestamp back into localStorage. Used only to compute a count
+  // for the banner above the feed; never touched again this session.
+  const LAST_SEEN_KEY = "techpulse-last-seen-timestamp";
+  // Read once at mount and never updated again this session -- the
+  // freshest timestamp gets written straight to localStorage (see the
+  // effect below) without needing to flow back through state.
+  const [lastSeenTimestamp] = useState<number | null>(() => {
+    try {
+      const raw = localStorage.getItem(LAST_SEEN_KEY);
+      return raw ? Number(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+  // "Scroll for more ↓" affordance -- shown once per browser until
+  // dismissed (manually, or automatically the first time infinite scroll
+  // actually fires), since there's no other visual signal that the feed
+  // keeps loading as you scroll.
+  const SCROLL_HINT_KEY = "techpulse-scroll-hint-dismissed";
+  const [scrollHintDismissed, setScrollHintDismissed] = useState<boolean>(
+    () => {
+      try {
+        return localStorage.getItem(SCROLL_HINT_KEY) === "1";
+      } catch {
+        return false;
+      }
+    }
+  );
+  const dismissScrollHint = () => {
+    setScrollHintDismissed(true);
+    try {
+      localStorage.setItem(SCROLL_HINT_KEY, "1");
+    } catch {
+      // Best-effort; ignore quota / privacy-mode failures.
+    }
+  };
+  // Article reader overlay -- `/article/:id` client-side route. Driven by
+  // its own bit of state (rather than folding into `activeTab`) since the
+  // reader opens *on top of* whichever tab was active, not instead of it.
+  const readArticleIdFromPath = (): string | null => {
+    if (typeof window === "undefined") return null;
+    const m = window.location.pathname.match(/^\/article\/([^/]+)\/?$/);
+    return m ? decodeURIComponent(m[1]) : null;
+  };
+  const [readerArticleId, setReaderArticleId] = useState<string | null>(() =>
+    readArticleIdFromPath()
+  );
+  const openArticleReader = (articleId: string) => {
+    setReaderArticleId(articleId);
+    if (typeof window !== "undefined") {
+      window.history.pushState(null, "", `/article/${encodeURIComponent(articleId)}`);
+    }
+  };
+  const closeArticleReader = () => {
+    setReaderArticleId(null);
+    if (typeof window !== "undefined" && readArticleIdFromPath()) {
+      const desired = TAB_TO_PATH[activeTab] || `/${activeTab}`;
+      window.history.pushState(null, "", desired);
+    }
+  };
   // ---------------------------------------------------------------------- //
   //  Routing -- History API, clean paths (polish iter 7).
   // ---------------------------------------------------------------------- //
@@ -89,14 +164,16 @@ function AppShell() {
   // Deployment note: any SPA-fallback dev/prod server is required so
   // refreshing /research returns index.html (Vite dev does this by
   // default; production needs a catch-all route in the static host).
-  const VALID_TABS = ["feed", "research", "knowledge", "digest", "saved", "preferences"] as const;
+  // "knowledge" removed -- the canvas graph tab was cut; entity filtering
+  // now lives in SearchBar's onSelectEntity dropdown. Any old /knowledge
+  // bookmark falls through readPathTab's `|| null` -> defaults to feed.
+  const VALID_TABS = ["feed", "research", "digest", "saved", "preferences"] as const;
   // Internal tab id -> URL path segment. Most are identical; preferences
   // maps to /settings because that's the user-facing label and the
   // shorter URL reads better.
   const TAB_TO_PATH: Record<string, string> = {
     feed: "/feed",
     research: "/research",
-    knowledge: "/knowledge",
     digest: "/digest",
     saved: "/saved",
     preferences: "/settings",
@@ -104,40 +181,29 @@ function AppShell() {
   const PATH_TO_TAB: Record<string, string> = {
     feed: "feed",
     research: "research",
-    knowledge: "knowledge",
     digest: "digest",
     saved: "saved",
     settings: "preferences",
     // Backwards-compat: keep /preferences working for any old bookmarks.
     preferences: "preferences",
   };
+  // No welcome/splash screen -- "/" and any unrecognized path land
+  // straight on the News Feed tab.
   const readPathTab = (): string | null => {
     if (typeof window === "undefined") return null;
     const seg = window.location.pathname.replace(/^\/+/, "").split("/")[0];
-    if (!seg) return null; // "/" -> no tab, render welcome
+    if (!seg) return null; // "/" -> feed
     return PATH_TO_TAB[seg] || null;
   };
   const [activeTab, setActiveTabState] = useState<string>(
     () => readPathTab() || "feed"
   );
 
-  // Welcome screen shows when the user is at `/` (no tab path).
-  // Deep links like /research skip the welcome so shared URLs always
-  // land on the intended content. The legacy `techpulse-welcome-seen`
-  // localStorage flag is no longer consulted -- `/` is now a real
-  // routable home page, not a one-time onboarding flash.
-  const [showWelcome, setShowWelcome] = useState<boolean>(
-    () => readPathTab() === null
-  );
-
   // Tab setter that also pushes the new path into history. Wrapped so
-  // every callsite (Sidebar, CommandPalette, Welcome CTAs) updates the
-  // URL automatically. Uses pushState so back/forward navigates between
-  // tabs. setShowWelcome(false) is called here so any tab navigation
-  // automatically dismisses the welcome overlay.
+  // every callsite (Sidebar, CommandPalette) updates the URL
+  // automatically. Uses pushState so back/forward navigates between tabs.
   const setActiveTab = (next: string) => {
     setActiveTabState(next);
-    setShowWelcome(false);
     if (typeof window !== "undefined") {
       const desired = TAB_TO_PATH[next] || `/${next}`;
       if (window.location.pathname !== desired) {
@@ -146,29 +212,63 @@ function AppShell() {
     }
   };
 
-  // Navigate to the home page (welcome screen). Sidebar logo uses this.
+  // Navigate to the News Feed (home). Sidebar logo uses this.
   const goHome = () => {
-    setShowWelcome(true);
-    if (typeof window !== "undefined" && window.location.pathname !== "/") {
-      window.history.pushState(null, "", "/");
-    }
+    setActiveTab("feed");
   };
 
   // Listen for popstate (back/forward button, manual URL edit) and
   // reflect the new path into state.
   useEffect(() => {
     const onPop = () => {
-      const tab = readPathTab();
-      if (tab) {
-        setActiveTabState(tab);
-        setShowWelcome(false);
-      } else {
-        setShowWelcome(true);
-      }
+      setActiveTabState(readPathTab() || "feed");
+      setReaderArticleId(readArticleIdFromPath());
     };
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, []);
+
+  // Keep the URL's ?q=/?topics= in sync whenever the user changes the
+  // search box or topic filters.
+  useEffect(() => {
+    setUrlSearchState({ q: searchQuery, topics: selectedCategories });
+  }, [searchQuery, selectedCategories, setUrlSearchState]);
+
+  // Reflect the URL back into the actual filter state -- only matters for
+  // browser back/forward or a hand-edited URL (useUrlSearchState's own
+  // popstate listener updates `urlSearchState`; the effect above already
+  // no-ops when the values it would write are unchanged, so this can't
+  // loop against it).
+  useEffect(() => {
+    const prev = lastAppliedUrlSearchState.current;
+    const changed =
+      urlSearchState.q !== prev.q ||
+      urlSearchState.topics.length !== prev.topics.length ||
+      urlSearchState.topics.some((t, i) => t !== prev.topics[i]);
+    if (!changed) return;
+    lastAppliedUrlSearchState.current = urlSearchState;
+    setSearchQuery(urlSearchState.q);
+    setSelectedCategories(urlSearchState.topics);
+  }, [urlSearchState]);
+
+  // Mount-time handoff from the Cmd+K palette (mirrors
+  // PENDING_RESEARCH_KEY in ResearchMode.tsx): picking a saved article
+  // there navigates here and stashes its id in techpulse-pending-
+  // article-id since ArticleReader didn't exist yet when that code was
+  // written. Consumed once the Saved tab is actually active.
+  useEffect(() => {
+    if (activeTab !== "saved") return;
+    try {
+      const pending = localStorage.getItem("techpulse-pending-article-id");
+      if (pending && pending.trim()) {
+        localStorage.removeItem("techpulse-pending-article-id");
+        openArticleReader(pending);
+      }
+    } catch {
+      // localStorage unavailable -- silently skip.
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]);
 
   const reduceMotion = useReducedMotion();
   // Page-tab fade-in: each TabsContent's children are wrapped in a
@@ -206,97 +306,183 @@ function AppShell() {
       );
   }, []);
 
+  // Feed ordering: articles with an image sort first (newest first);
+  // articles without one sink to the bottom (also newest first within
+  // that group), so a missing image never bumps a story above ones that
+  // have art.
+  const sortArticles = (list: any[]): any[] => {
+    return [...list].sort((a, b) => {
+      const aHasImage = Boolean(a.imageUrl);
+      const bHasImage = Boolean(b.imageUrl);
+      if (aHasImage !== bHasImage) return aHasImage ? -1 : 1;
+      return (
+        new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+      );
+    });
+  };
+
+  // Raw API article -> the shape NewsCard/LeadStoryCard-era code expects.
+  // Shared by the initial feed fetch and the infinite-scroll continuation
+  // so both stay in sync.
+  const mapApiArticle = (a: any) => {
+    // Prefer the longer of `summary` vs `content` so cards feel
+    // substantive even when the backend's `summary` field is a one-line
+    // teaser. Falls back to either if only one is present.
+    const summary = (a.summary || "").toString().trim();
+    const content = (a.content || "").toString().trim();
+    const body = content.length > summary.length * 1.5 ? content : (summary || content);
+    // Bumped from 200 -> 280 chars so the 2-3 line summary preview
+    // actually fills the line-clamp-3 box on cards. Medium stays at
+    // 800 for the expanded "Read more" view.
+    const summaryShort = !body
+      ? ""
+      : body.length > 280
+        ? body.slice(0, 280).trimEnd() + "..."
+        : body;
+    const summaryMedium = !body
+      ? ""
+      : body.length > 800
+        ? body.slice(0, 800).trimEnd() + "..."
+        : body;
+    return {
+      id: a.id,
+      title: a.title,
+      content: a.content,
+      summaryShort,
+      summaryMedium,
+      url: a.url,
+      publishedAt: a.published_at,
+      // Polish iter (design-review #9): pass the raw image_url through
+      // without an unconditional placeholder fallback -- NewsCard omits
+      // the image slot entirely when this is empty.
+      imageUrl: a.image_url || "",
+      category: a.categories || [],
+      source: a.source,
+      // Was a hardcoded 85 for every card regardless of the actual
+      // article -- read whatever the backend sends (once/if a
+      // `credibility_score` field lands on /api/news/) and fall back to
+      // an honest, non-fake-precise default rather than a flat number
+      // dressed up as a real score.
+      credibilityScore: a.credibility_score ?? a.credibilityScore ?? 70,
+      trending: false,
+      sentiment: "neutral",
+      keyInsights: [],
+      sourcesUsed: [a.source],
+      // Present only when a search query is active -- backend-computed
+      // excerpt around the match (see article_repository/news routes).
+      matchedSnippet: a.matched_snippet || undefined,
+    };
+  };
+
+  // Query params shared between the initial feed fetch and the
+  // infinite-scroll continuation -- keeps category/search filters
+  // identical across both so a scroll-triggered page can't silently drift
+  // from what's already on screen.
+  const buildFeedParams = (pageSize: number): URLSearchParams => {
+    const params = new URLSearchParams();
+    params.append("page_size", String(pageSize));
+    // The default browse view only shows articles with art (filtering
+    // server-side means every page is full-sized instead of shrinking as
+    // image-less rows get dropped client-side). But once someone is
+    // actively searching or filtering by company, that restriction does
+    // more harm than good: ~70% of articles matching a typical keyword
+    // search have no scraped image, so forcing has_image=true made search
+    // silently drop most real matches -- it looked like "search doesn't
+    // find older news" when really it just couldn't find image-less news
+    // at all, regardless of age.
+    const isSearchingOrFiltering =
+      Boolean(searchQuery) || selectedEntities.length > 0;
+    if (!isSearchingOrFiltering) {
+      params.append("has_image", "true");
+    }
+    if (selectedCategories.length > 0) {
+      for (const cat of selectedCategories) {
+        if (cat && cat.trim()) {
+          params.append("category", cat);
+        }
+      }
+    }
+    if (searchQuery) {
+      // Backend note: this used to be sent as `author`, which the API
+      // validated but never actually applied to the query -- typing a
+      // search term silently did nothing. `q` does a real title/content
+      // substring match (see article_repository.list_articles).
+      params.append("q", searchQuery);
+    }
+    for (const entity of selectedEntities) {
+      params.append("entity_id", String(entity.id));
+    }
+    return params;
+  };
+
+  const FEED_PAGE_SIZE = 24;
+
   // -------------------------------------------------------------------------
   // Data fetchers (unchanged from M2 — behavior is out of scope for M3.M1).
   // -------------------------------------------------------------------------
   const fetchArticles = async () => {
     try {
       setLoading(true);
-      const params = new URLSearchParams();
+      setHasMoreFeed(true);
+      const params = buildFeedParams(FEED_PAGE_SIZE);
       params.append("page", "1");
-      params.append("page_size", "50");
-
-      if (selectedCategories.length > 0) {
-        for (const cat of selectedCategories) {
-          if (cat && cat.trim()) {
-            params.append("category", cat);
-          }
-        }
-      }
-      if (searchQuery) {
-        params.append("author", searchQuery);
-      }
 
       const data = await apiFetch<any>(`${API_ENDPOINTS.news}?${params}`);
       console.log("API Response:", data);
 
-      const articles = data.data || data.items || [];
-      const buildSummaries = (a: any): { summaryShort: string; summaryMedium: string } => {
-        // Prefer the longer of `summary` vs `content` so cards feel
-        // substantive even when the backend's `summary` field is a one-line
-        // teaser. Falls back to either if only one is present.
-        const summary = (a.summary || "").toString().trim();
-        const content = (a.content || "").toString().trim();
-        const body = content.length > summary.length * 1.5 ? content : (summary || content);
-        if (!body) {
-          return { summaryShort: "", summaryMedium: "" };
-        }
-        // Bumped from 200 -> 280 chars so the 2-3 line summary preview
-        // actually fills the line-clamp-3 box on cards. Medium stays at
-        // 800 for the expanded "Read more" view.
-        const short =
-          body.length > 280 ? body.slice(0, 280).trimEnd() + "..." : body;
-        const medium =
-          body.length > 800 ? body.slice(0, 800).trimEnd() + "..." : body;
-        return { summaryShort: short, summaryMedium: medium };
-      };
-      const mappedArticles =
-        articles.map((article: any) => {
-          const { summaryShort, summaryMedium } = buildSummaries(article);
-          return {
-            id: article.id,
-            title: article.title,
-            content: article.content,
-            summaryShort,
-            summaryMedium,
-            url: article.url,
-            publishedAt: article.published_at,
-            // Polish iter (design-review #9): pass the raw image_url
-            // through without an unconditional placeholder fallback.
-            // Card components decide their own no-image rendering --
-            // LeadStoryCard drops the hero image slot entirely when
-            // missing; the secondary NewsCard keeps a minimal grey
-            // placeholder for grid alignment.
-            imageUrl: article.image_url || "",
-            category: article.categories || [],
-            source: article.source,
-            credibilityScore: 85,
-            trending: false,
-            sentiment: "neutral",
-            keyInsights: [],
-            sourcesUsed: [article.source],
-          };
-        }) || [];
+      const rawArticles = data.data || data.items || [];
+      const mapped = rawArticles.map(mapApiArticle);
+      const sorted = sortArticles(mapped);
+      setArticles(sorted);
+      setFilteredArticles(sorted);
 
-      setArticles(mappedArticles);
-      setFilteredArticles(mappedArticles);
+      const nextCursor = data.pagination?.next_cursor ?? null;
+      setFeedCursor(nextCursor);
+      setHasMoreFeed(Boolean(nextCursor));
     } catch (error) {
       console.error("Error fetching articles:", error);
       toast.error("Failed to fetch articles. Please try again.");
+      setHasMoreFeed(false);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchStats = async () => {
+  // Infinite-scroll continuation -- Facebook-style: fetch the next batch
+  // by cursor and append, rather than re-fetching everything with a bigger
+  // page_size. Guarded against overlapping calls (fast scrolling can fire
+  // the observer more than once before a fetch resolves) and against
+  // firing once the feed is exhausted.
+  const fetchMoreArticles = async () => {
+    if (loadingMore || !hasMoreFeed || !feedCursor) return;
+    // Infinite scroll just fired for real -- the "scroll for more" hint
+    // has done its job.
+    dismissScrollHint();
     try {
-      const envelope = await apiFetch<any>(API_ENDPOINTS.newsStats);
-      const data = envelope?.data ?? envelope;
-      const recent = Number(data?.recent_articles ?? 0);
-      const total = Number(data?.total_articles ?? 0);
-      setTotalArticleCount(recent > 0 ? recent : total);
+      setLoadingMore(true);
+      const params = buildFeedParams(FEED_PAGE_SIZE);
+      params.append("cursor", feedCursor);
+
+      const data = await apiFetch<any>(`${API_ENDPOINTS.news}?${params}`);
+      const rawArticles = data.data || data.items || [];
+      const mapped = rawArticles.map(mapApiArticle);
+
+      setArticles((prev) => {
+        const seen = new Set(prev.map((a) => a.id));
+        const fresh = mapped.filter((a: any) => !seen.has(a.id));
+        return [...prev, ...fresh];
+      });
+
+      const nextCursor = data.pagination?.next_cursor ?? null;
+      setFeedCursor(nextCursor);
+      setHasMoreFeed(Boolean(nextCursor));
     } catch (error) {
-      console.error("Error fetching stats:", error);
+      console.error("Error fetching more articles:", error);
+      // Don't toast here -- a failed background page-load shouldn't
+      // interrupt someone mid-scroll. They can just scroll again to retry.
+      setHasMoreFeed(false);
+    } finally {
+      setLoadingMore(false);
     }
   };
 
@@ -401,7 +587,13 @@ function AppShell() {
         const data = envelope?.data ?? envelope;
         if (data && typeof data === "object") {
           if (Array.isArray(data.categories)) {
-            setSelectedCategories(data.categories);
+            // Don't clobber topic filters a shared/reloaded URL already
+            // specified -- still track what's actually persisted server-
+            // side via savedCategories so the unsaved-changes indicator
+            // stays accurate.
+            if (!urlHadTopicsAtMount.current) {
+              setSelectedCategories(data.categories);
+            }
             setSavedCategories(data.categories);
             try {
               localStorage.setItem(
@@ -440,7 +632,6 @@ function AppShell() {
 
       fetchArticles();
       fetchDigest();
-      fetchStats();
       // Polish iter 3 / Part C — kick off the three new digest fetches in
       // parallel. Daily-summary may take 20-60s on cache miss, the others
       // are cheap DB reads.
@@ -461,42 +652,84 @@ function AppShell() {
 
   useEffect(() => {
     fetchArticles();
-  }, [selectedCategories, searchQuery, showTrendingOnly]);
+  }, [selectedCategories, searchQuery, showTrendingOnly, selectedEntities]);
 
-  // Polish iter 3 / Part D — Apply the entity chip filter client-side.
-  //
-  // When the user toggles an entity chip in the TrendingRail, we add the
-  // entity name to ``selectedEntities``. Filtering is approximate: an
-  // article "mentions" an entity iff its title or summaryShort/summaryMedium
-  // contains the entity name as a case-insensitive substring. This v1
-  // doesn't consult the knowledge-graph's tracked mentions, so it may miss
-  // articles that mention the entity only in the article body. The accuracy
-  // hit is acceptable here because the chips are a discovery affordance, not
-  // a precise query interface.
-  //
-  // If no entity chips are active, the filter is a no-op and we display
-  // every article returned by the backend query.
+  // Stamp the newest article timestamp seen so the *next* visit can show
+  // a "new since you were here" count. Keyed on `loading` flipping to
+  // false (a full reload), not on `articles` directly, so appending pages
+  // during infinite scroll doesn't re-stamp mid-session.
   useEffect(() => {
-    if (selectedEntities.length === 0) {
-      setFilteredArticles(articles);
-      return;
+    if (loading || articles.length === 0) return;
+    try {
+      const newest = articles.reduce((max, a) => {
+        const t = new Date(a.publishedAt).getTime();
+        return Number.isFinite(t) && t > max ? t : max;
+      }, 0);
+      if (newest > 0) {
+        localStorage.setItem(LAST_SEEN_KEY, String(newest));
+      }
+    } catch {
+      // Best-effort; ignore quota / privacy-mode failures.
     }
-    const needles = selectedEntities.map((e) => e.toLowerCase());
-    const next = articles.filter((article: any) => {
-      const haystack = [
-        article.title,
-        article.summaryShort,
-        article.summaryMedium,
-        article.content,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      // OR-match across entities — clicking two chips broadens the filter.
-      return needles.some((n) => haystack.includes(n));
-    });
-    setFilteredArticles(next);
-  }, [articles, selectedEntities]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading]);
+
+  // `filteredArticles` used to be a client-side post-filter (entity
+  // substring match). Entity filtering now happens server-side (real
+  // entity_mentions join, see buildFeedParams/fetchArticles), so this is
+  // just a passthrough -- kept as its own state rather than removed
+  // outright to avoid touching every downstream read of it.
+  useEffect(() => {
+    setFilteredArticles(articles);
+  }, [articles]);
+
+  // The default News Feed browse view only shows articles that have an
+  // image -- image-less stories are hidden rather than shown as bare
+  // text. That restriction is dropped while actively searching or
+  // filtering by company (see buildFeedParams for why), so a real text
+  // match without art still surfaces instead of being silently swallowed.
+  // `articles`/`filteredArticles` themselves stay untouched either way so
+  // Research, Digest, and Knowledge (which fetch independently) still see
+  // every story regardless of image availability.
+  const isSearchingOrFiltering =
+    Boolean(searchQuery) || selectedEntities.length > 0;
+  const visibleFeedArticles = isSearchingOrFiltering
+    ? filteredArticles
+    : filteredArticles.filter((a) => Boolean(a.imageUrl));
+
+  // "New since you last visited" -- count of currently-visible articles
+  // newer than the previous visit's newest-seen timestamp. Not shown
+  // while actively searching/filtering (the count would be misleading --
+  // it's about what's new in your feed, not in the filtered results) or
+  // on the very first-ever visit (nothing to compare against yet).
+  const newSinceLastVisitCount =
+    lastSeenTimestamp == null || isSearchingOrFiltering
+      ? 0
+      : visibleFeedArticles.filter(
+          (a) => new Date(a.publishedAt).getTime() > lastSeenTimestamp
+        ).length;
+
+  // Infinite scroll -- observe a sentinel just past the end of the feed
+  // list and fetch the next cursor page once it enters the viewport.
+  // Re-runs whenever the fetch guards change so the observer's closure
+  // never calls a stale fetchMoreArticles. rootMargin front-loads the
+  // fetch ~600px before the sentinel is actually visible so new cards
+  // are ready before the user scrolls into blank space.
+  const feedSentinelRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = feedSentinelRef.current;
+    if (!el || activeTab !== "feed" || !hasMoreFeed) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          fetchMoreArticles();
+        }
+      },
+      { rootMargin: "600px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [activeTab, feedCursor, hasMoreFeed, loadingMore, selectedCategories, searchQuery, selectedEntities]);
 
   // -------------------------------------------------------------------------
   // Render — sidebar + main pane inside a controlled Radix Tabs root.
@@ -529,6 +762,24 @@ function AppShell() {
           id="main-content"
           data-slot="main-content"
           className="flex-1 min-w-0 flex flex-col overflow-x-hidden"
+          onClick={(e) => {
+            // Article reader route -- delegated so it catches clicks on
+            // any NewsCard rendered anywhere under here (including inside
+            // UnifiedFeedView), without that component needing to know
+            // about routing. Clicking the headline opens the in-app
+            // reader; the "read at <host> ->" link (and share buttons)
+            // are untouched and still open the external publisher URL.
+            const titleEl = (e.target as HTMLElement).closest(
+              '[data-slot="card-title"]'
+            );
+            if (!titleEl) return;
+            const cardEl = titleEl.closest<HTMLElement>("[data-article-id]");
+            const articleId = cardEl?.dataset.articleId;
+            if (articleId) {
+              e.preventDefault();
+              openArticleReader(articleId);
+            }
+          }}
         >
           {/* M1 masthead — broadsheet two-row composition.
               Row 1: mono dateline (TECHPULSE / VOL III / NO. <day> / DATE / LIVE-FILED)
@@ -572,12 +823,6 @@ function AppShell() {
                 ) : (
                   <span className="text-foreground-soft">FILED</span>
                 )}
-                {/* REDESIGN Phase B — Atelier ↔ Mission Control toggle.
-                    Persists to localStorage.techpulse_mode and mirrors
-                    onto `<html data-mode>` so CSS variable overrides
-                    flip immediately. Phase E will use this attribute
-                    to switch the feed layout to the dense 3-col shell. */}
-                <ModeToggle />
               </span>
             </div>
             {/* Row 2 — headline + stat pills. */}
@@ -593,58 +838,10 @@ function AppShell() {
                   from the agentic desk.
                 </em>
               </h1>
-              {/* Masthead stat chips. Polish iter (design-review
-                  #8): bump text from ``text-foreground-soft`` to the
-                  full ``text-foreground`` so light-mode chips clear
-                  WCAG AA on a cream background, and tint the integer
-                  count with the signal accent so the eye lands on the
-                  number rather than the bracket frame. */}
-              <div className="flex items-center gap-2 pb-1">
-                <span className="border border-[var(--rule)] px-2 py-0.5 font-mono-tx text-[11px] text-foreground">
-                  [ <span aria-hidden>🔥 </span>
-                  <span className="text-signal tabular-nums">
-                    {articles.filter((a) => a.trending).length}
-                  </span>{" "}
-                  trending ]
-                </span>
-                <span className="border border-[var(--rule)] px-2 py-0.5 font-mono-tx text-[11px] text-foreground">
-                  [{" "}
-                  <span className="text-signal tabular-nums">
-                    {totalArticleCount || articles.length}
-                  </span>{" "}
-                  today ]
-                </span>
-              </div>
             </div>
           </header>
 
           <div className="px-6 py-6 flex-1">
-            {/* First-load welcome screen -- shown until the user
-                dismisses it via one of the CTAs. While visible we hide
-                ALL tab content via a wrapper div so Radix's tablist
-                stays intact (preserves a11y) but nothing else renders
-                in the main pane. */}
-            {showWelcome && (
-              <WelcomeScreen
-                onTryResearch={() => {
-                  setActiveTab("research");
-                }}
-                onBrowseFeed={(topic?: string) => {
-                  // DESIGN_REVIEW C-2 — when called from a digest card,
-                  // pre-fill the feed filter so the user lands on stories
-                  // for that topic instead of the whole feed.
-                  if (topic && typeof topic === "string" && topic.length > 0) {
-                    setSelectedCategories([topic]);
-                  }
-                  setActiveTab("feed");
-                }}
-                onSkip={() => {
-                  setActiveTab("feed");
-                }}
-              />
-            )}
-
-            <div style={{ display: showWelcome ? "none" : "contents" }}>
             {/* Page-tab cross-fade — every TabsContent's children are
                 wrapped in a motion.div that fades in on mount. Radix
                 unmounts the inactive tab's children, so switching tabs
@@ -662,10 +859,23 @@ function AppShell() {
               >
               {/* News-feed toolbar -- terminal pills. Search input keeps its
                   existing skin (M3 will revisit), trending/view toggles are
-                  recast as mono [ ] / [+] pills. */}
+                  recast as mono [ ] / [+] pills. SearchBar's onSelectEntity
+                  replaces the cut Knowledge Graph tab: typing shows matching
+                  entities in a dropdown, picking one adds it to the same
+                  entity_id filter the TrendingRail chips below drive. */}
               <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
                 <div className="flex-1 w-full md:max-w-md">
-                  <SearchBar onSearch={setSearchQuery} />
+                  <SearchBar
+                    onSearch={setSearchQuery}
+                    initialQuery={searchQuery}
+                    onSelectEntity={(entity) => {
+                      setSelectedEntities((prev) =>
+                        prev.some((e) => e.id === entity.id)
+                          ? prev
+                          : [...prev, entity]
+                      );
+                    }}
+                  />
                 </div>
                 <div className="flex gap-2 items-center font-mono-tx text-[11px] uppercase-eyebrow">
                   <button
@@ -713,17 +923,17 @@ function AppShell() {
                 </div>
               </div>
 
-              {/* Polish iter 3 / Part D — Trending Now rail. Now driven by
-                  the knowledge-graph trending-entities endpoint (top entities
+              {/* Polish iter 3 / Part D — Trending Now rail. Driven by the
+                  knowledge-graph trending-entities endpoint (top entities
                   this week). Clicking a chip toggles the entity in
-                  ``selectedEntities``, which then drives a client-side
-                  substring filter over the loaded article list. */}
+                  ``selectedEntities``, which drives the real backend
+                  entity_id filter (see buildFeedParams). */}
               <TrendingRail
-                selectedCategories={selectedEntities}
-                onSelectCategory={(entity) => {
+                selectedEntityIds={selectedEntities.map((e) => e.id)}
+                onSelectEntity={(entity) => {
                   setSelectedEntities((prev) =>
-                    prev.includes(entity)
-                      ? prev.filter((c) => c !== entity)
+                    prev.some((e) => e.id === entity.id)
+                      ? prev.filter((e) => e.id !== entity.id)
                       : [...prev, entity]
                   );
                 }}
@@ -735,31 +945,48 @@ function AppShell() {
                   className="flex flex-wrap gap-2 items-center border-t border-b border-[var(--rule)] py-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft"
                 >
                   <span className="mr-2">filtered &#9656;</span>
-                  {/* The inner <span> carrying just the raw `cat` text
-                      keeps the e2e contract intact: news-feed.spec.ts asserts
+                  {/* Each chip is its own remove button (click anywhere on
+                      it, including the ×, to drop just that one filter) --
+                      no need to hit "Clear Filters" to remove a single term.
+                      The inner <span> carrying just the raw `cat` text keeps
+                      the e2e contract intact: news-feed.spec.ts asserts
                       `activeFilters.getByText(chipCategory, { exact: true })`,
                       which matches an element whose textContent equals the
-                      value exactly. Bracket decoration lives in aria-hidden
-                      sibling spans so the visual "[ AI ]" survives. */}
+                      value exactly. Bracket/× decoration lives in aria-hidden
+                      sibling spans so the visual "[ AI × ]" survives. */}
                   {selectedCategories.map((cat) => (
-                    <span
+                    <button
                       key={`cat-${cat}`}
-                      className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground"
+                      type="button"
+                      onClick={() =>
+                        setSelectedCategories((prev) =>
+                          prev.filter((c) => c !== cat)
+                        )
+                      }
+                      aria-label={`Remove filter ${cat}`}
+                      className="inline-flex items-center px-1.5 py-0.5 border border-[var(--rule)] text-foreground hover:border-[var(--accent-signal)] hover:text-signal transition-colors"
                     >
                       <span aria-hidden="true">[&nbsp;</span>
                       <span>{cat}</span>
-                      <span aria-hidden="true">&nbsp;]</span>
-                    </span>
+                      <span aria-hidden="true">&nbsp;&#215;]</span>
+                    </button>
                   ))}
                   {selectedEntities.map((ent) => (
-                    <span
-                      key={`ent-${ent}`}
-                      className="px-1.5 py-0.5 border border-[var(--rule)] text-signal"
+                    <button
+                      key={`ent-${ent.id}`}
+                      type="button"
+                      onClick={() =>
+                        setSelectedEntities((prev) =>
+                          prev.filter((e) => e.id !== ent.id)
+                        )
+                      }
+                      aria-label={`Remove filter ${ent.name}`}
+                      className="inline-flex items-center px-1.5 py-0.5 border border-[var(--rule)] text-signal hover:border-[var(--accent-signal)] hover:text-foreground transition-colors"
                     >
                       <span aria-hidden="true">[&nbsp;</span>
-                      <span>{ent}</span>
-                      <span aria-hidden="true">&nbsp;]</span>
-                    </span>
+                      <span>{ent.name}</span>
+                      <span aria-hidden="true">&nbsp;&#215;]</span>
+                    </button>
                   ))}
                   <button
                     type="button"
@@ -774,153 +1001,104 @@ function AppShell() {
                 </div>
               )}
 
-              {/* News-feed body -- asymmetric 12-col broadsheet composition
-                  in detailed view, single-column mono list in compact view.
-                  Lead story always renders first so the LeadStoryCard sits
-                  before any secondary NewsCard in the DOM (this matters for
-                  the news-feed.spec.ts "Linear-dense" assertion -- see
-                  NewsCard.tsx header for the full explanation).
-
-                  REDESIGN Phase E: when mode === "mission", the entire
-                  body is replaced with the MissionShell + DenseArticleRow
-                  list. The toolbar above (search, filters, trending rail)
-                  is preserved so user controls work identically across
-                  modes. */}
-              {mode === "mission" ? (
-                loading ? (
-                  <div className="flex items-center justify-center py-12">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  </div>
-                ) : (
-                  <MissionShell
-                    heading={
-                      <>
-                        <span>Newsfeed</span>
-                        <span className="tabular-nums">
-                          {filteredArticles.length} stories · last cycle
-                        </span>
-                      </>
-                    }
-                  >
-                    <div data-testid="news-feed-list" className="flex flex-col">
-                      {filteredArticles.map((article) => (
-                        <DenseArticleRow key={article.id} article={article} />
-                      ))}
-                    </div>
-                  </MissionShell>
-                )
-              ) : loading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : filteredArticles.length === 0 ? (
+              {/* "New since you last visited" -- small localStorage-only
+                  banner comparing the newest article timestamp from the
+                  previous visit against what's in the feed now. */}
+              {newSinceLastVisitCount > 0 && (
                 <div
-                  data-testid="news-feed-list"
-                  className="text-center py-12 border-t border-b border-[var(--rule)] space-y-3"
+                  data-testid="news-feed-new-since-banner"
+                  className="flex items-center gap-2 border-t border-b border-[var(--rule)] py-2 font-mono-tx text-[11px] uppercase-eyebrow text-signal"
                 >
-                  <Newspaper className="w-12 h-12 text-foreground mx-auto" />
-                  <h3 className="font-display text-[22px] font-medium text-foreground">No articles found</h3>
-                  <p className="text-[14px] text-foreground-soft">
-                    Try adjusting your filters or search query
-                  </p>
-                  <Button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setShowTrendingOnly(false);
-                      setSelectedCategories([]);
-                      setSelectedEntities([]);
-                    }}
-                  >
-                    Reset Filters
-                  </Button>
-                </div>
-              ) : viewMode === "detailed" ? (
-                <div data-testid="news-feed-list" className="space-y-6">
-                  {/* Lead + deck -- 12-col grid. Lead spans cols 1-8 with a
-                      16:9 image and a 44px Fraunces headline; the deck of up
-                      to 3 secondary cards stacks in cols 9-12. */}
-                  <div className="grid grid-cols-12 gap-6">
-                    <div className="col-span-12 lg:col-span-8">
-                      <LeadStoryCard article={filteredArticles[0]} />
-                    </div>
-                    {filteredArticles.length > 1 && (
-                      <div className="col-span-12 lg:col-span-4 flex flex-col">
-                        {filteredArticles.slice(1, 4).map((article) => (
-                          <NewsCard
-                            key={article.id}
-                            article={article}
-                            viewMode="detailed"
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                  {/* Section break -- tick-rule with mono "more" label. Only
-                      rendered when there are remainder articles. */}
-                  {filteredArticles.length > 4 && (
-                    <>
-                      <div className="flex items-center gap-3">
-                        <span className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">more</span>
-                        <div className="tick-rule flex-1" />
-                      </div>
-                      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        {filteredArticles.slice(4).map((article) => (
-                          <NewsCard
-                            key={article.id}
-                            article={article}
-                            viewMode="detailed"
-                          />
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              ) : (
-                /* Compact view -- single-column scan list. Each row sits on
-                   the Atelier card surface (DESIGN_REVIEW S-3): no hairline
-                   dividers, hover tints the row, no images, no chrome.
-                   Matches the Detailed-view card idiom so toggling between
-                   modes feels like a density change rather than a style
-                   change. */
-                <div data-testid="news-feed-list" className="flex flex-col gap-1">
-                  {filteredArticles.map((article) => {
-                    const date = new Date(article.publishedAt);
-                    const hours = Math.floor(
-                      (Date.now() - date.getTime()) / (1000 * 60 * 60)
-                    );
-                    const stamp =
-                      hours < 1
-                        ? "just now"
-                        : hours < 24
-                          ? `${hours}h ago`
-                          : `${Math.floor(hours / 24)}d ago`;
-                    return (
-                      <div
-                        key={article.id}
-                        data-slot="card"
-                        data-testid="news-card"
-                        className="flex items-baseline gap-3 py-2.5 px-3 rounded-md bg-[var(--background-tint)]/60 hover:bg-[var(--background-tint)] transition-colors"
-                      >
-                        <span className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft w-24 shrink-0">
-                          {stamp}
-                        </span>
-                        <a
-                          href={article.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          data-slot="card-title"
-                          className="font-display text-[16px] leading-snug text-foreground hover:text-signal flex-1"
-                        >
-                          {article.title}
-                        </a>
-                        <span className="font-mono-tx text-[11px] uppercase-eyebrow text-gray-500">
-                          {article.source}
-                        </span>
-                      </div>
-                    );
-                  })}
+                  <span aria-hidden="true">&#9650;</span>
+                  <span>
+                    {newSinceLastVisitCount} new{" "}
+                    {newSinceLastVisitCount === 1 ? "story" : "stories"} since
+                    your last visit
+                  </span>
                 </div>
               )}
+
+              {/* News-feed body -- REDESIGN Phase F: a single density-aware
+                  UnifiedFeedView replaces the old mode==="mission"
+                  MissionShell/DenseArticleRow branch and the Atelier
+                  NewsCard grid/compact-list branch (the review flagged
+                  maintaining Atelier and Mission Control as two entirely
+                  separate full views as unnecessary upkeep). `density`
+                  mirrors the existing detailed/compact toggle; loading and
+                  the "no results" state (with a Reset Filters action) are
+                  its own, passed through so the feed keeps the same UX it
+                  had before the merge. Image-less articles are hidden from
+                  this tab entirely (no bare-text cards) rather than shown
+                  at the bottom -- `articles`/`filteredArticles` themselves
+                  stay untouched so Research and Digest (which fetch
+                  independently) still see every story regardless of image
+                  availability. */}
+              <UnifiedFeedView
+                articles={visibleFeedArticles}
+                density={viewMode === "compact" ? "compact" : "comfortable"}
+                loading={loading}
+                emptyState={
+                  <div
+                    data-testid="news-feed-list"
+                    className="text-center py-12 border-t border-b border-[var(--rule)] space-y-3"
+                  >
+                    <Newspaper className="w-12 h-12 text-foreground mx-auto" />
+                    <h3 className="font-display text-[22px] font-medium text-foreground">No articles found</h3>
+                    <p className="text-[14px] text-foreground-soft">
+                      Try adjusting your filters or search query
+                    </p>
+                    <Button
+                      onClick={() => {
+                        setSearchQuery("");
+                        setShowTrendingOnly(false);
+                        setSelectedCategories([]);
+                        setSelectedEntities([]);
+                      }}
+                    >
+                      Reset Filters
+                    </Button>
+                  </div>
+                }
+              />
+
+              {/* Infinite-scroll sentinel -- an IntersectionObserver
+                  watches this and fetches the next cursor page once it
+                  nears the viewport. Only rendered once the initial load
+                  has settled and there's actually more to fetch. */}
+              {!loading && visibleFeedArticles.length > 0 && (
+                <div ref={feedSentinelRef} className="h-px" aria-hidden="true" />
+              )}
+              {loadingMore && (
+                <div className="flex items-center justify-center py-6">
+                  <Loader2 className="w-5 h-5 animate-spin text-foreground-soft" />
+                </div>
+              )}
+              {!loading && !hasMoreFeed && visibleFeedArticles.length > 0 && (
+                <div className="text-center py-6 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+                  — end of feed —
+                </div>
+              )}
+
+              {/* "Scroll for more ↓" hint -- infinite scroll has no other
+                  visual affordance signaling more content loads on
+                  scroll. Dismissible; auto-dismisses the first time
+                  fetchMoreArticles actually fires (see there). */}
+              {!scrollHintDismissed &&
+                !loading &&
+                hasMoreFeed &&
+                visibleFeedArticles.length > 0 && (
+                  <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--rule)] bg-background/95 backdrop-blur shadow-lg font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+                    <span>scroll for more &#8595;</span>
+                    <button
+                      type="button"
+                      onClick={dismissScrollHint}
+                      aria-label="Dismiss scroll hint"
+                      className="text-foreground-mute hover:text-foreground"
+                    >
+                      &#215;
+                    </button>
+                  </div>
+                )}
               </motion.div>
             </TabsContent>
 
@@ -932,17 +1110,6 @@ function AppShell() {
                 transition={panelTransition}
               >
                 <ResearchMode />
-              </motion.div>
-            </TabsContent>
-
-            {/* Knowledge Graph Tab */}
-            <TabsContent value="knowledge" className="mt-0">
-              <motion.div
-                initial={panelInitial}
-                animate={panelAnimate}
-                transition={panelTransition}
-              >
-                <KnowledgeGraph />
               </motion.div>
             </TabsContent>
 
@@ -969,15 +1136,18 @@ function AppShell() {
               </motion.div>
             </TabsContent>
 
-            {/* Saved Research Tab — M3.M5. Lists every persisted
-                research report, opens them inline via MarkdownReport,
-                and supports per-row deletion. */}
+            {/* Saved Tab — persisted research reports (M3.M5) plus saved
+                articles (localStorage `techpulse-saved-articles`,
+                written by NewsCard's Save button). Two independent lists;
+                SavedArticlesList fetches its own article data. */}
             <TabsContent value="saved" className="mt-0">
               <motion.div
                 initial={panelInitial}
                 animate={panelAnimate}
                 transition={panelTransition}
+                className="space-y-8"
               >
+                <SavedArticlesList />
                 <SavedResearchList />
               </motion.div>
             </TabsContent>
@@ -1000,7 +1170,6 @@ function AppShell() {
                 />
               </motion.div>
             </TabsContent>
-            </div>
           </div>
 
           {/* Toast Notifications */}
@@ -1013,6 +1182,17 @@ function AppShell() {
               <span>© techpulse 2026 · agentic desk</span>
             </div>
           </footer>
+
+          {/* Article reader overlay -- `/article/:id` client-side route.
+              Renders on top of whichever tab is active rather than
+              replacing it, so closing it returns to exactly where the
+              user was. */}
+          {readerArticleId && (
+            <ArticleReader
+              articleId={readerArticleId}
+              onClose={closeArticleReader}
+            />
+          )}
         </main>
       </CommandPaletteProvider>
     </Tabs>
@@ -1027,9 +1207,7 @@ function AppShell() {
 export default function App() {
   return (
     <ThemeProvider>
-      <ModeProvider>
-        <AppShell />
-      </ModeProvider>
+      <AppShell />
     </ThemeProvider>
   );
 }

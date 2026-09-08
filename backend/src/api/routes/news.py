@@ -43,8 +43,28 @@ async def get_articles(
     page_size: int = Query(default=20, ge=1, le=100, description="Items per page"),
     source: Optional[str] = Query(default=None, description="Filter by news source"),
     category: Optional[List[str]] = Query(default=None, description="Filter by category tag (repeatable; OR-ed)"),
-    author: Optional[str] = Query(default=None, description="Filter by author"),
+    q: Optional[str] = Query(default=None, description="Free-text search over title/content (News Feed search box)"),
+    author: Optional[str] = Query(default=None, deprecated=True, description="Unused -- kept for backward compatibility. Use `q`."),
     has_summary: Optional[bool] = Query(default=None, description="Filter by summary presence"),
+    has_image: Optional[bool] = Query(default=None, description="Restrict to articles with a non-empty image_url"),
+    entity_id: Optional[List[int]] = Query(
+        default=None,
+        description=(
+            "Filter to articles mentioning this knowledge-graph entity id "
+            "(repeatable; OR-ed). This is the News Feed's entity filter "
+            "lens -- e.g. select a company node in Knowledge Graph to see "
+            "only articles that actually mention it."
+        ),
+    ),
+    cursor: Optional[str] = Query(
+        default=None,
+        description=(
+            "Opaque keyset cursor from a previous response's "
+            "pagination.next_cursor. When set, page/offset are ignored and "
+            "results continue immediately after the cursor row -- this is "
+            "what the News Feed's infinite scroll uses."
+        ),
+    ),
     sort_by: Optional[str] = Query(default="created_at", description="Sort field"),
     sort_desc: bool = Query(default=True, description="Sort in descending order"),
     repo: ArticleRepository = Depends(get_article_repository)
@@ -53,19 +73,30 @@ async def get_articles(
     Get paginated list of news articles with optional filtering.
 
     Args:
-        page: Page number (starting from 1)
+        page: Page number (starting from 1, ignored when cursor is set)
         page_size: Number of articles per page (1-100)
         source: Optional source filter
         category: Optional category filter — matches articles whose
             ``categories`` JSON-array contains any of the supplied values.
             Repeatable, OR-ed across values (?category=AI/ML&category=Cloud).
-        author: Optional author filter
+        q: Free-text search over title/content -- this is what the News
+            Feed's search box actually sends and filters on. Results rank
+            title matches above content-only matches; a content-only match
+            carries a ``matched_snippet`` excerpt on the article so the
+            frontend can show why it matched.
+        author: Deprecated, unused. Kept only so old links don't 400.
         has_summary: Filter by presence of summary
+        has_image: Restrict to articles with a non-empty image_url
+        entity_id: Optional knowledge-graph entity id filter (repeatable, OR-ed)
+        cursor: Opaque keyset cursor for infinite scroll -- continues past
+            the previous response's last row instead of paging by offset
         sort_by: Field to sort by (created_at, published_date, title, views)
         sort_desc: Sort in descending order
 
     Returns:
-        Paginated response with articles and pagination info
+        Paginated response with articles and pagination info. When
+        ``cursor`` is used, ``pagination.next_cursor`` carries the value to
+        pass on the following request; it's null once the feed is exhausted.
     """
     try:
         # Create filter object
@@ -77,37 +108,55 @@ async def get_articles(
             sort_desc=sort_desc
         )
 
-        # Calculate offset
+        # Calculate offset (unused once `cursor` is supplied)
         offset = (page - 1) * page_size
 
         # Normalize category filter: drop empties so an explicit ?category=
         # (no value) doesn't accidentally filter every article out.
         categories_filter = [c for c in (category or []) if c and c.strip()] or None
 
-        # Get articles and total count
-        articles, total_count = await repo.list_articles(
+        # Get articles, total count (None in cursor mode), and next_cursor
+        articles, total_count, next_cursor = await repo.list_articles(
             limit=page_size,
             offset=offset,
             source=source,
             categories=categories_filter,
+            has_image=has_image,
+            cursor=cursor,
+            entity_ids=entity_id,
+            query_text=q,
         )
-        
-        # Calculate pagination info
-        total_pages = (total_count + page_size - 1) // page_size
-        pagination = PaginationInfo(
-            page=page,
-            page_size=page_size,
-            total_items=total_count,
-            total_pages=total_pages,
-            has_next=page < total_pages,
-            has_previous=page > 1
-        )
-        
+
+        if cursor is not None:
+            # Cursor/infinite-scroll mode: there's no stable "page N of M"
+            # concept once new rows can be inserted between requests, so we
+            # only report whether another batch is available.
+            pagination = PaginationInfo(
+                page=page,
+                page_size=page_size,
+                total_items=len(articles),
+                total_pages=1,
+                has_next=next_cursor is not None,
+                has_previous=True,
+                next_cursor=next_cursor,
+            )
+        else:
+            total_pages = (total_count + page_size - 1) // page_size
+            pagination = PaginationInfo(
+                page=page,
+                page_size=page_size,
+                total_items=total_count,
+                total_pages=total_pages,
+                has_next=page < total_pages,
+                has_previous=page > 1,
+                next_cursor=next_cursor,
+            )
+
         return PaginatedResponse(
             data=articles,
             pagination=pagination
         )
-        
+
     except Exception as e:
         raise HTTPException(
             status_code=500,

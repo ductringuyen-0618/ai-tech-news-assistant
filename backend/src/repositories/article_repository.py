@@ -10,6 +10,7 @@ import json
 
 from ..models.article import Article, ArticleUpdate
 from ..core.exceptions import DatabaseError, NotFoundError
+from ..services.front_page_precompute import _credibility_score
 
 
 class ArticleRepository:
@@ -125,18 +126,25 @@ class ArticleRepository:
             except (json.JSONDecodeError, TypeError):
                 metadata = None
 
+        # schema A has 'source' TEXT; schema B has 'source_id' INTEGER FK.
+        # If only source_id is present we surface it as a string so the
+        # frontend has SOMETHING to render in the "source" chip.
+        source_value = _safe("source") or (
+            f"source#{row['source_id']}" if _safe("source_id") is not None else None
+        )
+
         return Article(
             id=row["id"],
             title=row["title"],
             url=row["url"],
             content=_safe("content"),
             summary=_safe("summary"),
-            # schema A has 'source' TEXT; schema B has 'source_id' INTEGER FK.
-            # If only source_id is present we surface it as a string so the
-            # frontend has SOMETHING to render in the "source" chip.
-            source=_safe("source")
-                   or (f"source#{row['source_id']}"
-                       if _safe("source_id") is not None else None),
+            source=source_value,
+            # Reuses the same per-source credibility tiering as the front
+            # page precompute pipeline (front_page_precompute._credibility_score)
+            # so the "credibility badge" is a real, consistent-across-the-app
+            # number instead of the old hardcoded 85% shown on every card.
+            credibility_score=_credibility_score(source_value or ""),
             author=_safe("author"),
             published_at=_safe("published_at"),
             categories=categories,
@@ -271,9 +279,30 @@ class ArticleRepository:
             cursor = conn.execute("UPDATE articles SET is_archived = TRUE WHERE id = ?", (article_id,))
             return cursor.rowcount > 0
     
-    async def list_articles(self, limit=50, offset=0, source=None, categories=None):
+    async def list_articles(
+        self,
+        limit=50,
+        offset=0,
+        source=None,
+        categories=None,
+        has_image=None,
+        cursor=None,
+        entity_ids=None,
+        query_text=None,
+    ):
         """List non-archived articles, optionally filtered by source and/or
         category tags.
+
+        ``query_text`` is a free-text substring match against title OR
+        content (case-insensitive). This is what the News Feed's search box
+        actually filters on -- previously the route accepted a query param
+        named ``author`` here but never passed it through to this method at
+        all, so typing in the search box silently did nothing. Results are
+        ranked so title matches sort ahead of content-only matches (a
+        passing mention buried in the body no longer ranks the same as an
+        article that's actually about the query term), and each
+        content-only match gets a ``matched_snippet`` excerpt on the
+        returned ``Article`` so the caller can show why it matched.
 
         ``categories`` is an iterable of category names to match against the
         article's stored ``categories`` JSON-array column. Matching is OR-ed
@@ -281,6 +310,30 @@ class ArticleRepository:
         listed categories to match) and is implemented with a JSON LIKE
         pattern that anchors on the quoted token so substring collisions
         (e.g. "AI" matching "AI/ML") don't false-positive.
+
+        ``has_image`` when True restricts to articles with a non-empty
+        ``image_url`` (used by the News Feed infinite-scroll, which only
+        ever renders cards that have art).
+
+        ``entity_ids`` restricts to articles that have at least one row in
+        ``entity_mentions`` for any of the given knowledge-graph entity ids
+        (OR-ed, same convention as ``categories``). This is the real,
+        DB-backed version of "show me articles about Company X" -- unlike
+        the old client-side title/summary substring match, it reflects
+        whatever the entity-extraction pass actually found, including
+        mentions buried in the article body. If the ``entity_mentions``
+        table doesn't exist yet (extraction has never run), the filter is
+        silently skipped rather than erroring.
+
+        ``cursor`` enables keyset pagination for infinite scroll: pass the
+        opaque string from a previous call's ``next_cursor`` to fetch the
+        next batch after it, ordered by (created_at, id) DESC so ties on an
+        identical ``created_at`` (common for articles ingested in the same
+        batch) still page deterministically instead of skipping/repeating
+        rows the way OFFSET would as new rows are inserted between requests.
+        When ``cursor`` is given, ``offset`` is ignored and the total count
+        query is skipped (unnecessary work for a scroll feed that never
+        needs "page N of M").
         """
         with sqlite3.connect(self.db_path) as conn:
             conn.row_factory = sqlite3.Row
@@ -288,6 +341,12 @@ class ArticleRepository:
             # Detect which schema is in play so the filter clauses don't
             # blow up on a column-doesn't-exist error.
             cols = {r[1] for r in conn.execute("PRAGMA table_info(articles)").fetchall()}
+            tables = {
+                r[0]
+                for r in conn.execute(
+                    "SELECT name FROM sqlite_master WHERE type = 'table'"
+                ).fetchall()
+            }
 
             # Build query with optional source + category filters
             base_query = "FROM articles WHERE is_archived = 0"
@@ -308,17 +367,163 @@ class ArticleRepository:
                     params.append(f'%"{c}"%')
                 base_query += " AND (" + " OR ".join(clauses) + ")"
 
+            eid_list = [e for e in (entity_ids or []) if e is not None]
+            if eid_list and "entity_mentions" in tables:
+                placeholders = ",".join("?" * len(eid_list))
+                base_query += (
+                    " AND id IN (SELECT article_id FROM entity_mentions "
+                    f"WHERE entity_id IN ({placeholders}))"
+                )
+                params.extend(eid_list)
+
+            q = (query_text or "").strip()
+            needle = None
+            if q and "content" in cols:
+                # Escape existing LIKE wildcards so a search for e.g. "50%"
+                # matches literally instead of acting as a wildcard.
+                escaped = q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+                base_query += (
+                    " AND (title LIKE ? ESCAPE '\\' OR content LIKE ? ESCAPE '\\')"
+                )
+                needle = f"%{escaped}%"
+                params.extend([needle, needle])
+
+            if has_image and "image_url" in cols:
+                base_query += " AND image_url IS NOT NULL AND image_url != ''"
+
+            # When searching, rank title matches ahead of content-only
+            # matches so a passing body mention doesn't rank identically to
+            # an article that's actually about the query term. Falls back
+            # to the normal recency order otherwise (and as the tiebreaker
+            # within each rank tier).
+            order_clause = "created_at DESC, id DESC"
+            order_params: list = []
+            if needle is not None:
+                order_clause = (
+                    "CASE WHEN title LIKE ? ESCAPE '\\' THEN 0 ELSE 1 END, "
+                    + order_clause
+                )
+                order_params = [needle]
+
+            if needle is not None:
+                # The keyset cursor below only orders on (created_at, id),
+                # but a search query's real ORDER BY prepends a title/content
+                # rank tier -- keyset paging against the wrong ordering
+                # silently drops rows (any content-only match newer than the
+                # last title match shown on a page never gets returned on
+                # any page, no error, nothing to notice). So when a search
+                # is active, page by a plain offset instead -- offset +
+                # ranking was verified correct, unlike keyset + ranking.
+                # The offset rides in the same opaque `cursor` string
+                # (prefixed so it's never confused with a real keyset
+                # cursor) so this stays a drop-in replacement for the
+                # frontend's existing infinite-scroll contract.
+                search_offset = 0
+                if cursor and cursor.startswith("search-offset::"):
+                    try:
+                        search_offset = max(0, int(cursor.split("::", 1)[1]))
+                    except (ValueError, IndexError):
+                        search_offset = 0
+
+                # Unlike the plain keyset-cursor path (which skips the count
+                # query since a scroll feed never needs "page N of M"), a
+                # search's first page is also how the News Feed's result
+                # count badge gets its number -- keep computing it here so
+                # switching search to offset-mode paging doesn't also break
+                # that badge.
+                count_query = f"SELECT COUNT(*) as count {base_query}"
+                total_count = conn.execute(count_query, params).fetchone()["count"]
+
+                query = f"SELECT * {base_query} ORDER BY {order_clause} LIMIT ? OFFSET ?"
+                rows = conn.execute(
+                    query, [*params, *order_params, limit, search_offset]
+                ).fetchall()
+                articles = [self._row_to_article(row) for row in rows]
+                self._attach_match_snippets(articles, rows, q)
+                next_cursor = (
+                    f"search-offset::{search_offset + limit}"
+                    if len(rows) == limit
+                    else None
+                )
+                return articles, total_count, next_cursor
+
+            cursor_created_at = None
+            cursor_id = None
+            if cursor:
+                try:
+                    cursor_created_at, cursor_id_str = cursor.split("::", 1)
+                    cursor_id = int(cursor_id_str)
+                except (ValueError, AttributeError):
+                    cursor_created_at = None
+                    cursor_id = None
+
+            if cursor_created_at is not None and cursor_id is not None:
+                # Keyset predicate: strictly "older" than the cursor row
+                # under the same (created_at DESC, id DESC) ordering used
+                # below, so no row is skipped or repeated across pages.
+                base_query += (
+                    " AND (created_at < ? OR (created_at = ? AND id < ?))"
+                )
+                params.extend([cursor_created_at, cursor_created_at, cursor_id])
+
+                query = f"SELECT * {base_query} ORDER BY {order_clause} LIMIT ?"
+                rows = conn.execute(query, [*params, *order_params, limit]).fetchall()
+                articles = [self._row_to_article(row) for row in rows]
+                self._attach_match_snippets(articles, rows, q)
+                next_cursor = self._next_cursor(rows, limit)
+                return articles, None, next_cursor
+
             # Get total count
             count_query = f"SELECT COUNT(*) as count {base_query}"
             total_count = conn.execute(count_query, params).fetchone()["count"]
 
             # Get articles with pagination
-            query = f"SELECT * {base_query} ORDER BY created_at DESC LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-            rows = conn.execute(query, params).fetchall()
+            query = f"SELECT * {base_query} ORDER BY {order_clause} LIMIT ? OFFSET ?"
+            rows = conn.execute(query, [*params, *order_params, limit, offset]).fetchall()
             articles = [self._row_to_article(row) for row in rows]
+            self._attach_match_snippets(articles, rows, q)
+            next_cursor = self._next_cursor(rows, limit)
 
-            return articles, total_count
+            return articles, total_count, next_cursor
+
+    @staticmethod
+    def _attach_match_snippets(articles, rows, query_text):
+        """Populate ``matched_snippet`` on each article for a content-only
+        search match (title didn't match the query, but content did).
+
+        No-op when ``query_text`` is empty. Title matches are left with
+        ``matched_snippet=None`` since the title itself already shows why
+        the article matched.
+        """
+        if not query_text:
+            return
+        q_lower = query_text.lower()
+        for article, row in zip(articles, rows):
+            title = (article.title or "")
+            if q_lower in title.lower():
+                continue
+            content = row["content"] or ""
+            idx = content.lower().find(q_lower)
+            if idx == -1:
+                continue
+            start = max(0, idx - 60)
+            end = min(len(content), idx + len(query_text) + 60)
+            snippet = content[start:end].strip()
+            prefix = "…" if start > 0 else ""
+            suffix = "…" if end < len(content) else ""
+            article.matched_snippet = f"{prefix}{snippet}{suffix}"
+
+    @staticmethod
+    def _next_cursor(rows, limit):
+        """Build the opaque keyset cursor for the row after ``rows``.
+
+        Returns None once a page comes back short (fewer rows than asked
+        for), which means the query has run out of matching articles.
+        """
+        if len(rows) < limit or not rows:
+            return None
+        last = rows[-1]
+        return f"{last['created_at']}::{last['id']}"
     
     async def search_articles(self, query, limit=50, offset=0):
         with sqlite3.connect(self.db_path) as conn:

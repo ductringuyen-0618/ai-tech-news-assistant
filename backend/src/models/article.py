@@ -53,6 +53,26 @@ class Article(ArticleBase):
     view_count: Optional[int] = Field(0, description="Number of times article has been viewed")
     embedding_generated: Optional[bool] = Field(False, description="Whether embedding has been generated")
     summary_generated: Optional[bool] = Field(False, description="Whether AI summary has been generated")
+    credibility_score: Optional[int] = Field(
+        None,
+        description=(
+            "Per-source credibility badge (0-100), same tiering logic as "
+            "the front-page precompute pipeline "
+            "(front_page_precompute._credibility_score). Not a per-article "
+            "score -- articles from the same source share the same value."
+        ),
+    )
+    matched_snippet: Optional[str] = Field(
+        None,
+        description=(
+            "Short excerpt (~100-150 chars) around the first search-query "
+            "match in the article body. Only populated by "
+            "ArticleRepository.list_articles when `query_text` is supplied "
+            "and the match was content-only (title didn't match), so the "
+            "caller can show *why* a result matched instead of just a bare "
+            "title/content substring hit."
+        ),
+    )
 
     model_config = {"from_attributes": True}
 

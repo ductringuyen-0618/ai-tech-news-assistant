@@ -64,6 +64,7 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
     <a
       data-testid="dense-article-row"
       data-slot="card"
+      data-article-id={article.id}
       href={article.url}
       target="_blank"
       rel="noopener noreferrer"

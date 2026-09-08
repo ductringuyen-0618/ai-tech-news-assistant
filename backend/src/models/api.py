@@ -55,6 +55,14 @@ class PaginationInfo(BaseModel):
     total_pages: int = Field(..., ge=0, description="Total number of pages")
     has_next: bool = Field(..., description="Whether there is a next page")
     has_previous: bool = Field(..., description="Whether there is a previous page")
+    next_cursor: Optional[str] = Field(
+        None,
+        description=(
+            "Opaque keyset cursor for the next batch (infinite-scroll feed). "
+            "Pass back as ?cursor=<value> to continue past this page without "
+            "an offset. Null when there are no more results."
+        ),
+    )
 
 
 class HealthCheck(BaseModel):

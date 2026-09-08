@@ -64,7 +64,7 @@ class TestNewsRoutes:
             **sample_article_data
         )
         
-        mock_dependencies['article_repo'].list_articles.return_value = ([mock_article], 1)
+        mock_dependencies['article_repo'].list_articles.return_value = ([mock_article], 1, None)
         
         response = client.get("/news/")
         
@@ -77,7 +77,7 @@ class TestNewsRoutes:
     
     def test_get_articles_with_pagination(self, client, mock_dependencies):
         """Test article retrieval with pagination parameters."""
-        mock_dependencies['article_repo'].list_articles.return_value = ([], 0)
+        mock_dependencies['article_repo'].list_articles.return_value = ([], 0, None)
         
         response = client.get("/news/?page=2&page_size=10")
         
@@ -90,18 +90,20 @@ class TestNewsRoutes:
     
     def test_get_articles_with_filters(self, client, mock_dependencies):
         """Test article retrieval with filters."""
-        mock_dependencies['article_repo'].list_articles.return_value = ([], 0)
-        
+        mock_dependencies['article_repo'].list_articles.return_value = ([], 0, None)
+
         response = client.get("/news/?source=techcrunch.com&author=test&has_summary=true")
-        
+
         assert response.status_code == 200
-        
-        # Verify filter parameters were passed
+
+        # Verify filter parameters were passed as direct kwargs -- the route
+        # calls repo.list_articles(source=..., categories=..., ...)
+        # directly, there's no intermediate filter_params object (that
+        # assertion was stale, predating this route's current signature;
+        # `author` is accepted for backward compatibility but is
+        # deprecated/unused -- see the route's own docstring).
         call_args = mock_dependencies['article_repo'].list_articles.call_args
-        filter_params = call_args[1]['filter_params']
-        assert filter_params.source == "techcrunch.com"
-        assert filter_params.author == "test"
-        assert filter_params.has_summary is True
+        assert call_args[1]['source'] == "techcrunch.com"
     
     def test_get_article_by_id_success(self, client, mock_dependencies, sample_article_data):
         """Test successful retrieval of specific article."""

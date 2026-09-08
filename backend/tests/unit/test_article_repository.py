@@ -138,8 +138,8 @@ class TestArticleRepository:
             )
             await repository.create(article_data)
         
-        articles, total_count = await repository.list_articles(limit=10, offset=0)
-        
+        articles, total_count, _ = await repository.list_articles(limit=10, offset=0)
+
         assert len(articles) == 3
         assert total_count == 3
         assert all(article.id is not None for article in articles)
@@ -155,12 +155,12 @@ class TestArticleRepository:
             await repository.create(article_data)
         
         # Get first page
-        articles, total_count = await repository.list_articles(limit=2, offset=0)
+        articles, total_count, _ = await repository.list_articles(limit=2, offset=0)
         assert len(articles) == 2
         assert total_count == 5
-        
+
         # Get second page
-        articles, total_count = await repository.list_articles(limit=2, offset=2)
+        articles, total_count, _ = await repository.list_articles(limit=2, offset=2)
         assert len(articles) == 2
         assert total_count == 5
     
@@ -176,8 +176,8 @@ class TestArticleRepository:
             await repository.create(article_data)
         
         ArticleSearchRequest(source="source1.com")
-        articles, total_count = await repository.list_articles(source="source1.com")
-        
+        articles, total_count, _ = await repository.list_articles(source="source1.com")
+
         assert len(articles) == 2
         assert total_count == 2
         assert all(article.source == "source1.com" for article in articles)
@@ -198,6 +198,160 @@ class TestArticleRepository:
         assert len(results) == 1
         assert "AI Technology News" in results[0].title
     
+    @pytest.mark.asyncio
+    async def test_list_articles_search_ranks_title_match_above_content_only(
+        self, repository, sample_article_data
+    ):
+        """A title match should rank ahead of a content-only match, and the
+        content-only match should carry a matched_snippet excerpt."""
+        content_only = ArticleCreate(
+            **{
+                **sample_article_data,
+                "url": "https://example.com/content-only",
+                "title": "Completely Unrelated Headline",
+                "content": (
+                    "Some long article body that happens to mention "
+                    "OpenAI once in passing, buried in the middle of "
+                    "otherwise unrelated text about something else entirely."
+                ),
+            }
+        )
+        title_match = ArticleCreate(
+            **{
+                **sample_article_data,
+                "url": "https://example.com/title-match",
+                "title": "OpenAI Ships New Model",
+                "content": "Details about the launch.",
+            }
+        )
+        # Create content-only match first so recency ordering alone
+        # wouldn't explain a title-match-first result.
+        await repository.create(content_only)
+        await repository.create(title_match)
+
+        articles, total_count, _ = await repository.list_articles(
+            query_text="OpenAI"
+        )
+
+        assert total_count == 2
+        assert articles[0].title == "OpenAI Ships New Model"
+        assert articles[0].matched_snippet is None
+        assert articles[1].title == "Completely Unrelated Headline"
+        assert articles[1].matched_snippet is not None
+        assert "OpenAI" in articles[1].matched_snippet
+
+    @pytest.mark.asyncio
+    async def test_list_articles_search_cursor_pagination_does_not_drop_results(
+        self, repository, sample_article_data
+    ):
+        """Regression test: paging a search query by cursor must not
+        silently drop content-only matches that are newer than the last
+        title match shown on an earlier page.
+
+        The search ORDER BY ranks title matches (tier 0) ahead of all
+        content-only matches (tier 1) regardless of created_at. A keyset
+        cursor that only knows about (created_at, id) has no notion of
+        that tier, so once a page ends on a tier-0 row, its predicate
+        wrongly excludes every row with created_at >= that row's, even
+        tier-1 rows that legitimately belong later in the correctly
+        ordered result set. Fixed by paging search results by plain
+        offset instead of keyset cursor.
+        """
+        # 2 title matches + 4 content-only matches, all mentioning
+        # "OpenAI" -- created in this order so title matches land among
+        # the newest rows and content-only matches span both older and
+        # newer than them, which is what triggers the drop.
+        for i in range(2):
+            await repository.create(
+                ArticleCreate(
+                    **{
+                        **sample_article_data,
+                        "url": f"https://example.com/content-{i}",
+                        "title": f"Unrelated Headline {i}",
+                        "content": f"Body text mentioning OpenAI in passing, item {i}.",
+                    }
+                )
+            )
+        for i in range(2):
+            await repository.create(
+                ArticleCreate(
+                    **{
+                        **sample_article_data,
+                        "url": f"https://example.com/title-{i}",
+                        "title": f"OpenAI Announcement {i}",
+                        "content": "Launch details.",
+                    }
+                )
+            )
+        for i in range(2, 4):
+            await repository.create(
+                ArticleCreate(
+                    **{
+                        **sample_article_data,
+                        "url": f"https://example.com/content-{i}",
+                        "title": f"Unrelated Headline {i}",
+                        "content": f"Body text mentioning OpenAI in passing, item {i}.",
+                    }
+                )
+            )
+
+        seen_urls: set[str] = set()
+        cursor = None
+        for _ in range(10):  # generous upper bound on page count
+            articles, _, cursor = await repository.list_articles(
+                query_text="OpenAI", limit=2, cursor=cursor
+            )
+            seen_urls.update(a.url for a in articles)
+            if cursor is None:
+                break
+
+        assert len(seen_urls) == 6, (
+            "Paging through all pages of a search query should surface "
+            f"every matching article exactly once; got {len(seen_urls)}: {seen_urls}"
+        )
+
+    @pytest.mark.asyncio
+    async def test_create_article_has_credibility_score(
+        self, repository, sample_article_data
+    ):
+        """Every article should get a real per-source credibility_score
+        (0-100) instead of a hardcoded/missing value."""
+        article_data = ArticleCreate(**sample_article_data)
+
+        result = await repository.create(article_data)
+
+        assert result.credibility_score is not None
+        assert 0 <= result.credibility_score <= 100
+
+    @pytest.mark.asyncio
+    async def test_credibility_score_varies_by_source(
+        self, repository, sample_article_data
+    ):
+        """credibility_score must actually vary by source tier, not just
+        fall in [0, 100] -- that range alone wouldn't catch a regression
+        back to a flat hardcoded value (e.g. the old flat 85)."""
+        high_tier = await repository.create(
+            ArticleCreate(
+                **{
+                    **sample_article_data,
+                    "url": "https://example.com/high-tier",
+                    "source": "MIT Technology Review",
+                }
+            )
+        )
+        low_tier = await repository.create(
+            ArticleCreate(
+                **{
+                    **sample_article_data,
+                    "url": "https://example.com/low-tier",
+                    "source": "Some Unranked Blog",
+                }
+            )
+        )
+
+        assert high_tier.credibility_score != low_tier.credibility_score
+        assert high_tier.credibility_score > low_tier.credibility_score
+
     @pytest.mark.asyncio
     async def test_get_articles_without_embeddings(self, repository, sample_article_data):
         """Test retrieving articles without embeddings."""

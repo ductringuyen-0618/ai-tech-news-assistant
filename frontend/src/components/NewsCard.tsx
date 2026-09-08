@@ -29,19 +29,14 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
  *   - data-testid="news-card-save-btn"
  *
  * Linear-dense threshold notes (news-feed.spec.ts ~L166):
- *   The spec asserts `titleSize <= 16px` and `padding <= 14px` on the
- *   FIRST `[data-slot="card"]` in the DOM. Outer padding stays p-3
- *   (12px) -- well under the ceiling. The title is 22px, which DOES
- *   exceed 16px, but the LeadStoryCard is rendered first in the feed
- *   and intentionally OMITS data-slot="card-title" so the spec's
- *   `card.querySelector("[data-slot=card-title]")` resolves to null,
- *   the `titleSize ?? 0` fallback evaluates to 0, and the threshold
- *   passes. The secondary cards still ship data-slot="card-title" so
- *   the duplicate-titles and no-seed-data rubric checks still cover
- *   the full set of titles.
+ *   The feed no longer opens with an oversized LeadStoryCard -- every
+ *   article, including the first, renders as this same NewsCard. The
+ *   spec's `titleSize <= 16px` assertion on the first `[data-slot="card"]`
+ *   may need updating to match this card's actual 18px title.
  */
 
 const SAVED_ARTICLES_KEY = "techpulse-saved-articles";
+const READ_ARTICLES_KEY = "techpulse-read-articles";
 
 function readSavedSet(): Set<string> {
   try {
@@ -58,6 +53,29 @@ function readSavedSet(): Set<string> {
 function persistSavedSet(set: Set<string>): void {
   try {
     localStorage.setItem(SAVED_ARTICLES_KEY, JSON.stringify(Array.from(set)));
+  } catch {
+    /* ignore quota / privacy errors */
+  }
+}
+
+function readReadSet(): Set<string> {
+  try {
+    const raw = localStorage.getItem(READ_ARTICLES_KEY);
+    if (!raw) return new Set<string>();
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return new Set(parsed.map(String));
+    return new Set<string>();
+  } catch {
+    return new Set<string>();
+  }
+}
+
+function markRead(articleId: string): void {
+  try {
+    const set = readReadSet();
+    if (set.has(articleId)) return;
+    set.add(articleId);
+    localStorage.setItem(READ_ARTICLES_KEY, JSON.stringify(Array.from(set)));
   } catch {
     /* ignore quota / privacy errors */
   }
@@ -92,6 +110,9 @@ interface NewsCardProps {
     trending: boolean;
     credibilityScore?: number;
     sourcesUsed?: string[];
+    /** Backend-provided excerpt around the search match, present only
+     *  when a search query is active. Rendered under the headline. */
+    matchedSnippet?: string;
   };
   viewMode: "compact" | "detailed";
 }
@@ -99,10 +120,17 @@ interface NewsCardProps {
 export function NewsCard({ article, viewMode }: NewsCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
+  const [isRead, setIsRead] = useState<boolean>(false);
 
   useEffect(() => {
     setIsSaved(readSavedSet().has(String(article.id)));
+    setIsRead(readReadSet().has(String(article.id)));
   }, [article.id]);
+
+  const markAsRead = () => {
+    markRead(String(article.id));
+    setIsRead(true);
+  };
 
   const toggleSaved = () => {
     const next = readSavedSet();
@@ -141,43 +169,69 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
   const expandedBody =
     fullBody.length > 1800 ? fullBody.slice(0, 1800).trimEnd() + "..." : fullBody;
 
+  // "Why this was surfaced" -- honest, derived only from fields actually
+  // present on the article. Trending (backed by source count when we have
+  // it) beats a plain topic match; topic match beats nothing.
+  const sourceCount = article.sourcesUsed?.length ?? 0;
+  const surfacedReason = article.trending
+    ? sourceCount > 1
+      ? `Trending — mentioned in ${sourceCount} sources`
+      : "Trending now"
+    : article.category[0]
+      ? `Matches your ${article.category[0]} interest`
+      : null;
+
+  const shareUrl = encodeURIComponent(article.url);
+  const shareText = encodeURIComponent(article.title);
+
   return (
     <article
       data-slot="card"
       data-testid="news-card"
-      className="group relative p-3 bg-[var(--background-tint)] border border-transparent hover:border-[var(--rule)] rounded-lg transition-colors"
+      data-read={isRead || undefined}
+      data-article-id={article.id}
+      className={`group relative p-3 bg-[var(--background-tint)] border border-transparent hover:border-[var(--rule)] rounded-lg transition-colors ${
+        isRead ? "opacity-60 hover:opacity-100" : ""
+      }`}
     >
       {/* Image — 16:10, soft tinted fallback frame, rounded corners.
-          (REDESIGN Phase D: dropped the black letterbox + mono "[ no image ]"
-          pill in favor of a quiet sub-tint placeholder.) */}
-      <div className="relative aspect-[16/10] bg-[var(--background-deep)] overflow-hidden mb-3 rounded-md">
-        {article.imageUrl ? (
+          Omitted entirely (no empty placeholder box) when the article
+          has no image -- the save button moves into the eyebrow row
+          instead so it's still reachable. */}
+      {article.imageUrl && (
+        <div className="relative aspect-[16/10] bg-[var(--background-deep)] overflow-hidden mb-3 rounded-md">
           <ImageWithFallback
             src={article.imageUrl}
             alt={article.title}
             className="w-full h-full object-cover"
           />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <span className="text-[11px] text-foreground-mute">no image</span>
-          </div>
-        )}
-        <button
-          type="button"
-          data-testid="news-card-save-btn"
-          onClick={toggleSaved}
-          aria-label={isSaved ? "Unsave article" : "Save article"}
-          aria-pressed={isSaved}
-          className="absolute top-2 right-2 text-[11px] font-medium px-2.5 py-1 bg-background/90 backdrop-blur border border-[var(--rule)] text-foreground hover:bg-background rounded-md transition-colors"
-        >
-          {isSaved ? "Saved" : "Save"}
-        </button>
-      </div>
+          <button
+            type="button"
+            data-testid="news-card-save-btn"
+            onClick={toggleSaved}
+            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-pressed={isSaved}
+            className="absolute top-2 right-2 text-[11px] font-medium px-2.5 py-1 bg-background/90 backdrop-blur border border-[var(--rule)] text-foreground hover:bg-background rounded-md transition-colors"
+          >
+            {isSaved ? "Saved" : "Save"}
+          </button>
+        </div>
+      )}
 
       {/* Source eyebrow -- TechCrunch . 4h ago . v85. The .text-gray-500
           class is preserved so news-feed.spec.ts source-name assertions
           (which scope to that class) keep working. */}
       <div className="font-mono-tx text-[11px] uppercase-eyebrow flex items-center gap-2 mb-2">
+        {isRead && (
+          <span
+            data-testid="news-card-read-indicator"
+            title="Already opened"
+            aria-label="Already opened"
+            className="text-foreground-mute"
+          >
+            {'✓'}
+          </span>
+        )}
         <span className="text-gray-500 uppercase-eyebrow">{article.source}</span>
         <span className="text-foreground-soft">.</span>
         <span className="text-foreground-soft">{timeAgo(article.publishedAt)}</span>
@@ -187,13 +241,56 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             <span className="text-foreground-soft">v{article.credibilityScore}</span>
           </>
         )}
+        {!article.imageUrl && (
+          <button
+            type="button"
+            data-testid="news-card-save-btn"
+            onClick={toggleSaved}
+            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-pressed={isSaved}
+            className="ml-auto text-[11px] font-medium px-2.5 py-1 border border-[var(--rule)] text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
+          >
+            {isSaved ? "Saved" : "Save"}
+          </button>
+        )}
       </div>
+
+      {/* "Why this was surfaced" chip -- honest, derived from real article
+          fields (trending + source count, else topic match). Replaces
+          relying solely on the bare credibility/relevance number above. */}
+      {surfacedReason && (
+        <div
+          data-testid="news-card-surfaced-reason"
+          title={surfacedReason}
+          className="inline-flex items-center gap-1 mb-2 px-2 py-0.5 text-[10px] font-mono-tx uppercase tracking-wide text-foreground-soft bg-background/60 border border-[var(--rule)] rounded-full w-fit"
+        >
+          {surfacedReason}
+        </div>
+      )}
 
       {/* Title — Geist 18 px in Atelier (was Fraunces 22 px). Hover flips
           to underlined foreground. data-slot="card-title" preserved for
-          the duplicate-titles / no-seed-data rubric checks. */}
+          the duplicate-titles / no-seed-data rubric checks.
+
+          Opening the in-app reader is wired via delegated onClick on
+          App.tsx's <main> (keyed off this data-slot), which only ever
+          fires on a real mouse/pointer click — a plain <h2> has no
+          native keyboard interactivity, so this was unreachable for
+          keyboard/screen-reader users. role="button" + tabIndex + an
+          Enter/Space handler that synthesizes a click makes it operable
+          without duplicating the article-id lookup logic that already
+          lives in App.tsx's handler. */}
       <h2
         data-slot="card-title"
+        role="button"
+        tabIndex={0}
+        aria-label={`Open "${article.title}" in the article reader`}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            e.currentTarget.click();
+          }
+        }}
         style={{
           overflowWrap: "anywhere",
           wordBreak: "break-word",
@@ -201,11 +298,25 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           lineHeight: 1.3,
           letterSpacing: "-0.02em",
           fontWeight: 600,
+          cursor: "pointer",
         }}
-        className="font-display text-foreground mb-2 line-clamp-2 group-hover:underline"
+        className="font-display text-foreground mb-2 line-clamp-2 group-hover:underline card-title-focus-ring"
       >
         {article.title}
       </h2>
+
+      {/* Search-match excerpt -- only present while a search query is
+          active (see App.tsx's mapApiArticle). Sits between the headline
+          and the regular summary so it reads as "why this matched". */}
+      {article.matchedSnippet && (
+        <p
+          data-testid="news-card-matched-snippet"
+          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+          className="text-[13px] italic leading-[1.5] text-signal mb-2 line-clamp-2"
+        >
+          &hellip;{article.matchedSnippet}&hellip;
+        </p>
+      )}
 
       {/* Summary — clean Geist 14 px body, muted ink, line-clamped. */}
       {article.summaryShort ? (
@@ -270,7 +381,10 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           ) : (
             <button
               type="button"
-              onClick={() => setExpanded(true)}
+              onClick={() => {
+                setExpanded(true);
+                markAsRead();
+              }}
               className="w-full text-[12px] text-foreground-soft hover:text-foreground py-1 underline-offset-4 hover:underline"
             >
               Read More
@@ -299,16 +413,43 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             </span>
           )}
         </div>
-        <a
-          data-testid="news-card-read-more"
-          href={article.url}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex items-center gap-1 font-medium hover:underline"
-          style={{ color: "var(--accent-signal)" }}
-        >
-          read at {hostname(article.url)} {'\u2192'}
-        </a>
+        <div className="flex items-center gap-2">
+          <a
+            data-testid="news-card-share-x"
+            href={`https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share on X"
+            title="Share on X"
+            onClick={(e) => e.stopPropagation()}
+            className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors font-mono-tx"
+          >
+            X
+          </a>
+          <a
+            data-testid="news-card-share-linkedin"
+            href={`https://www.linkedin.com/sharing/share-offsite/?url=${shareUrl}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Share on LinkedIn"
+            title="Share on LinkedIn"
+            onClick={(e) => e.stopPropagation()}
+            className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors font-mono-tx"
+          >
+            in
+          </a>
+          <a
+            data-testid="news-card-read-more"
+            href={article.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={markAsRead}
+            className="inline-flex items-center gap-1 font-medium hover:underline"
+            style={{ color: "var(--accent-signal)" }}
+          >
+            read at {hostname(article.url)} {'\u2192'}
+          </a>
+        </div>
       </div>
     </article>
   );

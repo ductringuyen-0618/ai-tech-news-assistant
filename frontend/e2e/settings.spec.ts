@@ -232,14 +232,14 @@ test.describe("rubric â€” Settings persistence (category 5)", () => {
 });
 
 // ---------------------------------------------------------------------------
-// M3.M4 — Theme toggle in Settings flips the <html class="dark"> attribute.
+// M3.M4 ï¿½ Theme toggle in Settings flips the <html class="dark"> attribute.
 // Asserts:
 //   1. Settings tab renders Appearance card with Dark / Light radios.
 //   2. Clicking Light removes the `dark` class from <html>.
 //   3. Clicking Dark adds it back. Both writes persist to localStorage.
 // ---------------------------------------------------------------------------
 
-test.describe("M3.M4 — Settings theme toggle", () => {
+test.describe("M3.M4 ï¿½ Settings theme toggle", () => {
   test("dark/light radios in Appearance card flip <html class='dark'> and persist", async ({
     page,
   }) => {
@@ -254,7 +254,7 @@ test.describe("M3.M4 — Settings theme toggle", () => {
     // Appearance card should be visible.
     await expect(page.getByText(/^Appearance$/i)).toBeVisible({ timeout: 10_000 });
 
-    // Force a known starting state — pick Dark explicitly.
+    // Force a known starting state ï¿½ pick Dark explicitly.
     await page.getByTestId("settings-theme-dark").click();
     await expect
       .poll(async () =>
@@ -262,7 +262,7 @@ test.describe("M3.M4 — Settings theme toggle", () => {
       )
       .toBe(true);
 
-    // Pick Light — html should drop the dark class.
+    // Pick Light ï¿½ html should drop the dark class.
     await page.getByTestId("settings-theme-light").click();
     await expect
       .poll(async () =>
@@ -270,7 +270,7 @@ test.describe("M3.M4 — Settings theme toggle", () => {
       )
       .toBe(false);
 
-    // Reload — light should persist via localStorage.
+    // Reload ï¿½ light should persist via localStorage.
     await page.reload();
     await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
     const stillLight = await page.evaluate(() =>
@@ -310,9 +310,11 @@ test.describe("M3.M4 — Settings theme toggle", () => {
     );
     expect(stored2).toBe("comfortable");
 
-    // Helper text — explicit deferred-behavior note.
-    await expect(
-      page.getByText(/Density behavior coming in a future release/i)
-    ).toBeVisible();
+    // Density is now live (read by UnifiedFeedView.tsx), so it is also
+    // written to the newer preference key alongside the legacy one.
+    const preference = await page.evaluate(() =>
+      localStorage.getItem("techpulse-density-preference")
+    );
+    expect(preference).toBe("comfortable");
   });
 });

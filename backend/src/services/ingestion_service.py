@@ -139,6 +139,45 @@ class IngestionService:
             "url": "https://www.technologyreview.com/feed/",
             "category": "AI/ML",
         },
+        # The feeds below fill in topic chips that previously had zero
+        # ingested articles (only AI/ML, Cloud, and Hardware were populated).
+        # Each was hand-verified to return a valid RSS document before being
+        # added here.
+        {
+            "name": "The Hacker News",
+            "url": "https://feeds.feedburner.com/TheHackersNews",
+            "category": "Security",
+        },
+        {
+            "name": "IEEE Spectrum Robotics",
+            "url": "https://spectrum.ieee.org/feeds/topic/robotics.rss",
+            "category": "Robotics",
+        },
+        {
+            "name": "STAT News",
+            "url": "https://www.statnews.com/feed/",
+            "category": "Healthcare",
+        },
+        {
+            "name": "Breaking Defense",
+            "url": "https://breakingdefense.com/feed/",
+            "category": "Military Tech",
+        },
+        {
+            "name": "GEN - Genetic Engineering & Biotechnology News",
+            "url": "https://www.genengnews.com/feed/",
+            "category": "Biotech",
+        },
+        {
+            "name": "The Quantum Insider",
+            "url": "https://thequantuminsider.com/feed/",
+            "category": "Quantum Computing",
+        },
+        {
+            "name": "IEEE Spectrum AI",
+            "url": "https://spectrum.ieee.org/feeds/topic/artificial-intelligence.rss",
+            "category": "AI Agents",
+        },
     ]
     
     def __init__(self, db: Session, batch_size: int = 5, timeout: int = 30):
@@ -293,6 +332,49 @@ class IngestionService:
         # Collapse runs of whitespace (incl. newlines) into single spaces.
         return re.sub(r"\s+", " ", decoded).strip()
 
+    # hnrss.org embeds "Article URL: ... / Comments URL: ... / Points: N /
+    # # Comments: M" as literal <p> paragraphs inside every entry's
+    # description. Left as-is, that boilerplate was leaking verbatim into
+    # the article content/summary and rendering unstyled in the UI. We
+    # parse it into structured fields (points/comments_count/comments_url)
+    # and strip it out of the stored content instead.
+    _HN_FIELD_RE = re.compile(
+        r"<p>\s*(Article URL|Comments URL|Points|#\s*Comments)\s*:\s*(.*?)</p>",
+        re.IGNORECASE | re.DOTALL,
+    )
+
+    @classmethod
+    def _extract_hn_metadata(cls, raw_description: Optional[str]) -> Dict[str, Any]:
+        """Pull HN's points / comment count / comments URL out of the raw description."""
+        if not raw_description:
+            return {}
+
+        metadata: Dict[str, Any] = {}
+        for label, value in cls._HN_FIELD_RE.findall(raw_description):
+            label_norm = re.sub(r"\s+", " ", label).strip().lower()
+            text_value = cls._clean_text(value)
+
+            if label_norm == "points":
+                try:
+                    metadata["hn_points"] = int(text_value)
+                except ValueError:
+                    pass
+            elif label_norm == "# comments":
+                try:
+                    metadata["hn_comments_count"] = int(text_value)
+                except ValueError:
+                    pass
+            elif label_norm == "comments url":
+                link_match = re.search(r'href=["\']([^"\']+)["\']', value)
+                metadata["hn_comments_url"] = link_match.group(1) if link_match else text_value
+
+        return metadata
+
+    @classmethod
+    def _strip_hn_boilerplate(cls, raw_description: str) -> str:
+        """Remove the Article/Comments URL + Points + # Comments paragraphs."""
+        return cls._HN_FIELD_RE.sub("", raw_description)
+
     @staticmethod
     def _extract_image_url(entry: Any, description: Optional[str]) -> Optional[str]:
         """
@@ -385,6 +467,23 @@ class IngestionService:
         raw_description = (entry.get("summary") or "").strip()
         image_url = self._extract_image_url(entry, raw_description)
 
+        # Hacker News (hnrss.org) embeds "Article URL / Comments URL / Points
+        # / # Comments" boilerplate in every entry's description. Parse it
+        # into structured metadata and strip it before it ever reaches
+        # ``content``/``summary`` — see ``_extract_hn_metadata`` for why.
+        #
+        # Gated on the exact source name (not just "did the regex match")
+        # -- a non-HN article whose body happens to contain a paragraph
+        # starting with "Points: ..." (e.g. a listicle-style gadget review)
+        # would otherwise have that paragraph silently deleted. Exact-name
+        # gate also correctly excludes "The Hacker News" (a distinct
+        # cybersecurity publication feed, unrelated to hnrss.org).
+        hn_metadata: Dict[str, Any] = {}
+        if source_name == "Hacker News":
+            hn_metadata = self._extract_hn_metadata(raw_description)
+            if hn_metadata:
+                raw_description = self._strip_hn_boilerplate(raw_description)
+
         # Decode HTML entities + strip tags up-front so what we store is what
         # the user will see in the UI — no more ``&#8217;`` showing up as
         # literal text in cards/digest.
@@ -458,34 +557,30 @@ class IngestionService:
         )
         try:
             self.db.flush()
-            # Always write source + image_url; conditionally write categories.
-            # We use a single UPDATE because the ``image_url`` column was added
-            # via lightweight migration and isn't on the SQLAlchemy ``Article``
-            # model here. Wrapped in try/except so a missing column on a stale
-            # DB schema (or any other transient failure) never aborts the
-            # ingestion of a whole entry.
+            # Always write source + image_url; conditionally write categories
+            # and (for HN entries) structured points/comments metadata. We
+            # use a single dynamic UPDATE because the ``image_url``/``metadata``
+            # columns were added via lightweight migration and aren't on the
+            # SQLAlchemy ``Article`` model here. Wrapped in try/except so a
+            # missing column on a stale DB schema (or any other transient
+            # failure) never aborts the ingestion of a whole entry.
+            set_clauses = ["source = :src", "image_url = :img"]
             params: Dict[str, Any] = {
                 "src": source_name,
                 "img": image_url,
                 "id": article.id,
             }
             if category_name:
+                set_clauses.append("categories = :cats")
                 params["cats"] = json.dumps([category_name])
-                self.db.execute(
-                    text(
-                        "UPDATE articles SET categories = :cats, source = :src, "
-                        "image_url = :img WHERE id = :id"
-                    ),
-                    params,
-                )
-            else:
-                self.db.execute(
-                    text(
-                        "UPDATE articles SET source = :src, image_url = :img "
-                        "WHERE id = :id"
-                    ),
-                    params,
-                )
+            if hn_metadata:
+                set_clauses.append("metadata = :meta")
+                params["meta"] = json.dumps(hn_metadata)
+
+            self.db.execute(
+                text(f"UPDATE articles SET {', '.join(set_clauses)} WHERE id = :id"),
+                params,
+            )
         except Exception as e:
             # Don't let an UPDATE failure abort the whole entry — the row will
             # just be returned with categories=NULL / image_url=NULL, which is

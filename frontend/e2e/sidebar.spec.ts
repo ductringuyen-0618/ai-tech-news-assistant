@@ -25,7 +25,6 @@ import { test, expect } from "@playwright/test";
 const NAV_LABELS: Array<{ matcher: RegExp | string; exact?: boolean }> = [
   { matcher: /News Feed/i },
   { matcher: /Research/i },
-  { matcher: /Knowledge/i },
   { matcher: /Digest/i },
   { matcher: "Saved", exact: true },
   { matcher: /Settings/i },
@@ -51,11 +50,11 @@ test.describe("Mission 3 / M1 — Sidebar + theme + Cmd+K palette", () => {
       await expect(tab, `Tab "${matcher}" should be visible`).toBeVisible();
     }
 
-    // At least 6 entries — News Feed, Research, Knowledge, Digest, Saved,
-    // Settings. (Polish iter 3 removed the Ask AI tab, leaving 6 — still
-    // satisfying the "6 or more" contract.)
+    // At least 5 entries — News Feed, Research, Digest, Saved, Settings.
+    // (Knowledge Graph tab was cut; entity filtering moved into the Feed
+    // toolbar's EntitySearch instead.)
     const tabCount = await page.getByRole("tab").count();
-    expect(tabCount).toBeGreaterThanOrEqual(6);
+    expect(tabCount).toBeGreaterThanOrEqual(5);
   });
 
   test("theme toggle flips <html class=\"dark\"> and persists across reload", async ({
@@ -193,5 +192,40 @@ test.describe("Mission 3 / M1 — Sidebar + theme + Cmd+K palette", () => {
 
     // The palette itself should have closed.
     await expect(paletteInput).toBeHidden();
+  });
+
+  test("sidebar does not permanently occupy ~40%+ of a mobile viewport", async ({
+    page,
+  }) => {
+    // Regression test for review-07: "Sidebar.tsx is a fixed w-72, no
+    // breakpoint/collapse/hamburger; would eat ~40%+ of a 375px viewport."
+    // A separate agent is wiring the existing (unused) ui/sidebar.tsx +
+    // use-mobile.ts hook into Sidebar.tsx concurrently with this test
+    // being written, so the exact collapse mechanism (hidden rail,
+    // off-canvas drawer, hamburger overlay, etc.) isn't knowable here.
+    //
+    // Instead of asserting on a specific toggle selector that might not
+    // match the final implementation, this asserts the implementation-
+    // agnostic contract: on a narrow viewport the main content area must
+    // get most of the screen width back, rather than ceding a fixed
+    // ~288px (w-72) column to the sidebar permanently. `[data-slot=
+    // "main-content"]` is the stable <main> hook App.tsx already exposes.
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto("/");
+    await expect(
+      page.getByRole("heading", { name: /TechPulse AI/i })
+    ).toBeVisible({ timeout: 15_000 });
+
+    const main = page.locator('[data-slot="main-content"]');
+    await expect(main).toBeVisible();
+
+    const mainWidth = await main.evaluate(
+      (el) => el.getBoundingClientRect().width
+    );
+
+    expect(
+      mainWidth,
+      `Main content was only ${mainWidth}px wide on a 375px viewport â€” the sidebar appears to still be a permanent fixed-width column instead of collapsing on mobile`
+    ).toBeGreaterThanOrEqual(375 * 0.75);
   });
 });

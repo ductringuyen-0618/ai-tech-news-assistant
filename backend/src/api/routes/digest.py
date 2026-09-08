@@ -221,15 +221,28 @@ async def get_daily_summary() -> Dict[str, Any]:
         if cached is not None:
             return cached
 
-        payload = await _build_daily_summary()
-        _DAILY_SUMMARY_CACHE[today] = payload
+        payload, cacheable = await _build_daily_summary()
+        if cacheable:
+            _DAILY_SUMMARY_CACHE[today] = payload
+        else:
+            logger.warning(
+                "daily-summary: serving fallback for %s without caching it "
+                "(LLM call failed or returned empty); next request will "
+                "retry the LLM.",
+                today,
+            )
         return payload
 
 
-async def _build_daily_summary() -> Dict[str, Any]:
+async def _build_daily_summary() -> Tuple[Dict[str, Any], bool]:
     """Pull recent articles, build a prompt, call Ollama, return the payload.
 
     Falls back to a static message if there aren't enough fresh articles.
+
+    Returns ``(payload, cacheable)`` — ``cacheable`` is False when the
+    payload is a fallback produced by an LLM failure/empty response, so the
+    caller does not poison ``_DAILY_SUMMARY_CACHE`` with a transient error
+    for the rest of the UTC day.
     """
     db_path = _resolve_db_path()
     now = datetime.now(timezone.utc)
@@ -281,7 +294,7 @@ async def _build_daily_summary() -> Dict[str, Any]:
             "summary": "Not enough articles in the past 24 hours to summarize.",
             "generated_at": now.isoformat(),
             "article_count": article_count,
-        }
+        }, True
 
     # Build the prompt body. Use each article's summary if present, otherwise
     # the first ~400 chars of content. We pass title + body so the LLM can
@@ -321,10 +334,14 @@ async def _build_daily_summary() -> Dict[str, Any]:
         summary_text = (result.summary or "").strip()
     except Exception as exc:  # noqa: BLE001 — LLM is best-effort
         logger.warning(
-            "daily-summary LLM call failed; returning fallback. err=%s", exc
+            "daily-summary LLM call failed; returning fallback (not cached). "
+            "err=%s",
+            exc,
         )
-        # Don't fail the endpoint just because Ollama is down — return a
-        # graceful fallback so the UI still renders.
+        # Don't fail the endpoint just because Ollama/Groq is down — return a
+        # graceful fallback so the UI still renders. Not cacheable: a later
+        # request should retry the LLM instead of being stuck with this for
+        # the rest of the UTC day.
         return {
             "summary": (
                 "Today's tech news is loading. The AI summary is temporarily "
@@ -332,9 +349,13 @@ async def _build_daily_summary() -> Dict[str, Any]:
             ),
             "generated_at": now.isoformat(),
             "article_count": article_count,
-        }
+        }, False
 
     if not summary_text:
+        logger.warning(
+            "daily-summary LLM returned an empty summary; returning "
+            "fallback (not cached)."
+        )
         return {
             "summary": (
                 "Today's tech news is loading. The AI summary is temporarily "
@@ -342,13 +363,13 @@ async def _build_daily_summary() -> Dict[str, Any]:
             ),
             "generated_at": now.isoformat(),
             "article_count": article_count,
-        }
+        }, False
 
     return {
         "summary": summary_text,
         "generated_at": now.isoformat(),
         "article_count": article_count,
-    }
+    }, True
 
 
 # ---------------------------------------------------------------------------
@@ -442,7 +463,7 @@ async def get_curated_headlines() -> Dict[str, Any]:
             con.row_factory = sqlite3.Row
             rows = con.execute(
                 "SELECT id, title, source, summary, content, url, image_url, "
-                "       categories, published_at, created_at "
+                "       categories, published_at, created_at, metadata "
                 "FROM articles "
                 "WHERE is_archived = 0 "
                 "  AND COALESCE(published_at, created_at) >= ? "
@@ -505,23 +526,37 @@ async def get_curated_headlines() -> Dict[str, Any]:
         if not summary and r["content"]:
             summary = r["content"][:280] + "..."
 
-        scored.append(
-            (
-                score,
-                {
-                    "id": int(r["id"]),
-                    "title": title,
-                    "source": r["source"] or "Unknown",
-                    "summary": summary,
-                    "url": r["url"] or "",
-                    "image_url": r["image_url"] or None,
-                    "published_at": published.isoformat(),
-                    "categories": _decode_categories(r["categories"]),
-                    "score": round(score, 3),
-                    "mention_count": mention_count,
-                },
-            )
-        )
+        item: Dict[str, Any] = {
+            "id": int(r["id"]),
+            "title": title,
+            "source": r["source"] or "Unknown",
+            "summary": summary,
+            "url": r["url"] or "",
+            "image_url": r["image_url"] or None,
+            "published_at": published.isoformat(),
+            "categories": _decode_categories(r["categories"]),
+            "score": round(score, 3),
+            "mention_count": mention_count,
+        }
+
+        # Hacker News items carry structured engagement data (points,
+        # comment count/URL) in the metadata column, written by ingestion's
+        # HN boilerplate parser. Surface it so the frontend can render a
+        # real "▲ N · N comments" badge instead of falling back to
+        # regex-parsing raw RSS boilerplate text out of the summary.
+        if r["metadata"]:
+            try:
+                meta = json.loads(r["metadata"])
+            except (TypeError, ValueError):
+                meta = {}
+            if "hn_points" in meta:
+                item["points"] = meta["hn_points"]
+            if "hn_comments_count" in meta:
+                item["comments_count"] = meta["hn_comments_count"]
+            if "hn_comments_url" in meta:
+                item["comments_url"] = meta["hn_comments_url"]
+
+        scored.append((score, item))
 
     scored.sort(key=lambda t: t[0], reverse=True)
     headlines = [item for _, item in scored[:CURATED_LIMIT]]

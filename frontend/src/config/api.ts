@@ -3,6 +3,7 @@
  *
  * Single source of truth for backend URLs and endpoint paths.
  */
+import { getClientId } from "../lib/clientId";
 
 const getApiBaseUrl = (): string => {
   const viteEnv = (import.meta as any).env;
@@ -70,17 +71,24 @@ export const API_ENDPOINTS = {
   // Settings (user preferences persisted server-side)
   settings: "/api/settings/",
 
-  // Knowledge graph (entity-extraction backed graph view)
-  knowledgeGraph: "/api/knowledge-graph/",
-  knowledgeGraphEntity: (id: number | string) =>
-    `/api/knowledge-graph/entity/${id}`,
+  // Knowledge graph (entity-extraction backed). The canvas graph tab was
+  // cut; these now only back the Feed's entity filter lens -- trending
+  // chips in the toolbar, and full-catalog search.
   knowledgeGraphTrending: "/api/knowledge-graph/trending",
+  knowledgeGraphSearch: "/api/knowledge-graph/search",
+  knowledgeGraphEntity: (id: number | string) => `/api/knowledge-graph/entity/${id}`,
+  knowledgeGraphRelatedArticles: (id: number | string, limit: number = 6) =>
+    `/api/knowledge-graph/related-articles/${id}?limit=${limit}`,
 
   // Daily digest (top stories + breakdown + trending built from DB)
   digest: "/api/digest/",
   digestDailySummary: "/api/digest/daily-summary",
   digestCurated: "/api/digest/curated",
   digestTopics: "/api/digest/topics",
+
+  // Digest email capture (storage only -- no sending pipeline yet, see
+  // docs/issues/2026-09-review-followups.md #1).
+  subscribers: "/api/subscribers/",
 
   // Saved research (M3.M5 — persisted research reports)
   savedResearch: "/api/saved-research",
@@ -103,6 +111,7 @@ export async function apiFetch<T>(
   const defaultOptions: RequestInit = {
     headers: {
       "Content-Type": "application/json",
+      "X-Client-Id": getClientId(),
       ...options.headers,
     },
   };

@@ -16,7 +16,14 @@ from pydantic import BaseModel, Field
 # Sensible defaults that mirror the frontend's hard-coded initial state in
 # App.tsx. A fresh DB (no settings row yet) returns these from GET so the
 # frontend always gets HTTP 200 with a usable payload.
-DEFAULT_CATEGORIES: List[str] = ["AI", "Machine Learning"]
+#
+# Empty on purpose: an unfiltered feed. ["AI", "Machine Learning"] used to
+# be the default here, but those strings don't match any value in the
+# real category taxonomy (which uses "AI/ML", "AI Agents", etc.) -- every
+# first-time visitor (no settings row yet) silently got a feed filtered
+# down to zero articles. See App.tsx's matching fix/comment for the
+# frontend-side half of this same bug.
+DEFAULT_CATEGORIES: List[str] = []
 DEFAULT_VIEW_MODE: str = "detailed"
 DEFAULT_SHOW_TRENDING_ONLY: bool = False
 

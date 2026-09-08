@@ -15,6 +15,22 @@
  * The provider also exposes a `useCommandPalette()` hook with `open()` /
  * `close()` so any descendant (e.g. the Cmd+K button in the sidebar) can
  * trigger it imperatively.
+ *
+ * Also lists (added alongside tabs + recent research):
+ *   - Saved articles, read straight from
+ *     `localStorage.techpulse-saved-articles` (the id list NewsCard's Save
+ *     button writes -- same key SavedArticlesList.tsx reads). We resolve
+ *     ids to titles with the same one-GET-per-id approach
+ *     SavedArticlesList uses (no batch-by-ids endpoint exists). Selecting
+ *     one navigates to the Saved tab and stashes the id in
+ *     `localStorage.techpulse-pending-article-id` so a future article deep-
+ *     link (e.g. ArticleReader) can pick it up -- there is no such
+ *     consumer yet, so today this just lands on the Saved tab.
+ *
+ * Digest editions were NOT added: there is no client-side digest-history
+ * data source to jump into (digest is fetched fresh per-view, nothing
+ * persists past editions to localStorage). See CommandPalette's report for
+ * this gap rather than fabricating one here.
  */
 import {
   createContext,
@@ -30,12 +46,13 @@ import { DialogTitle } from "./ui/dialog";
 import {
   Newspaper,
   Lightbulb,
-  Network,
   Mail,
   Settings,
   Bookmark,
   History,
+  FileText,
 } from "lucide-react";
+import { API_ENDPOINTS, apiFetch } from "../config/api";
 
 // ---------------------------------------------------------------------------
 // Tab catalogue — single source of truth for the palette's destination list.
@@ -53,7 +70,6 @@ interface TabEntry {
 const TAB_ENTRIES: TabEntry[] = [
   { value: "feed", label: "News Feed", icon: Newspaper },
   { value: "research", label: "Research", icon: Lightbulb },
-  { value: "knowledge", label: "Knowledge", icon: Network },
   { value: "digest", label: "Digest", icon: Mail },
   { value: "saved", label: "Saved", icon: Bookmark },
   { value: "preferences", label: "Settings", icon: Settings },
@@ -61,6 +77,8 @@ const TAB_ENTRIES: TabEntry[] = [
 
 const RECENT_RESEARCH_KEY = "techpulse-recent-research";
 const PENDING_RESEARCH_KEY = "techpulse-pending-research";
+const SAVED_ARTICLES_KEY = "techpulse-saved-articles";
+const PENDING_ARTICLE_KEY = "techpulse-pending-article-id";
 
 // ---------------------------------------------------------------------------
 // Context — exposes open() / close() to descendants.
@@ -110,6 +128,28 @@ function readRecentResearch(): string[] {
 }
 
 // ---------------------------------------------------------------------------
+// Helper: read the saved-article id list (capped at 10, newest-first is
+// however NewsCard appended them -- we don't reorder). Malformed JSON
+// returns an empty array, matching readRecentResearch's failure mode.
+// ---------------------------------------------------------------------------
+function readSavedArticleIds(): string[] {
+  try {
+    const raw = localStorage.getItem(SAVED_ARTICLES_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(String).slice(0, 10);
+  } catch {
+    return [];
+  }
+}
+
+interface SavedArticleEntry {
+  id: string;
+  title: string;
+}
+
+// ---------------------------------------------------------------------------
 // Provider — wraps the app and renders the modal as a portal-like overlay.
 // ---------------------------------------------------------------------------
 interface CommandPaletteProviderProps {
@@ -127,13 +167,39 @@ export function CommandPaletteProvider({
 }: CommandPaletteProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [recentResearch, setRecentResearch] = useState<string[]>([]);
+  const [savedArticles, setSavedArticles] = useState<SavedArticleEntry[]>([]);
+
+  // Resolve saved-article ids -> titles, one GET per id (mirrors
+  // SavedArticlesList.tsx — there's no batch-by-ids endpoint). Fire-and-
+  // forget: it fills in the "Saved articles" group a beat after the
+  // palette opens rather than blocking open() on the network.
+  const loadSavedArticles = useCallback(async () => {
+    const ids = readSavedArticleIds();
+    if (ids.length === 0) {
+      setSavedArticles([]);
+      return;
+    }
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        apiFetch<{ data?: { title?: string } }>(API_ENDPOINTS.newsById(id))
+      )
+    );
+    const loaded: SavedArticleEntry[] = [];
+    results.forEach((result, idx) => {
+      if (result.status === "fulfilled" && result.value?.data?.title) {
+        loaded.push({ id: ids[idx], title: result.value.data.title });
+      }
+    });
+    setSavedArticles(loaded);
+  }, []);
 
   const open = useCallback(() => {
     // Refresh the recents list every time we open — cheap, and the user
     // probably ran a research since they last opened the palette.
     setRecentResearch(readRecentResearch());
+    void loadSavedArticles();
     setIsOpen(true);
-  }, []);
+  }, [loadSavedArticles]);
 
   const close = useCallback(() => setIsOpen(false), []);
 
@@ -141,10 +207,11 @@ export function CommandPaletteProvider({
     setIsOpen((prev) => {
       if (!prev) {
         setRecentResearch(readRecentResearch());
+        void loadSavedArticles();
       }
       return !prev;
     });
-  }, []);
+  }, [loadSavedArticles]);
 
   // Global Cmd+K / Ctrl+K hotkey. We attach to `window` so the shortcut
   // works regardless of which element has focus. `preventDefault` stops
@@ -183,14 +250,29 @@ export function CommandPaletteProvider({
     close();
   };
 
+  const handleSelectSavedArticle = (id: string) => {
+    // No article deep-link consumer exists yet (ArticleReader isn't wired
+    // into App.tsx), so this stashes the id for whenever one lands and,
+    // today, just surfaces the Saved tab where the article already lives.
+    try {
+      localStorage.setItem(PENDING_ARTICLE_KEY, id);
+    } catch {
+      // If storage is unavailable we just navigate without a target id.
+    }
+    onSelectTab("saved");
+    close();
+  };
+
   return (
     <CommandPaletteContext.Provider value={ctxValue}>
       {children}
       {isOpen && (
         <CommandPaletteModal
           recentResearch={recentResearch}
+          savedArticles={savedArticles}
           onSelectTab={handleSelectTab}
           onSelectRecent={handleSelectRecent}
+          onSelectSavedArticle={handleSelectSavedArticle}
           onClose={close}
         />
       )}
@@ -204,15 +286,19 @@ export function CommandPaletteProvider({
 // ---------------------------------------------------------------------------
 interface CommandPaletteModalProps {
   recentResearch: string[];
+  savedArticles: SavedArticleEntry[];
   onSelectTab: (value: string) => void;
   onSelectRecent: (question: string) => void;
+  onSelectSavedArticle: (id: string) => void;
   onClose: () => void;
 }
 
 function CommandPaletteModal({
   recentResearch,
+  savedArticles,
   onSelectTab,
   onSelectRecent,
+  onSelectSavedArticle,
   onClose,
 }: CommandPaletteModalProps) {
   return (
@@ -282,6 +368,25 @@ function CommandPaletteModal({
                 >
                   <History className="w-4 h-4 text-muted-foreground shrink-0" />
                   <span className="truncate">{question}</span>
+                </Command.Item>
+              ))}
+            </Command.Group>
+          )}
+
+          {savedArticles.length > 0 && (
+            <Command.Group
+              heading="Saved articles"
+              className="text-[11px] text-muted-foreground uppercase tracking-wider px-2 py-1 mt-2"
+            >
+              {savedArticles.map((article) => (
+                <Command.Item
+                  key={`saved-${article.id}`}
+                  value={`saved:${article.id}:${article.title}`}
+                  onSelect={() => onSelectSavedArticle(article.id)}
+                  className="flex items-center gap-2 px-2 py-1.5 text-sm rounded-md cursor-pointer text-foreground data-[selected=true]:bg-accent data-[selected=true]:text-accent-foreground"
+                >
+                  <FileText className="w-4 h-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">{article.title}</span>
                 </Command.Item>
               ))}
             </Command.Group>

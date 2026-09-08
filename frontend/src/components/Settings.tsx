@@ -21,13 +21,13 @@
  *   - data-testid="settings-density"        (group wrapper)
  *
  *   - visible text matching /^Appearance$/i
- *   - visible helper text /Density behavior coming in a future
- *     release/i
  *   - visible text /Topic Preferences/i        (from TopicFilter)
  *   - button name /Save Preferences/i          (from TopicFilter)
  *
  *   - localStorage key "techpulse-density" still written on
- *     density toggle (settings.spec.ts:303-310).
+ *     density toggle (settings.spec.ts:303-310), kept for back
+ *     compat. The live key is "techpulse-density-preference",
+ *     read by UnifiedFeedView.tsx to actually change layout.
  *   - `<html>` `class="dark"` still toggles via useTheme on
  *     theme button click.
  *
@@ -40,11 +40,14 @@ import { useTheme, Theme } from "./ThemeProvider";
 import { TopicFilter } from "./TopicFilter";
 
 export const DENSITY_STORAGE_KEY = "techpulse-density";
+export const DENSITY_PREFERENCE_KEY = "techpulse-density-preference";
 type Density = "compact" | "comfortable";
 
 function readStoredDensity(): Density {
   try {
-    const v = localStorage.getItem(DENSITY_STORAGE_KEY);
+    const v =
+      localStorage.getItem(DENSITY_PREFERENCE_KEY) ??
+      localStorage.getItem(DENSITY_STORAGE_KEY);
     if (v === "compact" || v === "comfortable") return v;
   } catch {
     // privacy mode etc.
@@ -122,6 +125,7 @@ export function Settings({
     setDensityState(next);
     try {
       localStorage.setItem(DENSITY_STORAGE_KEY, next);
+      localStorage.setItem(DENSITY_PREFERENCE_KEY, next);
     } catch {
       // Best-effort.
     }
@@ -153,8 +157,7 @@ export function Settings({
             says "━ APPEARANCE" which would not match. */}
         <h3 className="sr-only">Appearance</h3>
         <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-          theme persists across reloads · density is saved but
-          does not yet change layout
+          theme and density persist across reloads
         </p>
 
         {/* Theme row */}
@@ -199,9 +202,6 @@ export function Settings({
               testId="settings-density-compact"
             />
           </div>
-          <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-            Density behavior coming in a future release. Your preference is saved.
-          </p>
         </div>
       </section>
 

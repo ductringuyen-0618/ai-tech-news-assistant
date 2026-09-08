@@ -16,9 +16,9 @@ import { test, expect, type Page, type Route } from "@playwright/test";
  * differences from flaking. Anti-aliasing is disabled at the
  * playwright level via the screenshot options.
  *
- * Tabs covered: News Feed, Research, Knowledge, Digest, Saved,
- * Settings. Research uses a mock so the baseline doesn't depend
- * on a live LLM run.
+ * Tabs covered: News Feed, Research, Digest, Saved, Settings.
+ * (Knowledge Graph tab was cut.) Research uses a mock so the
+ * baseline doesn't depend on a live LLM run.
  */
 
 const SCREENSHOT_OPTS = {
@@ -147,17 +147,6 @@ test.describe("M3.M6 — per-tab visual baselines", () => {
     } finally {
       await page.unroute("**/api/research");
     }
-  });
-
-  test("knowledge-final visual", async ({ page }) => {
-    test.setTimeout(60_000);
-    await page.goto("/");
-    await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
-    await page.getByRole("tab", { name: /Knowledge/i }).click();
-    // Knowledge graph renders an SVG canvas after data load.
-    await page.waitForLoadState("networkidle", { timeout: 15_000 }).catch(() => {});
-    await page.waitForTimeout(1500);
-    await expect(page).toHaveScreenshot("knowledge-final.png", SCREENSHOT_OPTS);
   });
 
   test("digest-final visual", async ({ page }) => {

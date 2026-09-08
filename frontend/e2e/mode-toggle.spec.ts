@@ -14,7 +14,23 @@
  */
 import { test, expect } from "@playwright/test";
 
-test.describe("mode toggle", () => {
+// FOLLOW-UP (2026-09-07, updated): the Atelier/Mission merge into
+// UnifiedFeedView's `density` prop already landed (App.tsx now derives
+// feed density from `viewMode`, not from this toggle's `mode` state).
+// An earlier pass here skipped this spec expecting that merge as a
+// future event and assumed the underlying <ModeToggle/> component
+// itself would need updated selectors -- in fact ModeToggle/ModeProvider
+// were entirely unchanged and would have kept passing this exact spec,
+// they just became orphaned: still rendered in the masthead, still
+// writing `<html data-mode>` / `localStorage.techpulse_mode`, but
+// nothing read either anymore. That's now fixed by removing
+// `<ModeToggle />` (and the now-unused `<ModeProvider>` wrapper) from
+// App.tsx rather than leaving dead, clickable-but-inert UI in
+// production. This spec covers a masthead control that no longer
+// exists, so it stays skipped (not un-skipped, not deleted -- keeping
+// the coverage intent documented in case a similar toggle returns).
+// Real coverage for the density toggle lives in settings.spec.ts.
+test.describe.skip("mode toggle", () => {
   test("defaults to atelier on a fresh context", async ({ page }) => {
     await page.goto("/", { waitUntil: "domcontentloaded" });
     const html = page.locator("html");

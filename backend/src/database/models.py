@@ -287,18 +287,46 @@ class EntityMention(Base):
     )
 
 
+class Subscriber(Base):
+    """
+    Digest email-capture subscriber.
+
+    Backs the "SUBSCRIBE AT /DIGEST" footer promise. Capture-only for now —
+    no email is actually sent (see ``api/routes/subscribers.py``).
+
+    Note: the runtime path uses raw sqlite3 (matching SettingsRepository's
+    pattern) — this model is the canonical schema declaration but is not
+    used by the running app for inserts/queries.
+    """
+
+    __tablename__ = 'subscribers'
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
+    subscribed_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    __table_args__ = (
+        Index('idx_subscribers_email', 'email'),
+    )
+
+
 class Settings(Base):
     """
-    Single-row application settings model.
+    Per-client application settings model.
 
     Stores user-facing UI preferences (selected categories, view mode,
     trending toggle) on the backend so they persist across browsers /
-    devices. The table holds at most one row, identified by ``id=1``.
+    devices. Rows are keyed by ``client_id`` (a frontend-generated,
+    localStorage-persisted UUID sent via the ``X-Client-Id`` header). The
+    legacy singleton row (``id=1``, ``client_id`` NULL) is kept as a
+    fallback for callers that don't send the header yet.
     """
 
     __tablename__ = 'settings'
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    client_id: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     categories: Mapped[Optional[List[str]]] = mapped_column(JSONEncodedDict)
     view_mode: Mapped[str] = mapped_column(String(20), default='detailed', nullable=False)
     show_trending_only: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)

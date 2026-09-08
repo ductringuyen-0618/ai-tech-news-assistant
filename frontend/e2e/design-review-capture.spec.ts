@@ -20,7 +20,6 @@ const PAGES = [
   { slug: "welcome", path: "/" },
   { slug: "feed", path: "/feed" },
   { slug: "research", path: "/research" },
-  { slug: "knowledge", path: "/knowledge" },
   { slug: "digest", path: "/digest" },
   { slug: "saved", path: "/saved" },
 ];

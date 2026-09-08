@@ -119,6 +119,30 @@ def _ensure_schema(db_path: str) -> None:
 # --------------------------------------------------------------------- #
 
 
+# Per-source credibility tiers (0-100 badge scale). Established outlets
+# with original reporting / editorial review score higher than
+# aggregators; PR-driven or unrecognised sources fall back to a
+# neutral-low default rather than a flat "everyone is equally
+# trustworthy" number. Keys are lower-cased source names so lookups are
+# case-insensitive (source strings come from RSS feed config / DB rows
+# with inconsistent casing).
+_SOURCE_CREDIBILITY: dict[str, int] = {
+    "mit technology review": 95,
+    "ars technica": 90,
+    "o'reilly radar": 85,
+    "the verge": 80,
+    "techcrunch": 75,
+    "hacker news": 70,
+}
+_DEFAULT_CREDIBILITY = 65
+
+
+def _credibility_score(source: str) -> int:
+    """Per-source credibility badge (0-100). Unknown sources get a
+    conservative default rather than being assumed equally trustworthy."""
+    return _SOURCE_CREDIBILITY.get((source or "").strip().lower(), _DEFAULT_CREDIBILITY)
+
+
 def _truncate(text: str, max_chars: int) -> str:
     if not text:
         return ""
@@ -236,10 +260,7 @@ def _row_to_front_page_article(
         summary_short=_truncate(body, 280),
         summary_medium=_truncate(body, 800),
         categories=_parse_categories(row["categories"]),
-        # TODO(credibility): per-source credibility map. For now every
-        # source gets a neutral 85 so the score is dominated by recency
-        # and novelty (the parts that actually vary per-run).
-        credibility_score=85,
+        credibility_score=_credibility_score(row["source"]),
         score=round(score, 4),
         score_components={k: round(v, 4) for k, v in components.items()},
     )
@@ -277,8 +298,7 @@ def _score_candidates(
 ) -> list[tuple[float, dict[str, float], sqlite3.Row]]:
     scored: list[tuple[float, dict[str, float], sqlite3.Row]] = []
     for row in rows:
-        # Placeholder per-source credibility map; uniformly 0.85.
-        credibility = 0.85
+        credibility = _credibility_score(row["source"]) / 100.0
         recency = _recency_factor(row["published_at"], now)
         novelty = _entity_novelty(int(row["id"]), prior_markers, conn)
         score = credibility * 1.0 + recency * 0.5 + novelty * 0.3

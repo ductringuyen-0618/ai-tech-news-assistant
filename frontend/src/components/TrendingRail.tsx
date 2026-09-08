@@ -17,14 +17,22 @@ import { API_ENDPOINTS, apiFetch } from "../config/api";
  *   - data-testid="news-feed-trending-chip"      (per-entity buttons)
  *   - data-category="<entity name>"              (per-button data attr)
  *   - data-entity-type="<entity type>"           (per-button data attr)
+ *
+ * Coverage diversity: once the trending list loads, each entity's source
+ * count is fetched from the existing entity-detail endpoint (which already
+ * returns each mentioning article's `source`) and rendered as a "· Nsrc"
+ * suffix -- a cheap approximation of Ground News's "coverage diversity"
+ * chip using data the backend already exposes, no schema change needed.
  */
 
 interface TrendingRailProps {
-  /** Currently-selected entity names. A chip whose name matches an entry
-   *  in this list renders in its "selected" variant. */
-  selectedCategories: string[];
-  /** Fired when a chip is clicked. The entity name is the only argument. */
-  onSelectCategory: (entityName: string) => void;
+  /** Currently-selected entity ids. A chip whose id matches an entry in
+   *  this list renders in its "selected" variant. */
+  selectedEntityIds: number[];
+  /** Fired when a chip is clicked. Passes the full {id, name} so the
+   *  caller can drive the real backend entity_id filter, not just a
+   *  display name. */
+  onSelectEntity: (entity: { id: number; name: string }) => void;
   /** Maximum number of chips to render (default 12 -- longer ticker reads
    *  more like a wire feed than a 5-chip toolbar). */
   limit?: number;
@@ -39,12 +47,13 @@ interface TrendingEntity {
 }
 
 export function TrendingRail({
-  selectedCategories,
-  onSelectCategory,
+  selectedEntityIds,
+  onSelectEntity,
   limit = 12,
 }: TrendingRailProps) {
   const [trending, setTrending] = useState<TrendingEntity[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sourceCounts, setSourceCounts] = useState<Record<number, number>>({});
 
   useEffect(() => {
     let cancelled = false;
@@ -85,6 +94,47 @@ export function TrendingRail({
     };
   }, [limit]);
 
+  // Progressively enhance each chip with a distinct-source count, pulled
+  // from the entity-detail endpoint's `articles[].source` list (already
+  // fetched by the KG side drawer elsewhere -- no new backend field).
+  useEffect(() => {
+    if (trending.length === 0) return;
+    let cancelled = false;
+
+    const loadSourceCounts = async () => {
+      const results = await Promise.allSettled(
+        trending.map((t) =>
+          apiFetch<{ articles?: { source?: string }[] }>(
+            `/api/knowledge-graph/entity/${t.id}`
+          ).then((detail) => {
+            const sources = new Set(
+              (detail.articles || [])
+                .map((a) => a.source)
+                .filter((s): s is string => Boolean(s))
+            );
+            return [t.id, sources.size] as const;
+          })
+        )
+      );
+      if (cancelled) return;
+      setSourceCounts((prev) => {
+        const next = { ...prev };
+        for (const r of results) {
+          if (r.status === "fulfilled") {
+            const [id, count] = r.value;
+            next[id] = count;
+          }
+        }
+        return next;
+      });
+    };
+
+    loadSourceCounts();
+    return () => {
+      cancelled = true;
+    };
+  }, [trending]);
+
   if (loading) {
     return (
       <div
@@ -113,7 +163,8 @@ export function TrendingRail({
       <div className="flex items-center gap-4 font-mono-tx text-[11px] uppercase-eyebrow whitespace-nowrap">
         <span className="text-foreground-soft shrink-0">&#9658; trending</span>
         {trending.map((t) => {
-          const isActive = selectedCategories.includes(t.name);
+          const isActive = selectedEntityIds.includes(t.id);
+          const sourceCount = sourceCounts[t.id];
           return (
             <button
               key={`${t.id}-${t.name}`}
@@ -121,7 +172,13 @@ export function TrendingRail({
               data-testid="news-feed-trending-chip"
               data-category={t.name}
               data-entity-type={t.type}
-              onClick={() => onSelectCategory(t.name)}
+              data-source-count={sourceCount ?? undefined}
+              onClick={() => onSelectEntity({ id: t.id, name: t.name })}
+              title={
+                sourceCount != null
+                  ? `Covered by ${sourceCount} source${sourceCount === 1 ? "" : "s"}`
+                  : undefined
+              }
               className={[
                 "shrink-0 px-1.5 py-0.5 border transition-colors",
                 isActive
@@ -131,6 +188,12 @@ export function TrendingRail({
             >
               {t.name.toUpperCase()}{" "}
               <span className="text-signal">&#9612;{t.mention_count}</span>
+              {sourceCount != null && sourceCount > 1 && (
+                <span className="text-foreground-soft">
+                  {" "}
+                  &middot; {sourceCount}src
+                </span>
+              )}
             </button>
           );
         })}

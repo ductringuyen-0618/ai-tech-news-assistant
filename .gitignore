@@ -603,7 +603,10 @@ TEMP*.md
 !docs/**/*.md
 !.github/**/*.md
 # Sentence-transformers / HuggingFace model caches (large, regenerated at runtime)
-models/
+# Anchored to repo root / backend root only -- an unanchored `models/` also
+# matched backend/src/models/ (real application source, e.g. subscriber.py),
+# silently excluding it from every commit.
+/models/
 backend/models/
 
 # Windows accidental "nul" artifact from cmd redirects

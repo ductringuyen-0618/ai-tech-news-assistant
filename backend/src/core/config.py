@@ -123,8 +123,10 @@ class Settings(BaseSettings):
     groq_base_url: str = Field(
         default="https://api.groq.com/openai/v1", alias="GROQ_BASE_URL"
     )
+    # llama-3.3-70b-versatile was decommissioned by Groq (Aug 2026); their
+    # migration guidance points to openai/gpt-oss-120b as the replacement.
     groq_model: str = Field(
-        default="llama-3.3-70b-versatile", alias="GROQ_MODEL"
+        default="openai/gpt-oss-120b", alias="GROQ_MODEL"
     )
     groq_timeout: int = Field(default=120, alias="GROQ_TIMEOUT", ge=1, le=600)
     

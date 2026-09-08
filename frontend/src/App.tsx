@@ -156,7 +156,6 @@ function AppShell() {
   //   /            -> Welcome / homepage
   //   /feed        -> News Feed
   //   /research    -> Agentic Research
-  //   /knowledge   -> Knowledge Graph
   //   /digest      -> Daily Digest
   //   /saved       -> Saved Research
   //   /settings    -> Settings (renamed from /preferences for shorter URL)
@@ -251,24 +250,6 @@ function AppShell() {
     setSelectedCategories(urlSearchState.topics);
   }, [urlSearchState]);
 
-  // Mount-time handoff from the Cmd+K palette (mirrors
-  // PENDING_RESEARCH_KEY in ResearchMode.tsx): picking a saved article
-  // there navigates here and stashes its id in techpulse-pending-
-  // article-id since ArticleReader didn't exist yet when that code was
-  // written. Consumed once the Saved tab is actually active.
-  useEffect(() => {
-    if (activeTab !== "saved") return;
-    try {
-      const pending = localStorage.getItem("techpulse-pending-article-id");
-      if (pending && pending.trim()) {
-        localStorage.removeItem("techpulse-pending-article-id");
-        openArticleReader(pending);
-      }
-    } catch {
-      // localStorage unavailable -- silently skip.
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab]);
 
   const reduceMotion = useReducedMotion();
   // Page-tab fade-in: each TabsContent's children are wrapped in a
@@ -751,7 +732,11 @@ function AppShell() {
       >
         [ skip to main ]
       </a>
-      <CommandPaletteProvider activeTab={activeTab} onSelectTab={setActiveTab}>
+      <CommandPaletteProvider
+        activeTab={activeTab}
+        onSelectTab={setActiveTab}
+        onOpenArticle={openArticleReader}
+      >
         <Sidebar
           activeTab={activeTab}
           onGoHome={goHome}

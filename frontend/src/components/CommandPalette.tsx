@@ -22,10 +22,13 @@
  *     button writes -- same key SavedArticlesList.tsx reads). We resolve
  *     ids to titles with the same one-GET-per-id approach
  *     SavedArticlesList uses (no batch-by-ids endpoint exists). Selecting
- *     one navigates to the Saved tab and stashes the id in
- *     `localStorage.techpulse-pending-article-id` so a future article deep-
- *     link (e.g. ArticleReader) can pick it up -- there is no such
- *     consumer yet, so today this just lands on the Saved tab.
+ *     one navigates to the Saved tab and opens it directly via the
+ *     `onOpenArticle` callback (App.tsx's `openArticleReader`) rather than
+ *     round-tripping through localStorage -- an earlier version stashed
+ *     the id and relied on a `[activeTab]`-effect to pick it up, which
+ *     silently no-opped when the palette was opened while already on the
+ *     Saved tab (selecting "saved" again is a no-op state update, so the
+ *     effect never re-fired).
  *
  * Digest editions were NOT added: there is no client-side digest-history
  * data source to jump into (digest is fetched fresh per-view, nothing
@@ -78,7 +81,6 @@ const TAB_ENTRIES: TabEntry[] = [
 const RECENT_RESEARCH_KEY = "techpulse-recent-research";
 const PENDING_RESEARCH_KEY = "techpulse-pending-research";
 const SAVED_ARTICLES_KEY = "techpulse-saved-articles";
-const PENDING_ARTICLE_KEY = "techpulse-pending-article-id";
 
 // ---------------------------------------------------------------------------
 // Context — exposes open() / close() to descendants.
@@ -158,12 +160,15 @@ interface CommandPaletteProviderProps {
   activeTab: string;
   /** Callback to switch the active tab. */
   onSelectTab: (value: string) => void;
+  /** Opens ArticleReader for the given article id (App.tsx's openArticleReader). */
+  onOpenArticle: (articleId: string) => void;
 }
 
 export function CommandPaletteProvider({
   children,
   activeTab: _activeTab,
   onSelectTab,
+  onOpenArticle,
 }: CommandPaletteProviderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [recentResearch, setRecentResearch] = useState<string[]>([]);
@@ -251,15 +256,8 @@ export function CommandPaletteProvider({
   };
 
   const handleSelectSavedArticle = (id: string) => {
-    // No article deep-link consumer exists yet (ArticleReader isn't wired
-    // into App.tsx), so this stashes the id for whenever one lands and,
-    // today, just surfaces the Saved tab where the article already lives.
-    try {
-      localStorage.setItem(PENDING_ARTICLE_KEY, id);
-    } catch {
-      // If storage is unavailable we just navigate without a target id.
-    }
     onSelectTab("saved");
+    onOpenArticle(id);
     close();
   };
 

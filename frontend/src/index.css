@@ -3520,6 +3520,18 @@ body {
   .w-4\/5 { width: 80%; }
   .-translate-x-1\/2 { transform: translateX(-50%); }
   .group:hover .group-hover\:underline { text-decoration-line: underline; }
+
+  /* CommandPalette's modal (contentClassName in CommandPalette.tsx) was
+     missing top-[15vh], the nested-calc width, and shadow-2xl here, so the
+     dialog had no `top`/`width` and fell back to its static in-flow
+     position -- as the last child appended to <body>, that put it far
+     below all page content (invisible without scrolling to the bottom). */
+  .top-\[15vh\] { top: 15vh; }
+  .w-\[min\(640px\,calc\(100vw-2rem\)\)\] { width: min(640px, calc(100vw - 2rem)); }
+  .shadow-2xl {
+    --tw-shadow: 0 25px 50px -12px rgb(0 0 0 / 0.25);
+    box-shadow: var(--tw-inset-shadow, 0 0 #0000), var(--tw-shadow);
+  }
 }
 
 /* This project ships a frozen, hand-authored Tailwind build (no live

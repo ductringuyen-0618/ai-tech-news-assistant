@@ -477,7 +477,10 @@ export function DigestView({
           >
             {curatedHeadlines.map((story) => {
               const engagement = getHnEngagement(story);
-              const displaySummary = engagement?.cleanedSummary || story.summary;
+              const displaySummary =
+                engagement?.cleanedSummary !== undefined
+                  ? engagement.cleanedSummary
+                  : story.summary;
               return (
               <a
                 key={story.id}
@@ -615,7 +618,10 @@ export function DigestView({
         >
           {digest.topStories.map((story, idx) => {
             const engagement = getHnEngagement(story);
-            const displaySummary = engagement?.cleanedSummary || story.summaryShort;
+            const displaySummary =
+              engagement?.cleanedSummary !== undefined
+                ? engagement.cleanedSummary
+                : story.summaryShort;
             return (
             // NOTE: the `.border-l-4` class on this <li> is
             // load-bearing for digest.spec.ts:41 and :107. The

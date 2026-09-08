@@ -13,7 +13,7 @@
  *
  * Test hook: data-testid="dense-article-row"
  */
-import { useMemo } from "react";
+import { useMemo, useRef } from "react";
 
 interface DenseArticleRowProps {
   article: {
@@ -59,6 +59,16 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
   const conf = typeof article.credibilityScore === "number"
     ? article.credibilityScore
     : null;
+  // The row's default action (native <a> Enter-to-activate) opens the
+  // external publisher URL in a new tab. Mouse clicks land on the title
+  // span, which App.tsx's delegated card-title click handler intercepts
+  // to open the in-app ArticleReader instead -- but a keyboard Enter on
+  // the row itself has e.target === the <a>, not the span, so that
+  // handler's closest('[data-slot="card-title"]') lookup misses it and
+  // the external navigation goes through unintercepted. Redirect Enter to
+  // a real click() on the title span so it takes the same in-app path as
+  // a mouse click, keeping keyboard and mouse activation consistent.
+  const titleRef = useRef<HTMLSpanElement>(null);
 
   return (
     <a
@@ -70,6 +80,12 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
       rel="noopener noreferrer"
       className="group grid items-baseline gap-3 py-1.5 px-3 border-b border-[var(--rule)] hover:bg-[var(--background-tint)] transition-colors text-[12px] tabular-nums"
       style={{ gridTemplateColumns: "56px 130px minmax(260px, 1fr) 48px 110px" }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          titleRef.current?.click();
+        }
+      }}
     >
       {/* Wall clock */}
       <span className="text-foreground-mute font-[var(--font-mono)] mono" data-mono>
@@ -81,6 +97,7 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
 
       {/* Title */}
       <span
+        ref={titleRef}
         data-slot="card-title"
         className="text-foreground group-hover:underline truncate"
         style={{ fontSize: "13px", fontWeight: 500 }}

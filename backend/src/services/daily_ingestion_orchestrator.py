@@ -750,6 +750,12 @@ def _select_unextracted_article_ids(db_path: str, *, limit: int) -> List[int]:
     Returns just the IDs because
     :meth:`EntityExtractionService.process_article` re-reads the article
     body itself.
+
+    Ordered newest-first: with a large historical backlog, an ascending
+    scan never catches up to newly-ingested articles, so trending/recent
+    entity features (e.g. ``/knowledge-graph/trending``) stay empty for
+    the last N days indefinitely. Newest-first keeps recent articles
+    covered while the older backlog fills in as capacity allows.
     """
     # entity_mentions may not exist yet on a fresh DB. We bootstrap it
     # by instantiating the service later in the phase; here we just
@@ -766,7 +772,7 @@ def _select_unextracted_article_ids(db_path: str, *, limit: int) -> List[int]:
                 """
                 SELECT id FROM articles
                 WHERE is_archived = 0
-                ORDER BY id ASC
+                ORDER BY id DESC
                 LIMIT ?
                 """,
                 (limit,),
@@ -779,7 +785,7 @@ def _select_unextracted_article_ids(db_path: str, *, limit: int) -> List[int]:
                   AND a.id NOT IN (
                       SELECT DISTINCT article_id FROM entity_mentions
                   )
-                ORDER BY a.id ASC
+                ORDER BY a.id DESC
                 LIMIT ?
                 """,
                 (limit,),

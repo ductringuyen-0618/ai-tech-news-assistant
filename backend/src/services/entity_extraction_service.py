@@ -217,9 +217,13 @@ def _regex_extract_entities(text: str, max_entities: int = 12) -> List[Tuple[str
 
     # Title-cased phrase matcher. Tokens may include digits / hyphens
     # (so "GPT-4" and "Llama 3" survive). The look-ahead caps the run
-    # at four tokens so we don't grab a whole sentence.
+    # at four tokens so we don't grab a whole sentence. Token separator
+    # is [ \t]+ (not \s+) so a run never crosses a newline -- callers
+    # join title and body with "\n\n", and \s+ would otherwise merge
+    # the article's last title word with the body's first word into a
+    # single bogus entity (e.g. "OpenAI\n\nApple").
     pattern = re.compile(
-        r"\b([A-Z][A-Za-z0-9\-]+(?:\s+[A-Z][A-Za-z0-9\-]+){0,3})\b"
+        r"\b([A-Z][A-Za-z0-9\-]+(?:[ \t]+[A-Z][A-Za-z0-9\-]+){0,3})\b"
     )
 
     candidates: List[str] = []

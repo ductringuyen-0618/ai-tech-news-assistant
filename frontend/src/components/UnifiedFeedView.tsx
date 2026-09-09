@@ -104,7 +104,14 @@ export function UnifiedFeedView({
   // covers. Frozen alongside `weights` for the same reason -- see below --
   // so an infinite-scroll append can only ever land *after* this boundary,
   // never inside an already-windowed, already-rendered region.
-  const [personalizedThrough, setPersonalizedThrough] = useState(0);
+  // Lazily initialized (not a hardcoded 0) for the same reason `weights`
+  // is: if this component remounts with `articles` already populated --
+  // e.g. a tab that unmounts on switch-away and doesn't refetch on
+  // return -- a hardcoded 0 would render the whole already-loaded list
+  // unpersonalized for one frame before the mount effect below corrects
+  // it. Matching the initial `weights` read here keeps that first render
+  // consistent with what it will immediately snap to anyway.
+  const [personalizedThrough, setPersonalizedThrough] = useState(() => articles.length);
   // Re-read weights only when the feed's *leading* article changes -- a
   // real reload/refresh/filter change -- never on a bare re-render or an
   // infinite-scroll append. `articles` gets a brand-new array reference on

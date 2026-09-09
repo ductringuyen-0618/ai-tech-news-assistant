@@ -100,6 +100,11 @@ export function UnifiedFeedView({
   const [statusOpen, setStatusOpen] = useState(true);
 
   const [weights, setWeights] = useState<Record<string, number>>(() => readInterestWeights());
+  // How much of `articles` (from the front) the current `weights` snapshot
+  // covers. Frozen alongside `weights` for the same reason -- see below --
+  // so an infinite-scroll append can only ever land *after* this boundary,
+  // never inside an already-windowed, already-rendered region.
+  const [personalizedThrough, setPersonalizedThrough] = useState(0);
   // Re-read weights only when the feed's *leading* article changes -- a
   // real reload/refresh/filter change -- never on a bare re-render or an
   // infinite-scroll append. `articles` gets a brand-new array reference on
@@ -112,13 +117,28 @@ export function UnifiedFeedView({
   const leadingArticleId = articles[0]?.id;
   useEffect(() => {
     setWeights(readInterestWeights());
+    setPersonalizedThrough(articles.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [leadingArticleId]);
-  const orderedArticles = useMemo(() => reorderByInterest(articles, weights), [articles, weights]);
+  const orderedArticles = useMemo(() => {
+    // reorderByInterest re-chunks its fixed-size windows from scratch over
+    // whatever array it's given. If a paginated append landed inside what
+    // would otherwise be a partial trailing window, re-chunking the *full*
+    // array on every append could merge newly-fetched articles into a
+    // window that's already on screen and sort one above an
+    // already-rendered card -- a live jump-scare pagination itself was
+    // supposed to be immune to. Only ever re-window the frozen prefix; new
+    // articles beyond it are always appended after, in their given order,
+    // until the next real personalization snapshot.
+    const personalized = reorderByInterest(articles.slice(0, personalizedThrough), weights);
+    return [...personalized, ...articles.slice(personalizedThrough)];
+  }, [articles, weights, personalizedThrough]);
   const isPersonalized = Object.keys(weights).length > 0;
 
   const handleResetPersonalization = () => {
     clearInterestWeights();
     setWeights({});
+    setPersonalizedThrough(articles.length);
     toast.success("Personalization reset — showing latest first");
   };
 

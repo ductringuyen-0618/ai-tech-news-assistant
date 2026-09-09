@@ -752,8 +752,11 @@ test.describe("News Feed tab â€” personalized feed reactions", () => {
     // its weights re-read off that array reference, which meant loading
     // more articles could re-read localStorage mid-scroll and silently
     // reshuffle windows already on screen -- exactly the "jump-scare"
-    // the proposal rules out. This pins the fix: reacting, then paging,
-    // must never move the already-rendered articles.
+    // the proposal rules out. Reacting mid-session (as this test does)
+    // writes localStorage but must NOT flow into this render's `weights`
+    // state without a real reload, so this also confirms that boundary --
+    // see the next test for the case where weights are non-empty *before*
+    // pagination fires, which exercises the windowing math itself.
     const now = Date.now();
     const secondPageArticles: ReactionTestArticle[] = [
       { id: "e2e-react-9", title: "Reaction Test Article Nine", source: "India Source", category: "India Topic", hoursAgo: 9 },
@@ -792,6 +795,62 @@ test.describe("News Feed tab â€” personalized feed reactions", () => {
 
     const afterScroll = await getRenderedArticleIds(page);
     expect(afterScroll.slice(0, beforeScroll.length)).toEqual(beforeScroll);
+    expect(afterScroll.slice(beforeScroll.length)).toEqual(["e2e-react-9", "e2e-react-10"]);
+  });
+
+  test("pagination with pre-seeded weights never re-windows already-rendered articles", async ({
+    page,
+    context,
+  }) => {
+    // Regression test for a windowing edge case: reorderByInterest chunks
+    // fixed-size windows from scratch over whatever array it's given. If a
+    // paginated append isn't handled as a frozen prefix + a plain append,
+    // the newly-arrived articles can get folded into what was previously a
+    // window that's already rendered on screen and sorted above an
+    // already-visible card -- a live jump-scare, exactly what pagination
+    // itself is supposed to be immune to. Unlike the previous test, this
+    // one seeds the weight *before* the first load, so it's genuinely
+    // present in this render's `weights` state (not just in localStorage)
+    // when the append lands -- the case the windowing math actually runs.
+    await seedInterestWeights(context, { [`source:${FAVORED_SOURCE}`]: 3 });
+
+    const now = Date.now();
+    const secondPageArticles: ReactionTestArticle[] = [
+      { id: "e2e-react-9", title: "Reaction Test Article Nine", source: "India Source", category: "India Topic", hoursAgo: 9 },
+      { id: "e2e-react-10", title: "Reaction Test Article Ten", source: "Juliet Source", category: "Juliet Topic", hoursAgo: 10 },
+    ];
+    const firstPage = {
+      data: REACTION_TEST_ARTICLES.map((a) => toApiArticle(a, now)),
+      pagination: { next_cursor: "e2e-cursor-2" },
+    };
+    const secondPage = {
+      data: secondPageArticles.map((a) => toApiArticle(a, now)),
+      pagination: { next_cursor: null },
+    };
+    await page.route("**/api/news/**", async (route) => {
+      const url = new URL(route.request().url());
+      const body = url.searchParams.has("cursor") ? secondPage : firstPage;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    });
+
+    await gotoMockedFeed(page);
+
+    // The seeded weight should already have reordered the first page.
+    const beforeScroll = await getRenderedArticleIds(page);
+    expect(beforeScroll).toEqual(REORDERED_WITH_FAVORED_SOURCE);
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(
+      page.locator('[data-testid="news-card"][data-article-id="e2e-react-10"]')
+    ).toBeVisible({ timeout: 15_000 });
+
+    const afterScroll = await getRenderedArticleIds(page);
+    // The already-rendered, already-personalized prefix must be untouched
+    // -- neither of the new (zero-weight) articles may sort above any of
+    // it, regardless of window-boundary arithmetic.
+    expect(afterScroll.slice(0, beforeScroll.length)).toEqual(beforeScroll);
+    // And the new articles are simply appended in their given order, never
+    // interleaved with the personalized prefix.
     expect(afterScroll.slice(beforeScroll.length)).toEqual(["e2e-react-9", "e2e-react-10"]);
   });
 });

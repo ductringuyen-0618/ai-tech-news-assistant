@@ -155,11 +155,11 @@ jobs:
           npm run build
           
           echo "📊 Checking build artifacts..."
-          if [ -d "dist" ]; then
+          if [ -d "build" ]; then
             echo "✅ Build successful - artifacts created:"
-            ls -la dist/
+            ls -la build/
           else
-            echo "❌ Build failed - no dist folder"
+            echo "❌ Build failed - no build folder"
             exit 1
           fi
           

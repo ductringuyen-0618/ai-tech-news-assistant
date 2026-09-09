@@ -1,0 +1,141 @@
+---
+status: proposed
+attempts: 0
+branch: null
+---
+# Personalized Feed Ranking via Lightweight Reactions
+
+## Problem / opportunity
+The feed (`UnifiedFeedView.tsx`) is strict reverse-chronological for every
+visitor. The app already tracks two client-side interest signals per
+browser -- read state (`NewsCard.tsx`'s `markRead`/`isRead`, key
+`techpulse-read-*`) and saved articles (`SavedArticlesList.tsx`, key
+`techpulse-saved-articles`) -- but neither feeds back into what the feed
+shows next. A visitor who saves five machine-learning articles in a row
+sees the exact same chronological list as a first-time visitor. There is
+also no way for a user to say "show me more/less of this" -- the only
+interest signal is the passive, invisible act of saving or reading.
+
+`docs/issues/2026-09-review-followups.md` names both of these as deferred
+engagement work: "Interest-weighted re-ranking from Save/read/topic-click
+behavior" (review-01 #4, review-09 #5, vs. Feedly Leo) and "Lightweight
+reaction mechanic (thumbs up/down or 'more/less like this')" (review-05
+#3), explicitly noting they're "worth bundling ... rather than doing
+standalone" -- a bare reaction button with no visible effect on the feed
+would fail the professional-feel bar (a control that visibly does nothing
+reads as a prototype, not a shipped product), so this proposal bundles
+them as the backlog recommends.
+
+## Why this increases engagement
+- **Session length**: a feed that visibly adapts to what a visitor just
+  reacted to gives an immediate, tangible reason to keep scrolling instead
+  of hitting a wall of undifferentiated chronological cards.
+- **Return visits**: interest weights persist across sessions (localStorage
+  survives a closed tab), so a visitor who trained the feed yesterday gets
+  a noticeably more relevant front page today -- the core Feedly-Leo-style
+  retention loop the backlog calls out.
+- **Personalization as differentiator**: it's the cheapest available step
+  toward "this product learns about me," which the existing product
+  (search, digest, research) doesn't yet offer anywhere.
+
+## Proposed solution
+Entirely client-side for v1 -- no backend, schema, or API changes. All
+raw signal data this needs (read state, saved ids) already lives in
+`localStorage`, matching the existing pattern.
+
+1. Add a small reaction control to `NewsCard.tsx` -- two icon buttons,
+   "More like this" / "Less like this" (lucide-react icons already used
+   elsewhere in the file), visible on hover/focus like the existing
+   save affordance. Clicking one nudges a per-`(source, category)` integer
+   weight up or down and shows a brief inline confirmation (reuse the
+   `sonner` toast pattern already used in `SavedResearchList.tsx`).
+2. Persist weights to a new localStorage key, e.g.
+   `techpulse-interest-weights`, as `{ [sourceOrCategory: string]: number
+   }`, clamped to a small range (e.g. -3..+3) so one click can't
+   permanently bury a whole source.
+3. In `UnifiedFeedView.tsx`, compute a blended sort key for the already-
+   fetched article list: recency remains the primary key; the interest
+   weight (summed across the article's source + each of its categories)
+   is a secondary, bounded nudge -- e.g. reorder only within a sliding
+   window of adjacent recency-ranked articles, never a full re-sort that
+   could bury breaking news under old "liked" content. Read articles keep
+   their existing opacity-dimming treatment (`NewsCard.tsx`); being read
+   does not additionally penalize ranking in v1 -- keep the model to one
+   signal (explicit reactions) plus recency, not three interacting
+   heuristics, to keep behavior predictable and explainable.
+4. A small, honest "Personalized for you" affordance (e.g. a toggle or a
+   subtitle) so a user can tell the feed is adapting and can reset their
+   weights -- avoids the product silently doing something invisible to the
+   user, which the professional-feel pass should treat as a hard
+   requirement, not a nice-to-have.
+
+## Effort estimate
+**M.** No backend/schema work. Frontend touches two existing files
+(`NewsCard.tsx`, `UnifiedFeedView.tsx`) plus one new small localStorage
+utility module (mirroring the existing `clientId.ts` / saved-articles
+key pattern). Main complexity is getting the bounded-reorder algorithm
+right so it visibly personalizes without ever looking broken (e.g. a
+day-old article jumping above breaking news).
+
+## Validation contract
+- Functional assertions:
+  - Each `NewsCard` renders "more like this" / "less like this" controls
+    (distinct `data-testid`s, e.g. `data-testid="reaction-more"` /
+    `data-testid="reaction-less"`).
+  - Clicking a reaction control persists an updated weight to the
+    `techpulse-interest-weights` localStorage key and shows a toast
+    confirmation.
+  - A reset/clear-personalization control exists and, when used, clears
+    the weights key and returns the feed to pure chronological order.
+- Behavioral assertions:
+  - Given a fixed set of articles and a pre-seeded
+    `techpulse-interest-weights` value favoring one source, that source's
+    articles appear measurably earlier in the rendered feed than in the
+    zero-weight (fresh visitor) baseline order, without violating the
+    "recency stays primary within the reorder window" rule above.
+  - Reacting to one card does not cause other, unrelated cards to jump
+    or flicker on screen immediately (the re-rank applies on next
+    feed load/refresh, not as a live jump-scare mid-scroll) -- this is a
+    professional-feel requirement as much as a functional one.
+  - The existing read-state dimming behavior (`isRead` /
+    `opacity-60`) is unchanged by this feature.
+- Negative assertions (should NOT happen):
+  - No article is ever hidden or removed from the feed because of a
+    negative reaction -- only reordered, and only within the bounded
+    window described above.
+  - No backend request is added for this feature in v1 -- it must not
+    call any new or existing API endpoint to read/write reactions.
+  - A brand-new visitor (empty localStorage) sees byte-identical ordering
+    to the current chronological feed -- this feature must be a no-op
+    until a user has reacted at least once.
+- Performance assertions:
+  - Re-ranking is a pure client-side sort over the already-fetched
+    in-memory article array (existing `UnifiedFeedView` state) -- O(n log
+    n) on typical feed page sizes, no additional network round-trip, no
+    added render-blocking work (measure via existing Lighthouse/manual
+    check that feed first-paint timing is not regressed).
+- Test commands the build will need to pass:
+  - Frontend: `npm run typecheck`, `npm run lint`, `npm run build`.
+  - E2E: extend `frontend/e2e/news-feed.spec.ts` with cases for reaction
+    controls, localStorage persistence, bounded reordering with seeded
+    weights, and the empty-localStorage no-op case; existing feed spec
+    assertions must not regress.
+  - Backend: none required (no backend files should change) -- run
+    `pytest tests/ -v` only if the worker touches any shared backend
+    file, to confirm no accidental regression.
+
+## Risks / open questions
+- Getting the "bounded window" reorder algorithm to feel right (not too
+  subtle to notice, not so aggressive it looks random) is the main design
+  risk -- the worker should bias toward a small, clearly-testable window
+  (e.g. reorder within each visible page/batch of N cards, not across the
+  whole feed) rather than a global re-sort.
+- If category data is sparse/missing on many articles (categories come
+  from a JSON column that can be empty, per `digest.py`'s
+  `_decode_categories`), weighting may need to fall back to `source`
+  alone for those articles -- acceptable, but the worker should verify
+  real data before assuming categories are populated.
+- v1 intentionally has no server-side persistence, so weights don't
+  follow a user across browsers/devices. That's an accepted limitation,
+  not a defect -- do not scope-creep into building account-linked
+  preference sync for this proposal.

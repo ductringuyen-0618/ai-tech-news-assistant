@@ -1,4 +1,4 @@
-import { Loader2, CheckCircle2, Circle, AlertTriangle } from "lucide-react";
+import { Loader2, CheckCircle2, Circle, AlertTriangle } from 'lucide-react';
 
 /**
  * ResearchProgressTimeline — M3.M2 vertical timeline.
@@ -14,7 +14,7 @@ import { Loader2, CheckCircle2, Circle, AlertTriangle } from "lucide-react";
  * tests query this testid for the current phase and still work.
  */
 
-export type TimelineStatus = "pending" | "in-progress" | "done" | "error";
+export type TimelineStatus = 'pending' | 'in-progress' | 'done' | 'error';
 
 export interface TimelineStep {
   id: string;
@@ -50,20 +50,18 @@ function formatDuration(ms: number): string {
 }
 
 function StatusIcon({ status }: { status: TimelineStatus }): JSX.Element {
-  if (status === "done") {
+  if (status === 'done') {
     return (
       <CheckCircle2 className="w-4 h-4 text-green-600 dark:text-green-400" />
     );
   }
-  if (status === "in-progress") {
+  if (status === 'in-progress') {
     return (
       <Loader2 className="w-4 h-4 text-blue-600 dark:text-blue-400 animate-spin" />
     );
   }
-  if (status === "error") {
-    return (
-      <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />
-    );
+  if (status === 'error') {
+    return <AlertTriangle className="w-4 h-4 text-red-600 dark:text-red-400" />;
   }
   return <Circle className="w-4 h-4 text-muted-foreground/40" />;
 }
@@ -79,7 +77,7 @@ export function ResearchProgressTimeline({
       className="border border-gray-200 dark:border-gray-800 rounded-lg overflow-hidden bg-white dark:bg-gray-900"
     >
       <ol className="divide-y divide-gray-100 dark:divide-gray-800">
-        {steps.map((step) => {
+        {steps.map(step => {
           const isActive = step.id === activeStepId;
           const labelForChip = phaseChipText ?? step.label;
           return (
@@ -89,9 +87,7 @@ export function ResearchProgressTimeline({
               data-step-id={step.id}
               data-status={step.status}
               className={`flex items-start gap-3 px-3 py-2 text-sm ${
-                isActive
-                  ? "bg-blue-50/40 dark:bg-blue-950/30"
-                  : ""
+                isActive ? 'bg-blue-50/40 dark:bg-blue-950/30' : ''
               }`}
             >
               <span className="mt-0.5 flex-shrink-0">
@@ -105,11 +101,11 @@ export function ResearchProgressTimeline({
                   <span
                     data-testid="research-phase-chip"
                     className={`font-medium ${
-                      step.status === "error"
-                        ? "text-red-600 dark:text-red-400"
-                        : step.status === "done"
-                        ? "text-green-700 dark:text-green-400"
-                        : "text-foreground"
+                      step.status === 'error'
+                        ? 'text-red-600 dark:text-red-400'
+                        : step.status === 'done'
+                          ? 'text-green-700 dark:text-green-400'
+                          : 'text-foreground'
                     }`}
                   >
                     {labelForChip}
@@ -117,11 +113,11 @@ export function ResearchProgressTimeline({
                 ) : (
                   <span
                     className={`font-medium ${
-                      step.status === "done"
-                        ? "text-foreground"
-                        : step.status === "error"
-                        ? "text-red-600 dark:text-red-400"
-                        : "text-muted-foreground"
+                      step.status === 'done'
+                        ? 'text-foreground'
+                        : step.status === 'error'
+                          ? 'text-red-600 dark:text-red-400'
+                          : 'text-muted-foreground'
                     }`}
                   >
                     {step.label}
@@ -133,8 +129,8 @@ export function ResearchProgressTimeline({
                   </span>
                 )}
               </span>
-              {step.status === "done" &&
-                typeof step.durationMs === "number" && (
+              {step.status === 'done' &&
+                typeof step.durationMs === 'number' && (
                   <span className="flex-shrink-0 text-xs text-muted-foreground">
                     {formatDuration(step.durationMs)}
                   </span>

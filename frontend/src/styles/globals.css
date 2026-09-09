@@ -18,19 +18,19 @@
 :root {
   --font-size: 15px;
   /* Atelier light — warm paper, near-black ink, electric indigo accent. */
-  --background:       oklch(0.985 0.003 95);   /* warm paper */
-  --background-tint:  oklch(0.965 0.004 95);   /* card surface */
-  --background-deep:  oklch(0.93  0.005 95);   /* nav strip / footers */
-  --foreground:       oklch(0.16  0.01  260);  /* near-black, blue cast */
-  --foreground-soft:  oklch(0.42  0.01  260);  /* secondary */
-  --foreground-mute:  oklch(0.62  0.01  260);  /* tertiary / captions */
-  --rule:             oklch(0.88  0.005 260);  /* hairline */
-  --rule-strong:      oklch(0.78  0.005 260);
-  --accent-signal:    oklch(0.62  0.22  264);  /* electric indigo — agents live */
-  --accent-signal-bg: oklch(0.94  0.04  264);
-  --accent-warm:      oklch(0.70  0.16  56);   /* amber — confidence */
-  --accent-soft:      oklch(0.78  0.10  178);  /* teal — info */
-  --grain-opacity: 0.020;
+  --background: oklch(0.985 0.003 95); /* warm paper */
+  --background-tint: oklch(0.965 0.004 95); /* card surface */
+  --background-deep: oklch(0.93 0.005 95); /* nav strip / footers */
+  --foreground: oklch(0.16 0.01 260); /* near-black, blue cast */
+  --foreground-soft: oklch(0.42 0.01 260); /* secondary */
+  --foreground-mute: oklch(0.62 0.01 260); /* tertiary / captions */
+  --rule: oklch(0.88 0.005 260); /* hairline */
+  --rule-strong: oklch(0.78 0.005 260);
+  --accent-signal: oklch(0.62 0.22 264); /* electric indigo — agents live */
+  --accent-signal-bg: oklch(0.94 0.04 264);
+  --accent-warm: oklch(0.7 0.16 56); /* amber — confidence */
+  --accent-soft: oklch(0.78 0.1 178); /* teal — info */
+  --grain-opacity: 0.02;
 
   /* Aliases to keep existing component CSS classes working. */
   --foreground-rgb: 28 26 22;
@@ -47,7 +47,7 @@
   --accent: var(--background-tint);
   --accent-foreground: var(--foreground);
   --destructive: hsl(0 65% 50%);
-  --destructive-foreground: #FFFFFF;
+  --destructive-foreground: #ffffff;
   --border: var(--rule);
   --input: var(--background-tint);
   --input-background: var(--background);
@@ -71,7 +71,7 @@
   --sidebar-ring: var(--accent-signal);
   /* Status palette — kept semantic. */
   --status-running: var(--accent-signal);
-  --status-done: oklch(0.55 0.10 145);
+  --status-done: oklch(0.55 0.1 145);
   --status-error: hsl(0 65% 50%);
 }
 
@@ -81,19 +81,19 @@
  * React mounts by the inline script in index.html).
  */
 .dark {
-  --background:       oklch(0.15  0.012 264);  /* deep cobalt */
-  --background-tint:  oklch(0.20  0.014 264);
-  --background-deep:  oklch(0.11  0.010 264);
-  --foreground:       oklch(0.96  0.005 95);   /* warm paper */
-  --foreground-soft:  oklch(0.74  0.008 95);
-  --foreground-mute:  oklch(0.56  0.010 95);
-  --rule:             oklch(0.28  0.012 264);
-  --rule-strong:      oklch(0.38  0.012 264);
-  --accent-signal:    oklch(0.78  0.18  230);  /* electric cyan */
-  --accent-signal-bg: oklch(0.32  0.10  230);
-  --accent-warm:      oklch(0.80  0.16  70);
-  --accent-soft:      oklch(0.74  0.12  178);
-  --grain-opacity: 0.040;
+  --background: oklch(0.15 0.012 264); /* deep cobalt */
+  --background-tint: oklch(0.2 0.014 264);
+  --background-deep: oklch(0.11 0.01 264);
+  --foreground: oklch(0.96 0.005 95); /* warm paper */
+  --foreground-soft: oklch(0.74 0.008 95);
+  --foreground-mute: oklch(0.56 0.01 95);
+  --rule: oklch(0.28 0.012 264);
+  --rule-strong: oklch(0.38 0.012 264);
+  --accent-signal: oklch(0.78 0.18 230); /* electric cyan */
+  --accent-signal-bg: oklch(0.32 0.1 230);
+  --accent-warm: oklch(0.8 0.16 70);
+  --accent-soft: oklch(0.74 0.12 178);
+  --grain-opacity: 0.04;
 
   --foreground-rgb: 240 235 220;
   --card: var(--background-tint);
@@ -109,7 +109,7 @@
   --accent: var(--background-tint);
   --accent-foreground: var(--foreground);
   --destructive: hsl(0 65% 55%);
-  --destructive-foreground: #FFFFFF;
+  --destructive-foreground: #ffffff;
   --border: var(--rule);
   --input: var(--background-tint);
   --input-background: var(--background-tint);
@@ -180,8 +180,13 @@
      * touch of personality at hero scale. SS01 + CV11 keep the
      * single-story `a` and unambiguous `g` we already counted on
      * across the codebase. */
-    font-family: 'Geist', 'Inter', system-ui, -apple-system, sans-serif;
-    font-feature-settings: "ss01", "cv11";
+    font-family:
+      'Geist',
+      'Inter',
+      system-ui,
+      -apple-system,
+      sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
     font-size: 15px;
     line-height: 1.55;
   }
@@ -190,7 +195,8 @@
    * Atelier hero ("I read N stories overnight…"). Optical sizing is a
    * no-op on Geist (not a variable opsz font), but the variation-
    * settings declaration is harmless and forward-compatible. */
-  .display, h1.masthead {
+  .display,
+  h1.masthead {
     font-family: 'Geist', 'Inter', system-ui, sans-serif;
     font-weight: 600;
     letter-spacing: -0.025em;
@@ -198,15 +204,21 @@
 
   /* Mono: IBM Plex Mono for telemetry, code, and the Mission Control
    * data rail. Replaces JetBrains Mono so we ship a single mono face. */
-  .mono, code, kbd, [data-mono] {
+  .mono,
+  code,
+  kbd,
+  [data-mono] {
     font-family: 'IBM Plex Mono', ui-monospace, monospace;
-    font-feature-settings: "ss02";
+    font-feature-settings: 'ss02';
   }
 
   /* Default headings use Geist now. Fraunces is reserved for the
    * `.editorial` class (research-report prose, drop-caps inside long
    * articles) — it should NOT be the house voice. */
-  h1, h2, h3, .heading {
+  h1,
+  h2,
+  h3,
+  .heading {
     font-family: 'Geist', 'Inter', system-ui, sans-serif;
     font-weight: 600;
     letter-spacing: -0.02em;
@@ -217,7 +229,9 @@
   .editorial {
     font-family: 'Fraunces', 'Times New Roman', serif;
     font-optical-sizing: auto;
-    font-variation-settings: "opsz" 96, "SOFT" 50;
+    font-variation-settings:
+      'opsz' 96,
+      'SOFT' 50;
   }
 }
 
@@ -225,7 +239,7 @@
  * Base typography. This is not applied to elements which have an ancestor with a Tailwind text class.
  */
 @layer base {
-  :where(:not(:has([class*=" text-"]), :not(:has([class^="text-"])))) {
+  :where(:not(:has([class*=' text-']), :not(:has([class^='text-'])))) {
     h1 {
       font-size: var(--text-2xl);
       font-weight: var(--font-weight-semibold);
@@ -315,7 +329,19 @@ html {
  *  consistent, theme-aware outline only when keyboard navigation is
  *  active.
  * ------------------------------------------------------------------ */
-:where(button, a, input, textarea, select, summary, [role="tab"], [role="button"], [role="link"], [role="menuitem"], [tabindex]):focus-visible {
+:where(
+  button,
+  a,
+  input,
+  textarea,
+  select,
+  summary,
+  [role='tab'],
+  [role='button'],
+  [role='link'],
+  [role='menuitem'],
+  [tabindex]
+):focus-visible {
   outline: 2px solid var(--accent-signal);
   outline-offset: 2px;
 }
@@ -330,6 +356,6 @@ html {
  *  remap it to `--foreground-soft` inside cards. The class stays in
  *  the DOM, so the assertion locator still resolves.
  * ------------------------------------------------------------------ */
-[data-slot="card"] .text-gray-500 {
+[data-slot='card'] .text-gray-500 {
   color: var(--foreground-soft);
 }

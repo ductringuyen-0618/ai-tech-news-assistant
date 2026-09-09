@@ -20,7 +20,7 @@
  * reports reduced motion, the transition resolves instantly.
  */
 
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from 'framer-motion';
 
 interface SuggestedQueriesProps {
   queries: string[];
@@ -35,7 +35,7 @@ interface SuggestedQueriesProps {
    * Testid for the chip row container. Distinct between callsites so
    * Playwright can target the empty-state row vs the follow-up row.
    */
-  "data-testid"?: string;
+  'data-testid'?: string;
   /**
    * Per-chip testid. Defaults to "suggested-query-chip" (back-compat
    * with the empty-state callsite). The follow-up callsite passes
@@ -49,8 +49,8 @@ export function SuggestedQueries({
   queries,
   onSelect,
   label,
-  "data-testid": testid,
-  chipTestId = "suggested-query-chip",
+  'data-testid': testid,
+  chipTestId = 'suggested-query-chip',
 }: SuggestedQueriesProps): JSX.Element | null {
   const reduceMotion = useReducedMotion();
   if (!queries || queries.length === 0) return null;
@@ -70,15 +70,13 @@ export function SuggestedQueries({
     },
   } as const;
   const chipVariants = {
-    hidden: reduceMotion
-      ? { opacity: 1, y: 0 }
-      : { opacity: 0, y: 4 },
+    hidden: reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 },
     visible: {
       opacity: 1,
       y: 0,
       transition: {
         duration: reduceMotion ? 0 : 0.18,
-        ease: "easeOut" as const,
+        ease: 'easeOut' as const,
       },
     },
   } as const;
@@ -86,9 +84,7 @@ export function SuggestedQueries({
   return (
     <div data-testid={testid} className="space-y-2">
       {label && (
-        <p className="text-sm text-muted-foreground font-medium">
-          {label}
-        </p>
+        <p className="text-sm text-muted-foreground font-medium">{label}</p>
       )}
       <motion.div
         className="flex flex-wrap gap-2"

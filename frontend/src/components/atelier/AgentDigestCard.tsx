@@ -12,7 +12,7 @@
  * mono-eyebrows, no decorative tick rules. Just a tinted surface, a
  * one-pixel hairline on hover, and Geist type at three sizes.
  */
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from 'lucide-react';
 
 export interface DigestTopic {
   label: string;
@@ -53,7 +53,11 @@ export function AgentDigestCard({
       >
         <h3
           className="font-display text-foreground"
-          style={{ fontSize: "18px", lineHeight: 1.3, letterSpacing: "-0.015em" }}
+          style={{
+            fontSize: '18px',
+            lineHeight: 1.3,
+            letterSpacing: '-0.015em',
+          }}
         >
           {topic.label}
         </h3>
@@ -82,7 +86,7 @@ export function AgentDigestCard({
               <span
                 className="text-foreground-mute shrink-0"
                 aria-hidden
-                style={{ fontSize: "10px" }}
+                style={{ fontSize: '10px' }}
               >
                 ●
               </span>
@@ -114,7 +118,7 @@ export function AgentDigestCard({
         </button>
         {headlines.length > 0 && (
           <span className="text-[11px] text-foreground-mute tabular-nums uppercase tracking-wide">
-            {headlines.length} {headlines.length === 1 ? "story" : "stories"}
+            {headlines.length} {headlines.length === 1 ? 'story' : 'stories'}
           </span>
         )}
       </div>

@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 
 /**
  * SubQuestionsPanel -- M3b teleprinter restyle.
@@ -50,7 +50,7 @@ export interface SubQuestionArticle {
   url?: string | null;
 }
 
-export type SubQuestionStatus = "pending" | "in-progress" | "done";
+export type SubQuestionStatus = 'pending' | 'in-progress' | 'done';
 
 interface SubQuestionsPanelProps {
   subQuestions: string[];
@@ -69,11 +69,11 @@ interface SubQuestionsPanelProps {
 
 /** Best-effort hostname extractor -- strips leading `www.`. */
 function hostname(url: string | null | undefined): string {
-  if (!url) return "";
+  if (!url) return '';
   try {
-    return new URL(url).hostname.replace(/^www\\./, "");
+    return new URL(url).hostname.replace(/^www\\./, '');
   } catch {
-    return "source";
+    return 'source';
   }
 }
 
@@ -83,7 +83,7 @@ function hostname(url: string | null | undefined): string {
  * middle dot so the row reads as "queued" rather than "errored".
  */
 function StatusGlyph({ status }: { status: SubQuestionStatus }): JSX.Element {
-  if (status === "done") {
+  if (status === 'done') {
     return (
       <span
         aria-label="done"
@@ -94,7 +94,7 @@ function StatusGlyph({ status }: { status: SubQuestionStatus }): JSX.Element {
       </span>
     );
   }
-  if (status === "in-progress") {
+  if (status === 'in-progress') {
     return (
       <span
         aria-label="in progress"
@@ -135,15 +135,12 @@ export function SubQuestionsPanel({
   // span so the test regex /Decomposing your question/i still binds.
   if (!hasQuestions) {
     return (
-      <div
-        data-testid="research-sub-questions-panel"
-        data-state="decomposing"
-      >
+      <div data-testid="research-sub-questions-panel" data-state="decomposing">
         <div
           data-testid="research-sub-questions-skeleton"
           className="space-y-2"
         >
-          {[0, 1, 2].map((i) => (
+          {[0, 1, 2].map(i => (
             <div
               key={i}
               className="flex items-center gap-3 font-mono-tx text-[12px] animate-pulse"
@@ -164,14 +161,11 @@ export function SubQuestionsPanel({
   }
 
   return (
-    <div
-      data-testid="research-sub-questions-panel"
-      data-state="ready"
-    >
+    <div data-testid="research-sub-questions-panel" data-state="ready">
       <ol className="space-y-1.5">
         <AnimatePresence initial={false}>
           {subQuestions.map((q, idx) => {
-            const status = statusByIndex[idx] ?? "pending";
+            const status = statusByIndex[idx] ?? 'pending';
             const articles = searchResults[idx] ?? [];
             return (
               <motion.li
@@ -179,29 +173,23 @@ export function SubQuestionsPanel({
                 data-testid="research-sub-question-row"
                 className="font-mono-tx text-[12px] text-foreground"
                 initial={
-                  reduceMotion
-                    ? { opacity: 1, y: 0 }
-                    : { opacity: 0, y: -4 }
+                  reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }
                 }
                 animate={{ opacity: 1, y: 0 }}
                 exit={
-                  reduceMotion
-                    ? { opacity: 0, y: 0 }
-                    : { opacity: 0, y: -4 }
+                  reduceMotion ? { opacity: 0, y: 0 } : { opacity: 0, y: -4 }
                 }
                 transition={{
                   duration: reduceMotion ? 0 : 0.18,
                   delay: reduceMotion ? 0 : Math.min(idx * 0.05, 0.25),
-                  ease: "easeOut",
+                  ease: 'easeOut',
                 }}
               >
                 <div className="flex items-start gap-3 min-w-0">
                   <span className="text-foreground-soft w-6 shrink-0 leading-[1.5]">
-                    {String(idx + 1).padStart(2, "0")}
+                    {String(idx + 1).padStart(2, '0')}
                   </span>
-                  <span className="text-signal shrink-0 leading-[1.5]">
-                    ▸
-                  </span>
+                  <span className="text-signal shrink-0 leading-[1.5]">▸</span>
                   <span className="leading-[1.5] mt-0.5 shrink-0">
                     <StatusGlyph status={status} />
                   </span>
@@ -209,8 +197,8 @@ export function SubQuestionsPanel({
                     <p
                       className="text-foreground leading-[1.5]"
                       style={{
-                        overflowWrap: "anywhere",
-                        wordBreak: "break-word",
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
                       }}
                     >
                       {q}
@@ -220,7 +208,7 @@ export function SubQuestionsPanel({
                         data-testid="research-sub-question-articles"
                         className="mt-1 space-y-0.5"
                       >
-                        {articles.map((a) => {
+                        {articles.map(a => {
                           const host = hostname(a.url);
                           const meta = host || a.source;
                           const inner = (
@@ -228,13 +216,13 @@ export function SubQuestionsPanel({
                               <span className="text-foreground-soft">↳ </span>
                               <span
                                 className="text-foreground"
-                                style={{ overflowWrap: "anywhere" }}
+                                style={{ overflowWrap: 'anywhere' }}
                               >
                                 {a.title}
                               </span>
                               {meta && (
                                 <span className="text-foreground-soft">
-                                  {" · "}
+                                  {' · '}
                                   {meta}
                                 </span>
                               )}
@@ -245,7 +233,7 @@ export function SubQuestionsPanel({
                               key={a.id}
                               data-testid="research-sub-question-article"
                               className="font-mono-tx text-[11px] uppercase-eyebrow"
-                              style={{ overflowWrap: "anywhere" }}
+                              style={{ overflowWrap: 'anywhere' }}
                             >
                               <a
                                 href={a.url}
@@ -261,7 +249,7 @@ export function SubQuestionsPanel({
                               key={a.id}
                               data-testid="research-sub-question-article"
                               className="font-mono-tx text-[11px] uppercase-eyebrow"
-                              style={{ overflowWrap: "anywhere" }}
+                              style={{ overflowWrap: 'anywhere' }}
                             >
                               {inner}
                             </li>

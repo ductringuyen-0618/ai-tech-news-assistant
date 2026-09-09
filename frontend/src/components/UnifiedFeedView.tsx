@@ -23,17 +23,21 @@
  * from the pre-merge Atelier/Mission markup so existing specs keep
  * scoping to it).
  */
-import { ReactNode, useEffect, useMemo, useState } from "react";
-import { Loader2, Newspaper } from "lucide-react";
-import { toast } from "sonner";
-import { NewsCard } from "./NewsCard";
-import { AtelierShell } from "./atelier/AtelierShell";
-import { MissionShell } from "./mission/MissionShell";
-import { DenseArticleRow } from "./mission/DenseArticleRow";
-import { AgentTelemetry } from "./mission/AgentTelemetry";
-import { readInterestWeights, clearInterestWeights, reorderByInterest } from "../lib/interestWeights";
+import { ReactNode, useEffect, useMemo, useState } from 'react';
+import { Loader2, Newspaper } from 'lucide-react';
+import { toast } from 'sonner';
+import { NewsCard } from './NewsCard';
+import { AtelierShell } from './atelier/AtelierShell';
+import { MissionShell } from './mission/MissionShell';
+import { DenseArticleRow } from './mission/DenseArticleRow';
+import { AgentTelemetry } from './mission/AgentTelemetry';
+import {
+  readInterestWeights,
+  clearInterestWeights,
+  reorderByInterest,
+} from '../lib/interestWeights';
 
-export type FeedDensity = "comfortable" | "compact";
+export type FeedDensity = 'comfortable' | 'compact';
 
 /**
  * Superset of the article fields NewsCard and DenseArticleRow each read.
@@ -95,11 +99,13 @@ export function UnifiedFeedView({
   heading,
   emptyState,
   showAgentStatus = true,
-  className = "",
+  className = '',
 }: UnifiedFeedViewProps) {
   const [statusOpen, setStatusOpen] = useState(true);
 
-  const [weights, setWeights] = useState<Record<string, number>>(() => readInterestWeights());
+  const [weights, setWeights] = useState<Record<string, number>>(() =>
+    readInterestWeights()
+  );
   // How much of `articles` (from the front) the current `weights` snapshot
   // covers. Frozen alongside `weights` for the same reason -- see below --
   // so an infinite-scroll append can only ever land *after* this boundary,
@@ -111,7 +117,9 @@ export function UnifiedFeedView({
   // unpersonalized for one frame before the mount effect below corrects
   // it. Matching the initial `weights` read here keeps that first render
   // consistent with what it will immediately snap to anyway.
-  const [personalizedThrough, setPersonalizedThrough] = useState(() => articles.length);
+  const [personalizedThrough, setPersonalizedThrough] = useState(
+    () => articles.length
+  );
   // Re-read weights only when the feed's *leading* article changes -- a
   // real reload/refresh/filter change -- never on a bare re-render or an
   // infinite-scroll append. `articles` gets a brand-new array reference on
@@ -137,7 +145,10 @@ export function UnifiedFeedView({
     // supposed to be immune to. Only ever re-window the frozen prefix; new
     // articles beyond it are always appended after, in their given order,
     // until the next real personalization snapshot.
-    const personalized = reorderByInterest(articles.slice(0, personalizedThrough), weights);
+    const personalized = reorderByInterest(
+      articles.slice(0, personalizedThrough),
+      weights
+    );
     return [...personalized, ...articles.slice(personalizedThrough)];
   }, [articles, weights, personalizedThrough]);
   const isPersonalized = Object.keys(weights).length > 0;
@@ -146,7 +157,7 @@ export function UnifiedFeedView({
     clearInterestWeights();
     setWeights({});
     setPersonalizedThrough(articles.length);
-    toast.success("Personalization reset — showing latest first");
+    toast.success('Personalization reset — showing latest first');
   };
 
   if (loading) {
@@ -158,7 +169,10 @@ export function UnifiedFeedView({
   }
 
   const personalizationRow = isPersonalized && articles.length > 0 && (
-    <div data-testid="personalization-status" className="mb-3 flex items-center justify-between gap-2">
+    <div
+      data-testid="personalization-status"
+      className="mb-3 flex items-center justify-between gap-2"
+    >
       <span className="font-mono-tx uppercase-eyebrow">
         Personalized for you — based on your reactions
       </span>
@@ -175,12 +189,12 @@ export function UnifiedFeedView({
 
   const body =
     articles.length === 0 ? (
-      emptyState ?? DefaultEmptyState
-    ) : density === "compact" ? (
+      (emptyState ?? DefaultEmptyState)
+    ) : density === 'compact' ? (
       <MissionShell heading={heading} showTelemetry={false}>
         {personalizationRow}
         <div data-testid="news-feed-list" className="flex flex-col">
-          {orderedArticles.map((article) => (
+          {orderedArticles.map(article => (
             <DenseArticleRow key={article.id} article={article} />
           ))}
         </div>
@@ -197,32 +211,39 @@ export function UnifiedFeedView({
           data-testid="news-feed-list"
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {orderedArticles.map((article) => (
+          {orderedArticles.map(article => (
             // NewsCard's article prop requires several fields (imageUrl,
             // category, summaryShort, ...) that UnifiedFeedArticle keeps
             // optional so DenseArticleRow's narrower subset also fits.
             // App.tsx's own article state is typed `any[]` for the same
             // reason -- not every ingested article carries every field.
-            <NewsCard key={article.id} article={article as any} viewMode="detailed" />
+            <NewsCard
+              key={article.id}
+              article={article as any}
+              viewMode="detailed"
+            />
           ))}
         </div>
       </AtelierShell>
     );
 
   return (
-    <div data-testid="unified-feed-view" className={["flex w-full", className].join(" ")}>
+    <div
+      data-testid="unified-feed-view"
+      className={['flex w-full', className].join(' ')}
+    >
       <div className="flex-1 min-w-0">{body}</div>
       {showAgentStatus && articles.length > 0 && (
         <div className="flex shrink-0">
           <button
             type="button"
             data-testid="unified-feed-status-toggle"
-            onClick={() => setStatusOpen((v) => !v)}
+            onClick={() => setStatusOpen(v => !v)}
             aria-expanded={statusOpen}
             aria-controls="unified-feed-agent-status"
             className="self-start px-1.5 py-2 text-[10px] uppercase tracking-wide text-foreground-mute hover:text-foreground border-l border-[var(--rule)] transition-colors"
           >
-            {statusOpen ? "›" : "‹"}
+            {statusOpen ? '›' : '‹'}
           </button>
           {statusOpen && (
             <div id="unified-feed-agent-status">

@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { NewsCard } from "./NewsCard";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
-import { Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { NewsCard } from './NewsCard';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 /**
  * SavedArticlesList -- renders the articles a reader has filed via
@@ -20,7 +20,7 @@ import { Loader2, AlertCircle } from "lucide-react";
  * masthead / mono-eyebrow / empty-state conventions.
  */
 
-const SAVED_ARTICLES_KEY = "techpulse-saved-articles";
+const SAVED_ARTICLES_KEY = 'techpulse-saved-articles';
 
 function readSavedIds(): string[] {
   try {
@@ -45,18 +45,19 @@ function writeSavedIds(ids: string[]): void {
  *  `mapApiArticle` (not exported there) so saved cards render identically
  *  to the main feed. */
 function mapApiArticle(a: any) {
-  const summary = (a.summary || "").toString().trim();
-  const content = (a.content || "").toString().trim();
-  const body = content.length > summary.length * 1.5 ? content : (summary || content);
+  const summary = (a.summary || '').toString().trim();
+  const content = (a.content || '').toString().trim();
+  const body =
+    content.length > summary.length * 1.5 ? content : summary || content;
   const summaryShort = !body
-    ? ""
+    ? ''
     : body.length > 280
-      ? body.slice(0, 280).trimEnd() + "..."
+      ? body.slice(0, 280).trimEnd() + '...'
       : body;
   const summaryMedium = !body
-    ? ""
+    ? ''
     : body.length > 800
-      ? body.slice(0, 800).trimEnd() + "..."
+      ? body.slice(0, 800).trimEnd() + '...'
       : body;
   return {
     id: a.id,
@@ -66,12 +67,12 @@ function mapApiArticle(a: any) {
     summaryMedium,
     url: a.url,
     publishedAt: a.published_at,
-    imageUrl: a.image_url || "",
+    imageUrl: a.image_url || '',
     category: a.categories || [],
     source: a.source,
     credibilityScore: 85,
     trending: false,
-    sentiment: "neutral",
+    sentiment: 'neutral',
     keyInsights: [],
     sourcesUsed: [a.source],
   };
@@ -100,14 +101,14 @@ export default function SavedArticlesList() {
     }
 
     const results = await Promise.allSettled(
-      ids.map((id) => apiFetch<BaseResponseLike>(API_ENDPOINTS.newsById(id)))
+      ids.map(id => apiFetch<BaseResponseLike>(API_ENDPOINTS.newsById(id)))
     );
 
     const loaded: any[] = [];
     const staleIds: string[] = [];
 
     results.forEach((result, idx) => {
-      if (result.status === "fulfilled" && result.value?.data) {
+      if (result.status === 'fulfilled' && result.value?.data) {
         loaded.push(mapApiArticle(result.value.data));
       } else {
         // Article was deleted/archived server-side since it was saved --
@@ -117,13 +118,15 @@ export default function SavedArticlesList() {
     });
 
     if (staleIds.length > 0) {
-      writeSavedIds(ids.filter((id) => !staleIds.includes(id)));
+      writeSavedIds(ids.filter(id => !staleIds.includes(id)));
     }
 
     if (loaded.length === 0 && staleIds.length > 0 && ids.length > 0) {
       // Every saved id failed to resolve -- surface this distinctly from
       // "nothing saved" so it doesn't read as if the feature is empty.
-      setError("Couldn't load your saved articles. They may have been removed.");
+      setError(
+        "Couldn't load your saved articles. They may have been removed."
+      );
       setArticles([]);
     } else {
       setArticles(loaded);
@@ -137,13 +140,16 @@ export default function SavedArticlesList() {
 
   function handleRemove(id: string) {
     const prevIds = readSavedIds();
-    writeSavedIds(prevIds.filter((savedId) => savedId !== id));
-    setArticles((prev) => (prev ? prev.filter((a) => String(a.id) !== id) : prev));
-    toast.success("Removed from saved articles");
+    writeSavedIds(prevIds.filter(savedId => savedId !== id));
+    setArticles(prev => (prev ? prev.filter(a => String(a.id) !== id) : prev));
+    toast.success('Removed from saved articles');
   }
 
   return (
-    <div className="max-w-3xl mx-auto space-y-4" data-testid="saved-articles-list">
+    <div
+      className="max-w-3xl mx-auto space-y-4"
+      data-testid="saved-articles-list"
+    >
       <header className="space-y-1 border-b-2 border-[var(--foreground)] pb-3">
         <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
           ━ THE CLIPPING FILE
@@ -185,7 +191,10 @@ export default function SavedArticlesList() {
       )}
 
       {!loading && !error && articles && articles.length === 0 && (
-        <div className="text-center py-12 space-y-2" data-testid="saved-articles-empty">
+        <div
+          className="text-center py-12 space-y-2"
+          data-testid="saved-articles-empty"
+        >
           <p className="font-mono-tx text-[24px] text-foreground-soft">▌</p>
           <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
             No saved articles yet — click Save on any story to file it here.
@@ -195,7 +204,7 @@ export default function SavedArticlesList() {
 
       {!loading && !error && articles && articles.length > 0 && (
         <div className="space-y-3">
-          {articles.map((article) => (
+          {articles.map(article => (
             <div
               key={article.id}
               data-testid="saved-articles-item"

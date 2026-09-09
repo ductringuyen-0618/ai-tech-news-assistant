@@ -1,5 +1,5 @@
 ---
-status: proposed
+status: rejected
 attempts: 0
 branch: null
 ---

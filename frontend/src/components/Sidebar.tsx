@@ -29,17 +29,17 @@
  * IMPORTANT: this component MUST be rendered inside a Radix `<Tabs>`
  * root. App.tsx wraps the whole layout in <Tabs value=... onValueChange=...>.
  */
-import { useState, type ReactNode } from "react";
-import { TabsList, TabsTrigger } from "./ui/tabs";
-import { useTheme } from "./ThemeProvider";
-import { useIsMobile } from "./ui/use-mobile";
+import { useState, type ReactNode } from 'react';
+import { TabsList, TabsTrigger } from './ui/tabs';
+import { useTheme } from './ThemeProvider';
+import { useIsMobile } from './ui/use-mobile';
 import {
   Sheet,
   SheetContent,
   SheetHeader,
   SheetTitle,
   SheetDescription,
-} from "./ui/sheet";
+} from './ui/sheet';
 import {
   Newspaper,
   Lightbulb,
@@ -47,7 +47,7 @@ import {
   Settings,
   Bookmark,
   Menu,
-} from "lucide-react";
+} from 'lucide-react';
 
 export interface SidebarNavItem {
   /** Tab id (matches the Radix Tabs `value`). */
@@ -61,18 +61,18 @@ export interface SidebarNavItem {
 }
 
 export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
-  { value: "feed", label: "News Feed", icon: Newspaper },
-  { value: "research", label: "Research", icon: Lightbulb },
-  { value: "digest", label: "Digest", icon: Mail },
-  { value: "saved", label: "Saved", icon: Bookmark },
-  { value: "preferences", label: "Settings", icon: Settings },
+  { value: 'feed', label: 'News Feed', icon: Newspaper },
+  { value: 'research', label: 'Research', icon: Lightbulb },
+  { value: 'digest', label: 'Digest', icon: Mail },
+  { value: 'saved', label: 'Saved', icon: Bookmark },
+  { value: 'preferences', label: 'Settings', icon: Settings },
 ];
 
 interface SidebarProps {
   /** Currently active tab value. Drives the active-state styling. */
   activeTab: string;
   /** Optional click-tap visual hint (e.g. unsaved-changes pill on Settings). */
-  badges?: Partial<Record<string, "unsaved" | "warn">>;
+  badges?: Partial<Record<string, 'unsaved' | 'warn'>>;
   /** Navigate to the home page (welcome screen). Wired to the
    *  branding-header logo click so users can always return to `/`. */
   onGoHome?: () => void;
@@ -140,7 +140,7 @@ export function Sidebar({ activeTab, badges, onGoHome }: SidebarProps) {
             const Icon = item.icon;
             const isActive = activeTab === item.value;
             const badge = badges?.[item.value];
-            const num = String(idx + 1).padStart(2, "0") + ".";
+            const num = String(idx + 1).padStart(2, '0') + '.';
             return (
               <TabsTrigger
                 key={item.value}
@@ -148,12 +148,12 @@ export function Sidebar({ activeTab, badges, onGoHome }: SidebarProps) {
                 aria-label={item.label}
                 onClick={() => onNavigate?.()}
                 className={[
-                  "group relative flex items-center w-full px-4 py-2 gap-3",
-                  "text-left font-medium text-[14px] text-foreground-soft",
-                  "hover:text-foreground hover:bg-[var(--background-tint)]",
-                  "transition-colors rounded-none",
-                  isActive ? "text-foreground bg-[var(--background-tint)]" : "",
-                ].join(" ")}
+                  'group relative flex items-center w-full px-4 py-2 gap-3',
+                  'text-left font-medium text-[14px] text-foreground-soft',
+                  'hover:text-foreground hover:bg-[var(--background-tint)]',
+                  'transition-colors rounded-none',
+                  isActive ? 'text-foreground bg-[var(--background-tint)]' : '',
+                ].join(' ')}
               >
                 {/* Left rule: 3px signal bar when active, hairline
                     rule fade on hover when inactive. The transition
@@ -163,11 +163,11 @@ export function Sidebar({ activeTab, badges, onGoHome }: SidebarProps) {
                 <span
                   aria-hidden="true"
                   className={[
-                    "w-[3px] h-5 ml-[-16px] mr-[13px] transition-colors",
+                    'w-[3px] h-5 ml-[-16px] mr-[13px] transition-colors',
                     isActive
-                      ? "bg-[var(--accent-signal)]"
-                      : "bg-transparent group-hover:bg-[var(--rule)]",
-                  ].join(" ")}
+                      ? 'bg-[var(--accent-signal)]'
+                      : 'bg-transparent group-hover:bg-[var(--rule)]',
+                  ].join(' ')}
                 />
                 <span
                   aria-hidden="true"
@@ -177,7 +177,7 @@ export function Sidebar({ activeTab, badges, onGoHome }: SidebarProps) {
                 </span>
                 <Icon className="w-[14px] h-[14px] shrink-0" />
                 <span className="flex-1">{item.label}</span>
-                {badge === "unsaved" && (
+                {badge === 'unsaved' && (
                   <span
                     aria-label="Unsaved changes"
                     className="w-1.5 h-1.5 rounded-full bg-[var(--accent-signal)]"
@@ -198,17 +198,21 @@ export function Sidebar({ activeTab, badges, onGoHome }: SidebarProps) {
           type="button"
           onClick={toggleTheme}
           data-testid="theme-toggle"
-          aria-label={`Switch to ${theme === "dark" ? "light" : "dark"} theme`}
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} theme`}
           className="mx-3 mb-3 mt-2 px-3 py-2 border-t border-[var(--rule)] flex items-center gap-2 font-mono-tx text-[11px] uppercase-eyebrow"
         >
           <span
-            className={theme === "light" ? "text-foreground" : "text-foreground-soft"}
+            className={
+              theme === 'light' ? 'text-foreground' : 'text-foreground-soft'
+            }
           >
             [ light ]
           </span>
           <span className="text-foreground-soft">·</span>
           <span
-            className={theme === "dark" ? "text-foreground" : "text-foreground-soft"}
+            className={
+              theme === 'dark' ? 'text-foreground' : 'text-foreground-soft'
+            }
           >
             [ dark ]
           </span>

@@ -13,7 +13,7 @@
  *
  * Test hook: data-testid="dense-article-row"
  */
-import { useMemo, useRef } from "react";
+import { useMemo, useRef } from 'react';
 
 interface DenseArticleRowProps {
   article: {
@@ -30,35 +30,39 @@ interface DenseArticleRowProps {
 // it. Replace with a real `surfaced_by` column once the backend migration
 // from REDESIGN_PLAN.md §5.3 lands.
 function inferSubagent(source: string): string {
-  const s = (source || "").toLowerCase();
-  if (s.includes("hacker") || s.includes("ycomb")) return "editor-pick";
-  if (s.includes("verge") || s.includes("techcrunch") || s.includes("wired"))
-    return "feed-ingest";
-  if (s.includes("bloomberg") || s.includes("reuters") || s.includes("ft"))
-    return "topic-cluster";
-  if (s.includes("ars") || s.includes("anandtech")) return "entity-link";
-  return "feed-ingest";
+  const s = (source || '').toLowerCase();
+  if (s.includes('hacker') || s.includes('ycomb')) return 'editor-pick';
+  if (s.includes('verge') || s.includes('techcrunch') || s.includes('wired'))
+    return 'feed-ingest';
+  if (s.includes('bloomberg') || s.includes('reuters') || s.includes('ft'))
+    return 'topic-cluster';
+  if (s.includes('ars') || s.includes('anandtech')) return 'entity-link';
+  return 'feed-ingest';
 }
 
 function fmtClock(iso: string): string {
   try {
     const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return "--:--";
-    return d.toLocaleTimeString("en-US", {
-      hour: "2-digit",
-      minute: "2-digit",
+    if (Number.isNaN(d.getTime())) return '--:--';
+    return d.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
       hour12: false,
     });
   } catch {
-    return "--:--";
+    return '--:--';
   }
 }
 
 export function DenseArticleRow({ article }: DenseArticleRowProps) {
-  const subagent = useMemo(() => inferSubagent(article.source), [article.source]);
-  const conf = typeof article.credibilityScore === "number"
-    ? article.credibilityScore
-    : null;
+  const subagent = useMemo(
+    () => inferSubagent(article.source),
+    [article.source]
+  );
+  const conf =
+    typeof article.credibilityScore === 'number'
+      ? article.credibilityScore
+      : null;
   // The row's default action (native <a> Enter-to-activate) opens the
   // external publisher URL in a new tab. Mouse clicks land on the title
   // span, which App.tsx's delegated card-title click handler intercepts
@@ -79,16 +83,21 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
       target="_blank"
       rel="noopener noreferrer"
       className="group grid items-baseline gap-3 py-1.5 px-3 border-b border-[var(--rule)] hover:bg-[var(--background-tint)] transition-colors text-[12px] tabular-nums"
-      style={{ gridTemplateColumns: "56px 130px minmax(260px, 1fr) 48px 110px" }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter") {
+      style={{
+        gridTemplateColumns: '56px 130px minmax(260px, 1fr) 48px 110px',
+      }}
+      onKeyDown={e => {
+        if (e.key === 'Enter') {
           e.preventDefault();
           titleRef.current?.click();
         }
       }}
     >
       {/* Wall clock */}
-      <span className="text-foreground-mute font-[var(--font-mono)] mono" data-mono>
+      <span
+        className="text-foreground-mute font-[var(--font-mono)] mono"
+        data-mono
+      >
         {fmtClock(article.publishedAt)}
       </span>
 
@@ -100,7 +109,7 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
         ref={titleRef}
         data-slot="card-title"
         className="text-foreground group-hover:underline truncate"
-        style={{ fontSize: "13px", fontWeight: 500 }}
+        style={{ fontSize: '13px', fontWeight: 500 }}
       >
         {article.title}
       </span>
@@ -115,20 +124,20 @@ export function DenseArticleRow({ article }: DenseArticleRowProps) {
         style={{
           color:
             conf == null
-              ? "var(--foreground-mute)"
+              ? 'var(--foreground-mute)'
               : conf < 60
-                ? "var(--accent-warm)"
-                : "var(--foreground-soft)",
+                ? 'var(--accent-warm)'
+                : 'var(--foreground-soft)',
         }}
       >
-        {conf != null ? `${conf}%` : "—"}
+        {conf != null ? `${conf}%` : '—'}
       </span>
 
       {/* Which subagent surfaced it */}
       <span
         className="text-right mono"
         data-mono
-        style={{ color: "var(--accent-signal)", fontSize: "11px" }}
+        style={{ color: 'var(--accent-signal)', fontSize: '11px' }}
       >
         {subagent}
       </span>

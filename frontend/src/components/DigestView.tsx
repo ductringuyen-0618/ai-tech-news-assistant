@@ -1,15 +1,15 @@
-import { useState } from "react";
+import { useState } from 'react';
 import {
   Newspaper,
   ExternalLink,
   Layers,
   ArrowUp,
   MessageCircle,
-} from "lucide-react";
-import { Badge } from "./ui/badge";
-import { Skeleton } from "./ui/skeleton";
-import { DropCap } from "./DropCap";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
+} from 'lucide-react';
+import { Badge } from './ui/badge';
+import { Skeleton } from './ui/skeleton';
+import { DropCap } from './DropCap';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
 
 /**
  * DigestView -- M5 newspaper-section restyle of the daily digest.
@@ -118,18 +118,18 @@ interface DigestViewProps {
 }
 
 function relativeTime(iso: string | undefined | null): string {
-  if (!iso) return "";
+  if (!iso) return '';
   try {
     const date = new Date(iso);
     const now = Date.now();
     const diffSec = Math.floor((now - date.getTime()) / 1000);
-    if (diffSec < 60) return "just now";
+    if (diffSec < 60) return 'just now';
     if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`;
     if (diffSec < 86_400) return `${Math.floor(diffSec / 3600)} hr ago`;
     if (diffSec < 7 * 86_400) return `${Math.floor(diffSec / 86_400)} d ago`;
     return date.toLocaleDateString();
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -161,15 +161,15 @@ function parseHnBoilerplate(text: string | null | undefined): {
   let commentsUrl: string | undefined;
 
   for (const m of matches) {
-    const label = m[1].replace(/\s+/g, " ").trim().toLowerCase();
+    const label = m[1].replace(/\s+/g, ' ').trim().toLowerCase();
     const value = m[2].trim();
-    if (label === "points") {
+    if (label === 'points') {
       const n = parseInt(value, 10);
       if (!Number.isNaN(n)) points = n;
-    } else if (label === "# comments") {
+    } else if (label === '# comments') {
       const n = parseInt(value, 10);
       if (!Number.isNaN(n)) commentsCount = n;
-    } else if (label === "comments url") {
+    } else if (label === 'comments url') {
       commentsUrl = value;
     }
   }
@@ -182,7 +182,7 @@ function parseHnBoilerplate(text: string | null | undefined): {
     points,
     commentsCount,
     commentsUrl,
-    cleanedText: text.replace(HN_FIELD_RE, "").trim(),
+    cleanedText: text.replace(HN_FIELD_RE, '').trim(),
   };
 }
 
@@ -208,13 +208,13 @@ function getHnEngagement(story: {
   const parsed = parseHnBoilerplate(story.summary ?? story.summaryShort);
 
   const points =
-    typeof story.points === "number" ? story.points : parsed?.points;
+    typeof story.points === 'number' ? story.points : parsed?.points;
   const commentsCount =
-    typeof story.comments_count === "number"
+    typeof story.comments_count === 'number'
       ? story.comments_count
       : parsed?.commentsCount;
   const commentsUrl =
-    typeof story.comments_url === "string"
+    typeof story.comments_url === 'string'
       ? story.comments_url
       : parsed?.commentsUrl;
 
@@ -222,7 +222,12 @@ function getHnEngagement(story: {
     return null;
   }
 
-  return { points, commentsCount, commentsUrl, cleanedSummary: parsed?.cleanedText };
+  return {
+    points,
+    commentsCount,
+    commentsUrl,
+    cleanedSummary: parsed?.cleanedText,
+  };
 }
 
 /** "▲ 205 · 74 comments" engagement pill. When `asLink` is false the pill
@@ -253,7 +258,7 @@ function HnEngagementBadge({
       {commentsCount !== undefined ? (
         <span className="inline-flex items-center gap-0.5 text-foreground-soft">
           <MessageCircle className="w-3 h-3" />
-          {commentsCount} comment{commentsCount === 1 ? "" : "s"}
+          {commentsCount} comment{commentsCount === 1 ? '' : 's'}
         </span>
       ) : null}
     </span>
@@ -268,7 +273,7 @@ function HnEngagementBadge({
         target="_blank"
         rel="noopener noreferrer"
         className="hover:text-signal transition-colors"
-        onClick={(e) => e.stopPropagation()}
+        onClick={e => e.stopPropagation()}
       >
         {content}
       </a>
@@ -280,16 +285,16 @@ function HnEngagementBadge({
       role="link"
       tabIndex={0}
       className="hover:text-signal transition-colors cursor-pointer"
-      onClick={(e) => {
+      onClick={e => {
         e.preventDefault();
         e.stopPropagation();
-        window.open(commentsUrl, "_blank", "noopener,noreferrer");
+        window.open(commentsUrl, '_blank', 'noopener,noreferrer');
       }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
+      onKeyDown={e => {
+        if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault();
           e.stopPropagation();
-          window.open(commentsUrl, "_blank", "noopener,noreferrer");
+          window.open(commentsUrl, '_blank', 'noopener,noreferrer');
         }
       }}
     >
@@ -321,25 +326,27 @@ function SectionEyebrow({ label }: { label: string }) {
  * that same followups doc as a deliberate next step, not done here.
  */
 function SubscribeForm() {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "loading" | "done" | "error">("idle");
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>(
+    'idle'
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (status === "loading") return;
-    setStatus("loading");
+    if (status === 'loading') return;
+    setStatus('loading');
     try {
       await apiFetch(API_ENDPOINTS.subscribers, {
-        method: "POST",
+        method: 'POST',
         body: JSON.stringify({ email }),
       });
-      setStatus("done");
+      setStatus('done');
     } catch {
-      setStatus("error");
+      setStatus('error');
     }
   };
 
-  if (status === "done") {
+  if (status === 'done') {
     return (
       <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft text-center">
         ━ you're on the list — see you in tomorrow's edition ━
@@ -361,21 +368,21 @@ function SubscribeForm() {
         type="email"
         required
         value={email}
-        onChange={(e) => setEmail(e.target.value)}
+        onChange={e => setEmail(e.target.value)}
         placeholder="you@example.com"
-        disabled={status === "loading"}
+        disabled={status === 'loading'}
         className="font-mono-tx text-[12px] bg-transparent border border-[var(--rule)] rounded px-2 py-1 text-foreground placeholder:text-foreground-soft"
       />
       <button
         type="submit"
-        disabled={status === "loading"}
+        disabled={status === 'loading'}
         className={`font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] rounded px-3 py-1 text-foreground hover:bg-[var(--background-tint)] transition-colors ${
-          status === "loading" ? "opacity-40" : ""
+          status === 'loading' ? 'opacity-40' : ''
         }`}
       >
-        {status === "loading" ? "Subscribing…" : "Subscribe"}
+        {status === 'loading' ? 'Subscribing…' : 'Subscribe'}
       </button>
-      {status === "error" && (
+      {status === 'error' && (
         <span className="font-mono-tx text-[11px] text-foreground-soft w-full text-center">
           Couldn't subscribe — try again in a moment.
         </span>
@@ -393,11 +400,11 @@ export function DigestView({
 }: DigestViewProps) {
   const formatMasthead = (dateString: string) => {
     const date = new Date(dateString);
-    const wd = date.toLocaleDateString("en-US", { weekday: "short" });
-    const d = date.toLocaleDateString("en-US", {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
+    const wd = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const d = date.toLocaleDateString('en-US', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
     });
     return `${wd.toUpperCase()} ${d.toUpperCase()}`;
   };
@@ -424,12 +431,9 @@ export function DigestView({
 
       {/* === DAILY BRIEF (AI-generated summary) ============== */}
       {(dailySummary || dailySummaryLoading) && (
-        <section
-          data-testid="digest-daily-summary-card"
-          className="space-y-3"
-        >
+        <section data-testid="digest-daily-summary-card" className="space-y-3">
           <SectionEyebrow
-            label={`DAILY BRIEF — ${formatMasthead(digest.date).split(" ").slice(0, 2).join(" ")}`}
+            label={`DAILY BRIEF — ${formatMasthead(digest.date).split(' ').slice(0, 2).join(' ')}`}
           />
           {dailySummaryLoading ? (
             <div className="space-y-2">
@@ -455,12 +459,16 @@ export function DigestView({
                 data-testid="digest-daily-summary-text"
                 className="text-[18px] italic leading-[1.55]"
               >
-                <span style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}>
+                <span
+                  style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
+                >
                   {dailySummary.summary}
                 </span>
               </DropCap>
               <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-                filed {relativeTime(dailySummary.generated_at) || "today"} · {dailySummary.article_count} article{dailySummary.article_count === 1 ? "" : "s"}
+                filed {relativeTime(dailySummary.generated_at) || 'today'} ·{' '}
+                {dailySummary.article_count} article
+                {dailySummary.article_count === 1 ? '' : 's'}
               </p>
             </>
           ) : null}
@@ -475,67 +483,70 @@ export function DigestView({
             data-testid="digest-curated-headlines"
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-6"
           >
-            {curatedHeadlines.map((story) => {
+            {curatedHeadlines.map(story => {
               const engagement = getHnEngagement(story);
               const displaySummary =
                 engagement?.cleanedSummary !== undefined
                   ? engagement.cleanedSummary
                   : story.summary;
               return (
-              <a
-                key={story.id}
-                data-testid={`digest-curated-story-${story.id}`}
-                href={story.url || "#"}
-                target={story.url ? "_blank" : undefined}
-                rel={story.url ? "noopener noreferrer" : undefined}
-                className="group flex flex-col border-t border-[var(--rule)] pt-3 hover:cursor-pointer"
-              >
-                {story.image_url ? (
-                  <div className="w-full aspect-[16/10] overflow-hidden bg-[var(--background-tint)] mb-3">
-                    <img
-                      src={story.image_url}
-                      alt=""
-                      loading="lazy"
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).style.display =
-                          "none";
-                      }}
-                    />
-                  </div>
-                ) : null}
-                <h3
-                  className="font-display text-[20px] font-medium text-foreground leading-snug line-clamp-3 group-hover:text-signal group-hover:underline"
-                  style={{
-                    overflowWrap: "anywhere",
-                    wordBreak: "break-word",
-                  }}
+                <a
+                  key={story.id}
+                  data-testid={`digest-curated-story-${story.id}`}
+                  href={story.url || '#'}
+                  target={story.url ? '_blank' : undefined}
+                  rel={story.url ? 'noopener noreferrer' : undefined}
+                  className="group flex flex-col border-t border-[var(--rule)] pt-3 hover:cursor-pointer"
                 >
-                  {story.title}
-                </h3>
-                {displaySummary ? (
-                  <p
-                    className="mt-2 text-[14px] text-foreground-soft leading-relaxed line-clamp-2"
+                  {story.image_url ? (
+                    <div className="w-full aspect-[16/10] overflow-hidden bg-[var(--background-tint)] mb-3">
+                      <img
+                        src={story.image_url}
+                        alt=""
+                        loading="lazy"
+                        className="w-full h-full object-cover"
+                        onError={e => {
+                          (e.currentTarget as HTMLImageElement).style.display =
+                            'none';
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  <h3
+                    className="font-display text-[20px] font-medium text-foreground leading-snug line-clamp-3 group-hover:text-signal group-hover:underline"
                     style={{
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
                     }}
                   >
-                    {displaySummary}
-                  </p>
-                ) : null}
-                <div className="mt-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft flex items-center gap-2 flex-wrap">
-                  <span>{story.source}</span>
-                  <span>·</span>
-                  <span>{relativeTime(story.published_at)}</span>
-                  {engagement ? (
-                    <>
-                      <span>·</span>
-                      <HnEngagementBadge engagement={engagement} asLink={false} />
-                    </>
+                    {story.title}
+                  </h3>
+                  {displaySummary ? (
+                    <p
+                      className="mt-2 text-[14px] text-foreground-soft leading-relaxed line-clamp-2"
+                      style={{
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {displaySummary}
+                    </p>
                   ) : null}
-                </div>
-              </a>
+                  <div className="mt-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft flex items-center gap-2 flex-wrap">
+                    <span>{story.source}</span>
+                    <span>·</span>
+                    <span>{relativeTime(story.published_at)}</span>
+                    {engagement ? (
+                      <>
+                        <span>·</span>
+                        <HnEngagementBadge
+                          engagement={engagement}
+                          asLink={false}
+                        />
+                      </>
+                    ) : null}
+                  </div>
+                </a>
               );
             })}
           </div>
@@ -550,7 +561,7 @@ export function DigestView({
             data-testid="digest-topic-clusters"
             className="flex flex-col gap-4"
           >
-            {topicClusters.map((cluster) => (
+            {topicClusters.map(cluster => (
               <div
                 key={cluster.slug}
                 data-testid={`digest-topic-cluster-${cluster.slug}`}
@@ -573,27 +584,28 @@ export function DigestView({
                   ) : null}
                 </div>
                 <div className="flex flex-col">
-                  {cluster.preview.map((article) => (
+                  {cluster.preview.map(article => (
                     <a
                       key={article.id}
                       data-testid={`digest-cluster-article-${article.id}`}
-                      href={article.url || "#"}
-                      target={article.url ? "_blank" : undefined}
-                      rel={article.url ? "noopener noreferrer" : undefined}
+                      href={article.url || '#'}
+                      target={article.url ? '_blank' : undefined}
+                      rel={article.url ? 'noopener noreferrer' : undefined}
                       className="group flex items-start gap-2 py-2 border-t border-[var(--rule)] hover:text-signal transition-colors"
                     >
                       <div className="flex-1 min-w-0 space-y-1">
                         <p
                           className="font-display text-[15px] text-foreground leading-snug line-clamp-2 group-hover:text-signal group-hover:underline"
                           style={{
-                            overflowWrap: "anywhere",
-                            wordBreak: "break-word",
+                            overflowWrap: 'anywhere',
+                            wordBreak: 'break-word',
                           }}
                         >
                           {article.title}
                         </p>
                         <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-                          {article.source} · {relativeTime(article.published_at)}
+                          {article.source} ·{' '}
+                          {relativeTime(article.published_at)}
                         </div>
                       </div>
                       <ExternalLink className="w-3 h-3 text-foreground-soft mt-1 shrink-0" />
@@ -612,10 +624,7 @@ export function DigestView({
         <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
           the most important tech news you shouldn't miss
         </p>
-        <ul
-          data-testid="digest-top-stories"
-          className="flex flex-col"
-        >
+        <ul data-testid="digest-top-stories" className="flex flex-col">
           {digest.topStories.map((story, idx) => {
             const engagement = getHnEngagement(story);
             const displaySummary =
@@ -623,66 +632,69 @@ export function DigestView({
                 ? engagement.cleanedSummary
                 : story.summaryShort;
             return (
-            // NOTE: the `.border-l-4` class on this <li> is
-            // load-bearing for digest.spec.ts:41 and :107. The
-            // visible left rail is now the mono 3-digit index
-            // rendered inside the row; the border is set to
-            // transparent so the class survives the visual
-            // rebuild while the selector still matches.
-            <li
-              key={story.id}
-              data-testid="digest-top-story-row"
-              className="border-l-4 border-transparent border-t border-t-[var(--rule)] pl-3 py-2 hover:bg-[var(--background-tint)] transition-colors"
-            >
-              <div className="flex items-start gap-3">
-                <span className="font-mono-tx text-[13px] uppercase-eyebrow text-signal tabular-nums shrink-0 pt-0.5">
-                  {String(idx + 1).padStart(3, "0")}
-                </span>
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <h3
-                    className="font-display text-[16px] font-medium text-foreground leading-snug"
-                    style={{
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {story.title}
-                  </h3>
-                  <p
-                    className="text-[13px] text-foreground-soft leading-relaxed line-clamp-2"
-                    style={{
-                      overflowWrap: "anywhere",
-                      wordBreak: "break-word",
-                    }}
-                  >
-                    {displaySummary}
-                  </p>
-                  <div className="flex flex-wrap gap-1.5 items-center">
-                    <Badge
-                      variant="outline"
-                      className="h-5 px-1.5 text-[10px] font-mono-tx uppercase-eyebrow border-[var(--rule)] bg-card text-foreground rounded-none"
+              // NOTE: the `.border-l-4` class on this <li> is
+              // load-bearing for digest.spec.ts:41 and :107. The
+              // visible left rail is now the mono 3-digit index
+              // rendered inside the row; the border is set to
+              // transparent so the class survives the visual
+              // rebuild while the selector still matches.
+              <li
+                key={story.id}
+                data-testid="digest-top-story-row"
+                className="border-l-4 border-transparent border-t border-t-[var(--rule)] pl-3 py-2 hover:bg-[var(--background-tint)] transition-colors"
+              >
+                <div className="flex items-start gap-3">
+                  <span className="font-mono-tx text-[13px] uppercase-eyebrow text-signal tabular-nums shrink-0 pt-0.5">
+                    {String(idx + 1).padStart(3, '0')}
+                  </span>
+                  <div className="flex-1 min-w-0 space-y-1.5">
+                    <h3
+                      className="font-display text-[16px] font-medium text-foreground leading-snug"
+                      style={{
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
                     >
-                      {story.source}
-                    </Badge>
-                    {story.category
-                      .filter((cat) => cat && cat !== story.source)
-                      .slice(0, 2)
-                      .map((cat) => (
-                        <Badge
-                          key={cat}
-                          variant="secondary"
-                          className="h-5 px-1.5 text-[10px] font-mono-tx uppercase-eyebrow rounded-none"
-                        >
-                          {cat}
-                        </Badge>
-                      ))}
-                    {engagement ? (
-                      <HnEngagementBadge engagement={engagement} asLink={true} />
-                    ) : null}
+                      {story.title}
+                    </h3>
+                    <p
+                      className="text-[13px] text-foreground-soft leading-relaxed line-clamp-2"
+                      style={{
+                        overflowWrap: 'anywhere',
+                        wordBreak: 'break-word',
+                      }}
+                    >
+                      {displaySummary}
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 items-center">
+                      <Badge
+                        variant="outline"
+                        className="h-5 px-1.5 text-[10px] font-mono-tx uppercase-eyebrow border-[var(--rule)] bg-card text-foreground rounded-none"
+                      >
+                        {story.source}
+                      </Badge>
+                      {story.category
+                        .filter(cat => cat && cat !== story.source)
+                        .slice(0, 2)
+                        .map(cat => (
+                          <Badge
+                            key={cat}
+                            variant="secondary"
+                            className="h-5 px-1.5 text-[10px] font-mono-tx uppercase-eyebrow rounded-none"
+                          >
+                            {cat}
+                          </Badge>
+                        ))}
+                      {engagement ? (
+                        <HnEngagementBadge
+                          engagement={engagement}
+                          asLink={true}
+                        />
+                      ) : null}
+                    </div>
                   </div>
                 </div>
-              </div>
-            </li>
+              </li>
             );
           })}
         </ul>
@@ -698,7 +710,7 @@ export function DigestView({
           data-testid="digest-trending-row"
           className="flex flex-wrap gap-1.5"
         >
-          {digest.trendingTopics.map((topic) => (
+          {digest.trendingTopics.map(topic => (
             // The `bg-orange-50 rounded-lg` literals are
             // load-bearing for digest.spec.ts:64 and :131. We
             // keep BOTH classes on the wrapper -- in light mode
@@ -716,16 +728,16 @@ export function DigestView({
                 <p
                   className="truncate"
                   style={{
-                    overflowWrap: "anywhere",
-                    wordBreak: "break-word",
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {topic.title}
                 </p>
                 {topic.category
-                  .filter((c) => c && c.trim().length > 0)
+                  .filter(c => c && c.trim().length > 0)
                   .slice(0, 1)
-                  .map((cat) => (
+                  .map(cat => (
                     <Badge
                       key={cat}
                       variant="outline"
@@ -746,10 +758,7 @@ export function DigestView({
         <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
           news distribution across categories
         </p>
-        <div
-          data-testid="digest-source-distribution"
-          className="space-y-3"
-        >
+        <div data-testid="digest-source-distribution" className="space-y-3">
           {Object.entries(digest.categoryBreakdown)
             .sort(([, a], [, b]) => b - a)
             .slice(0, 6)

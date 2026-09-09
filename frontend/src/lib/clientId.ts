@@ -4,7 +4,7 @@
  * `X-Client-Id` header on every API request (see config/api.ts).
  */
 
-const CLIENT_ID_KEY = "techpulse-client-id";
+const CLIENT_ID_KEY = 'techpulse-client-id';
 
 let cachedClientId: string | null = null;
 

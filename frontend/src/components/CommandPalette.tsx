@@ -43,9 +43,9 @@ import {
   useMemo,
   useState,
   ReactNode,
-} from "react";
-import { Command } from "cmdk";
-import { DialogTitle } from "./ui/dialog";
+} from 'react';
+import { Command } from 'cmdk';
+import { DialogTitle } from './ui/dialog';
 import {
   Newspaper,
   Lightbulb,
@@ -54,8 +54,8 @@ import {
   Bookmark,
   History,
   FileText,
-} from "lucide-react";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
+} from 'lucide-react';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
 
 // ---------------------------------------------------------------------------
 // Tab catalogue — single source of truth for the palette's destination list.
@@ -71,16 +71,16 @@ interface TabEntry {
 }
 
 const TAB_ENTRIES: TabEntry[] = [
-  { value: "feed", label: "News Feed", icon: Newspaper },
-  { value: "research", label: "Research", icon: Lightbulb },
-  { value: "digest", label: "Digest", icon: Mail },
-  { value: "saved", label: "Saved", icon: Bookmark },
-  { value: "preferences", label: "Settings", icon: Settings },
+  { value: 'feed', label: 'News Feed', icon: Newspaper },
+  { value: 'research', label: 'Research', icon: Lightbulb },
+  { value: 'digest', label: 'Digest', icon: Mail },
+  { value: 'saved', label: 'Saved', icon: Bookmark },
+  { value: 'preferences', label: 'Settings', icon: Settings },
 ];
 
-const RECENT_RESEARCH_KEY = "techpulse-recent-research";
-const PENDING_RESEARCH_KEY = "techpulse-pending-research";
-const SAVED_ARTICLES_KEY = "techpulse-saved-articles";
+const RECENT_RESEARCH_KEY = 'techpulse-recent-research';
+const PENDING_RESEARCH_KEY = 'techpulse-pending-research';
+const SAVED_ARTICLES_KEY = 'techpulse-saved-articles';
 
 // ---------------------------------------------------------------------------
 // Context — exposes open() / close() to descendants.
@@ -92,12 +92,16 @@ interface CommandPaletteContextValue {
   isOpen: boolean;
 }
 
-const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(null);
+const CommandPaletteContext = createContext<CommandPaletteContextValue | null>(
+  null
+);
 
 export function useCommandPalette(): CommandPaletteContextValue {
   const ctx = useContext(CommandPaletteContext);
   if (!ctx) {
-    throw new Error("useCommandPalette must be used inside <CommandPaletteProvider>");
+    throw new Error(
+      'useCommandPalette must be used inside <CommandPaletteProvider>'
+    );
   }
   return ctx;
 }
@@ -115,14 +119,18 @@ function readRecentResearch(): string[] {
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
     return parsed
-      .map((item) => {
-        if (typeof item === "string") return item;
-        if (item && typeof item === "object" && typeof item.question === "string") {
+      .map(item => {
+        if (typeof item === 'string') return item;
+        if (
+          item &&
+          typeof item === 'object' &&
+          typeof item.question === 'string'
+        ) {
           return item.question;
         }
-        return "";
+        return '';
       })
-      .filter((q) => q.length > 0)
+      .filter(q => q.length > 0)
       .slice(0, 10);
   } catch {
     return [];
@@ -185,13 +193,13 @@ export function CommandPaletteProvider({
       return;
     }
     const results = await Promise.allSettled(
-      ids.map((id) =>
+      ids.map(id =>
         apiFetch<{ data?: { title?: string } }>(API_ENDPOINTS.newsById(id))
       )
     );
     const loaded: SavedArticleEntry[] = [];
     results.forEach((result, idx) => {
-      if (result.status === "fulfilled" && result.value?.data?.title) {
+      if (result.status === 'fulfilled' && result.value?.data?.title) {
         loaded.push({ id: ids[idx], title: result.value.data.title });
       }
     });
@@ -209,7 +217,7 @@ export function CommandPaletteProvider({
   const close = useCallback(() => setIsOpen(false), []);
 
   const toggle = useCallback(() => {
-    setIsOpen((prev) => {
+    setIsOpen(prev => {
       if (!prev) {
         setRecentResearch(readRecentResearch());
         void loadSavedArticles();
@@ -225,13 +233,13 @@ export function CommandPaletteProvider({
     const handler = (e: KeyboardEvent) => {
       const key = e.key.toLowerCase();
       const isModifier = e.metaKey || e.ctrlKey;
-      if (isModifier && key === "k") {
+      if (isModifier && key === 'k') {
         e.preventDefault();
         toggle();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, [toggle]);
 
   const ctxValue = useMemo<CommandPaletteContextValue>(
@@ -251,12 +259,12 @@ export function CommandPaletteProvider({
     } catch {
       // If storage is unavailable we just navigate without prefill.
     }
-    onSelectTab("research");
+    onSelectTab('research');
     close();
   };
 
   const handleSelectSavedArticle = (id: string) => {
-    onSelectTab("saved");
+    onSelectTab('saved');
     onOpenArticle(id);
     close();
   };
@@ -302,7 +310,7 @@ function CommandPaletteModal({
   return (
     <Command.Dialog
       open
-      onOpenChange={(o) => {
+      onOpenChange={o => {
         if (!o) onClose();
       }}
       label="Command palette"
@@ -336,7 +344,7 @@ function CommandPaletteModal({
             heading="Navigation"
             className="text-[11px] text-muted-foreground uppercase tracking-wider px-2 py-1"
           >
-            {TAB_ENTRIES.map((tab) => {
+            {TAB_ENTRIES.map(tab => {
               const Icon = tab.icon;
               return (
                 <Command.Item
@@ -376,7 +384,7 @@ function CommandPaletteModal({
               heading="Saved articles"
               className="text-[11px] text-muted-foreground uppercase tracking-wider px-2 py-1 mt-2"
             >
-              {savedArticles.map((article) => (
+              {savedArticles.map(article => (
                 <Command.Item
                   key={`saved-${article.id}`}
                   value={`saved:${article.id}:${article.title}`}
@@ -394,20 +402,20 @@ function CommandPaletteModal({
           <span>
             <kbd className="px-1 py-[1px] border border-border rounded bg-muted text-[10px]">
               esc
-            </kbd>{" "}
+            </kbd>{' '}
             to close
           </span>
           <span>
             <kbd className="px-1 py-[1px] border border-border rounded bg-muted text-[10px]">
               up
-            </kbd>{" "}
+            </kbd>{' '}
             <kbd className="px-1 py-[1px] border border-border rounded bg-muted text-[10px]">
               down
-            </kbd>{" "}
-            navigate ·{" "}
+            </kbd>{' '}
+            navigate ·{' '}
             <kbd className="px-1 py-[1px] border border-border rounded bg-muted text-[10px]">
               enter
-            </kbd>{" "}
+            </kbd>{' '}
             select
           </span>
         </div>

@@ -1,7 +1,7 @@
-import type React from "react";
-import { useMemo } from "react";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
+import type React from 'react';
+import { useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 /**
  * MarkdownReport -- M3b typography pass.
@@ -78,7 +78,7 @@ function handleCitationClick(
   event.preventDefault();
   const target = document.getElementById(`source-${n}`);
   if (target) {
-    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 }
 
@@ -101,7 +101,7 @@ function CitationPill({
       key={anchorKey}
       className="citation inline-flex items-baseline font-mono-tx text-[11px] align-baseline hover:bg-signal-wash transition-colors px-0.5 cursor-pointer no-underline"
       href={`#source-${n}`}
-      onClick={(e) => handleCitationClick(e, n)}
+      onClick={e => handleCitationClick(e, n)}
     >
       <span className="text-foreground-soft">[</span>
       <span className="text-signal font-medium px-0.5">{n}</span>
@@ -126,7 +126,7 @@ function linkifyChildren(
   let i = 0;
 
   const walk = (node: React.ReactNode): void => {
-    if (typeof node === "string") {
+    if (typeof node === 'string') {
       let lastIndex = 0;
       let m: RegExpExecArray | null;
       pattern.lastIndex = 0;
@@ -168,16 +168,16 @@ function linkifyChildren(
  * preview so we can apply `.editorial-drop` to the right paragraph.
  */
 function extractText(children: React.ReactNode): string {
-  if (children == null || typeof children === "boolean") return "";
-  if (typeof children === "string") return children;
-  if (typeof children === "number") return String(children);
-  if (Array.isArray(children)) return children.map(extractText).join("");
-  if (typeof children === "object" && "props" in children) {
+  if (children == null || typeof children === 'boolean') return '';
+  if (typeof children === 'string') return children;
+  if (typeof children === 'number') return String(children);
+  if (Array.isArray(children)) return children.map(extractText).join('');
+  if (typeof children === 'object' && 'props' in children) {
     return extractText(
       (children as { props?: { children?: React.ReactNode } }).props?.children
     );
   }
-  return "";
+  return '';
 }
 
 /**
@@ -203,7 +203,7 @@ function findFirstParagraph(
   for (let i = 0; i < lines.length; i += 1) {
     const line = lines[i];
     const trimmed = line.trim();
-    if (trimmed.startsWith("```") || trimmed.startsWith("~~~")) {
+    if (trimmed.startsWith('```') || trimmed.startsWith('~~~')) {
       inFence = !inFence;
       continue;
     }
@@ -227,13 +227,13 @@ function findFirstParagraph(
   // Strip markdown emphasis / links / inline code from the fingerprint
   // so it matches the *rendered* text the React tree produces.
   const joined = buf
-    .join(" ")
-    .replace(/`([^`]+)`/g, "$1")
-    .replace(/\*\*([^*]+)\*\*/g, "$1")
-    .replace(/\*([^*]+)\*/g, "$1")
-    .replace(/_([^_]+)_/g, "$1")
-    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
-    .replace(/\s+/g, " ")
+    .join(' ')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*\*([^*]+)\*\*/g, '$1')
+    .replace(/\*([^*]+)\*/g, '$1')
+    .replace(/_([^_]+)_/g, '$1')
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')
+    .replace(/\s+/g, ' ')
     .trim();
   return {
     fingerprint: joined.slice(0, 64),
@@ -270,7 +270,7 @@ export function MarkdownReport({
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ children, ...rest }) => {
-            const t = String(children ?? "").trim();
+            const t = String(children ?? '').trim();
             if (linkifyCitations && /^sources?\b/i.test(t)) {
               inSourcesSection = true;
               sourceCounter = 0;
@@ -287,7 +287,7 @@ export function MarkdownReport({
             );
           },
           h2: ({ children, ...rest }) => {
-            const t = String(children ?? "").trim();
+            const t = String(children ?? '').trim();
             if (linkifyCitations && /^sources?\b/i.test(t)) {
               inSourcesSection = true;
               sourceCounter = 0;
@@ -304,7 +304,7 @@ export function MarkdownReport({
             );
           },
           h3: ({ children, ...rest }) => {
-            const t = String(children ?? "").trim();
+            const t = String(children ?? '').trim();
             if (linkifyCitations && /^sources?\b/i.test(t)) {
               inSourcesSection = true;
               sourceCounter = 0;
@@ -332,28 +332,30 @@ export function MarkdownReport({
             // Editorial drop cap on the first body paragraph when it's
             // substantive (>200 chars). We match against the cached
             // fingerprint computed from the raw markdown source.
-            const renderedText = extractText(children).replace(/\s+/g, " ").trim();
+            const renderedText = extractText(children)
+              .replace(/\s+/g, ' ')
+              .trim();
             const isFirst =
               firstPara !== null &&
               firstPara.length > 200 &&
               renderedText.startsWith(firstPara.fingerprint);
             const cls = [
-              "text-[15px] leading-[1.65] mb-4 text-foreground",
-              isFirst ? "editorial-drop" : "",
+              'text-[15px] leading-[1.65] mb-4 text-foreground',
+              isFirst ? 'editorial-drop' : '',
             ]
               .filter(Boolean)
-              .join(" ");
+              .join(' ');
             return (
               <p
                 className={cls}
                 style={{
-                  overflowWrap: "anywhere",
-                  wordBreak: "break-word",
+                  overflowWrap: 'anywhere',
+                  wordBreak: 'break-word',
                 }}
                 {...rest}
               >
                 {linkifyCitations
-                  ? linkifyChildren(children, "p", renderCitation)
+                  ? linkifyChildren(children, 'p', renderCitation)
                   : children}
               </p>
             );
@@ -385,7 +387,7 @@ export function MarkdownReport({
             return (
               <li id={anchorId} {...rest}>
                 {linkifyCitations
-                  ? linkifyChildren(children, "li", renderCitation)
+                  ? linkifyChildren(children, 'li', renderCitation)
                   : children}
               </li>
             );
@@ -394,7 +396,7 @@ export function MarkdownReport({
             // Already-linkified citation anchors keep their existing
             // styling. External links open in a new tab.
             const isCitation =
-              typeof href === "string" && href.startsWith("#source-");
+              typeof href === 'string' && href.startsWith('#source-');
             if (isCitation) {
               const m = href.match(/^#source-(\d+)$/);
               const n = m ? parseInt(m[1], 10) : 0;
@@ -402,7 +404,7 @@ export function MarkdownReport({
                 <a
                   className="citation inline-flex items-baseline font-mono-tx text-[11px] align-baseline hover:bg-signal-wash transition-colors px-0.5 cursor-pointer no-underline"
                   href={href}
-                  onClick={(e) => handleCitationClick(e, n)}
+                  onClick={e => handleCitationClick(e, n)}
                   {...rest}
                 >
                   <span className="text-foreground-soft">[</span>
@@ -436,7 +438,7 @@ export function MarkdownReport({
             }
             return (
               <code
-                className={`block font-mono-tx text-[13px] bg-[var(--background-tint)] text-foreground p-3 overflow-x-auto ${className ?? ""}`}
+                className={`block font-mono-tx text-[13px] bg-[var(--background-tint)] text-foreground p-3 overflow-x-auto ${className ?? ''}`}
                 {...rest}
               >
                 {children}
@@ -462,12 +464,8 @@ export function MarkdownReport({
               </table>
             </div>
           ),
-          thead: ({ children, ...rest }) => (
-            <thead {...rest}>{children}</thead>
-          ),
-          tbody: ({ children, ...rest }) => (
-            <tbody {...rest}>{children}</tbody>
-          ),
+          thead: ({ children, ...rest }) => <thead {...rest}>{children}</thead>,
+          tbody: ({ children, ...rest }) => <tbody {...rest}>{children}</tbody>,
           tr: ({ children, ...rest }) => (
             <tr className="border-b border-[var(--rule)]" {...rest}>
               {children}
@@ -487,7 +485,7 @@ export function MarkdownReport({
               {...rest}
             >
               {linkifyCitations
-                ? linkifyChildren(children, "td", renderCitation)
+                ? linkifyChildren(children, 'td', renderCitation)
                 : children}
             </td>
           ),

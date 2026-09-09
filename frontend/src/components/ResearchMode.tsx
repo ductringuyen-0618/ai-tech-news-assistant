@@ -1,17 +1,17 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import type React from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { toast } from "sonner";
-import { API_BASE_URL, API_ENDPOINTS } from "../config/api";
-import { MarkdownReport } from "./MarkdownReport";
-import { SuggestedQueries } from "./SuggestedQueries";
-import { RecentDispatches } from "./RecentDispatches";
-import { CitationHoverCard } from "./CitationHoverCard";
+import { useEffect, useMemo, useRef, useState } from 'react';
+import type React from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { toast } from 'sonner';
+import { API_BASE_URL, API_ENDPOINTS } from '../config/api';
+import { MarkdownReport } from './MarkdownReport';
+import { SuggestedQueries } from './SuggestedQueries';
+import { RecentDispatches } from './RecentDispatches';
+import { CitationHoverCard } from './CitationHoverCard';
 import {
   SubQuestionsPanel,
   type SubQuestionArticle,
   type SubQuestionStatus,
-} from "./SubQuestionsPanel";
+} from './SubQuestionsPanel';
 
 /**
  * ResearchMode -- M3 Broadsheet Terminal rebuild.
@@ -94,33 +94,119 @@ import {
 
 const EMPTY_STATE_QUERIES: string[] = [
   "OpenAI's last 30 days",
-  "AI chip market shifts",
-  "Anthropic vs OpenAI announcements",
-  "AI funding rounds past month",
-  "Cloud security trends",
-  "Edge computing developments",
+  'AI chip market shifts',
+  'Anthropic vs OpenAI announcements',
+  'AI funding rounds past month',
+  'Cloud security trends',
+  'Edge computing developments',
 ];
 
 // Mount-time handoff key from the Cmd+K palette (M3.M1).
-const PENDING_RESEARCH_KEY = "techpulse-pending-research";
+const PENDING_RESEARCH_KEY = 'techpulse-pending-research';
 
 // ---------------------------------------------------------------------------
 // Follow-up extractor (unchanged from M3.M2).
 // ---------------------------------------------------------------------------
 
 const STOPWORDS = new Set([
-  "The", "What", "How", "When", "Where", "Why", "Who", "Which",
-  "And", "But", "Or", "If", "Of", "For", "From", "With", "Without",
-  "In", "On", "At", "To", "By", "As", "Is", "Are", "Was", "Were",
-  "Be", "Been", "Being", "Has", "Have", "Had", "Do", "Does", "Did",
-  "Can", "Could", "Would", "Should", "Will", "Shall", "May", "Might",
-  "Must", "AI", "An", "A", "It", "Its", "This", "That", "These",
-  "Those", "Some", "Many", "Most", "More", "Less", "Few", "All",
-  "Both", "Each", "Every", "Other", "Such", "No", "Not", "Only",
-  "Same", "Than", "Then", "Too", "Very", "Just", "Also", "Even",
-  "New", "Old", "First", "Last", "Next", "Past", "Year", "Month",
-  "Week", "Day", "Now", "Today", "Sources", "Used", "Executive",
-  "Summary", "Key", "Findings", "Trends", "Themes", "Report",
+  'The',
+  'What',
+  'How',
+  'When',
+  'Where',
+  'Why',
+  'Who',
+  'Which',
+  'And',
+  'But',
+  'Or',
+  'If',
+  'Of',
+  'For',
+  'From',
+  'With',
+  'Without',
+  'In',
+  'On',
+  'At',
+  'To',
+  'By',
+  'As',
+  'Is',
+  'Are',
+  'Was',
+  'Were',
+  'Be',
+  'Been',
+  'Being',
+  'Has',
+  'Have',
+  'Had',
+  'Do',
+  'Does',
+  'Did',
+  'Can',
+  'Could',
+  'Would',
+  'Should',
+  'Will',
+  'Shall',
+  'May',
+  'Might',
+  'Must',
+  'AI',
+  'An',
+  'A',
+  'It',
+  'Its',
+  'This',
+  'That',
+  'These',
+  'Those',
+  'Some',
+  'Many',
+  'Most',
+  'More',
+  'Less',
+  'Few',
+  'All',
+  'Both',
+  'Each',
+  'Every',
+  'Other',
+  'Such',
+  'No',
+  'Not',
+  'Only',
+  'Same',
+  'Than',
+  'Then',
+  'Too',
+  'Very',
+  'Just',
+  'Also',
+  'Even',
+  'New',
+  'Old',
+  'First',
+  'Last',
+  'Next',
+  'Past',
+  'Year',
+  'Month',
+  'Week',
+  'Day',
+  'Now',
+  'Today',
+  'Sources',
+  'Used',
+  'Executive',
+  'Summary',
+  'Key',
+  'Findings',
+  'Trends',
+  'Themes',
+  'Report',
 ]);
 
 function extractFollowUpEntities(report: string, limit = 3): string[] {
@@ -133,7 +219,7 @@ function extractFollowUpEntities(report: string, limit = 3): string[] {
     if (!term) continue;
     if (term.length <= 2) continue;
     const words = term.split(/\s+/);
-    if (words.every((w) => STOPWORDS.has(w))) continue;
+    if (words.every(w => STOPWORDS.has(w))) continue;
     counts.set(term, (counts.get(term) ?? 0) + 1);
   }
   const ranked = Array.from(counts.entries())
@@ -157,9 +243,9 @@ function buildFollowUps(report: string): string[] {
     out.push(`Drill into ${entities[2]}'s funding history.`);
   }
   const generic = [
-    "What risks should we watch out for next quarter?",
-    "Which companies are most affected?",
-    "How does this compare to the previous month?",
+    'What risks should we watch out for next quarter?',
+    'Which companies are most affected?',
+    'How does this compare to the previous month?',
   ];
   let gi = 0;
   while (out.length < 3 && gi < generic.length) {
@@ -175,12 +261,7 @@ function buildFollowUps(report: string): string[] {
 
 interface AgentEvent {
   type:
-    | "phase"
-    | "token"
-    | "error"
-    | "subagent"
-    | "decomposed"
-    | "search_results";
+    'phase' | 'token' | 'error' | 'subagent' | 'decomposed' | 'search_results';
   data?: string;
   report?: string;
   skill?: string;
@@ -196,7 +277,7 @@ interface AgentEvent {
 interface SubagentRow {
   skill: string;
   articleId: number;
-  status: "running" | "done" | "error";
+  status: 'running' | 'done' | 'error';
   startedAt: number;
   durationMs?: number;
   message?: string;
@@ -208,16 +289,16 @@ interface SubagentRow {
 // ---------------------------------------------------------------------------
 
 function formatClock(date: Date): string {
-  const hh = String(date.getUTCHours()).padStart(2, "0");
-  const mm = String(date.getUTCMinutes()).padStart(2, "0");
-  const ss = String(date.getUTCSeconds()).padStart(2, "0");
+  const hh = String(date.getUTCHours()).padStart(2, '0');
+  const mm = String(date.getUTCMinutes()).padStart(2, '0');
+  const ss = String(date.getUTCSeconds()).padStart(2, '0');
   return `${hh}:${mm}:${ss} UTC`;
 }
 
 function formatRelativeTime(timestamp: number): string {
-  if (!timestamp) return "just now";
+  if (!timestamp) return 'just now';
   const diff = Math.max(0, Date.now() - timestamp);
-  if (diff < 5_000) return "just now";
+  if (diff < 5_000) return 'just now';
   if (diff < 60_000) return `${Math.round(diff / 1000)}s ago`;
   if (diff < 3_600_000) return `${Math.round(diff / 60_000)}m ago`;
   return `${Math.round(diff / 3_600_000)}h ago`;
@@ -225,18 +306,18 @@ function formatRelativeTime(timestamp: number): string {
 
 export function ResearchMode() {
   const reduceMotion = useReducedMotion();
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState('');
   const [isResearching, setIsResearching] = useState(false);
-  const [phase, setPhase] = useState<string>("");
-  const [reportText, setReportText] = useState<string>("");
+  const [phase, setPhase] = useState<string>('');
+  const [reportText, setReportText] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [lastSubmittedQuery, setLastSubmittedQuery] = useState<string>("");
+  const [lastSubmittedQuery, setLastSubmittedQuery] = useState<string>('');
   const [submittedAt, setSubmittedAt] = useState<number>(0);
   const [filedAt, setFiledAt] = useState<number>(0);
-  const [dispatchNum, setDispatchNum] = useState<string>("");
+  const [dispatchNum, setDispatchNum] = useState<string>('');
   const [copied, setCopied] = useState(false);
-  const [saveState, setSaveState] = useState<"idle" | "saving" | "saved">(
-    "idle"
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(
+    'idle'
   );
   const [subagents, setSubagents] = useState<Map<string, SubagentRow>>(
     () => new Map()
@@ -303,13 +384,13 @@ export function ResearchMode() {
   // agent is mid-run. Loose pub/sub via a window-scoped CustomEvent
   // so the masthead never has to know ResearchMode exists.
   useEffect(() => {
-    const active = phase !== "" && phase !== "done" && phase !== "error";
+    const active = phase !== '' && phase !== 'done' && phase !== 'error';
     window.dispatchEvent(
-      new CustomEvent("techpulse:research-stream", { detail: { active } })
+      new CustomEvent('techpulse:research-stream', { detail: { active } })
     );
     return () => {
       window.dispatchEvent(
-        new CustomEvent("techpulse:research-stream", {
+        new CustomEvent('techpulse:research-stream', {
           detail: { active: false },
         })
       );
@@ -324,75 +405,70 @@ export function ResearchMode() {
     ev: AgentEvent,
     tokenAcc: { current: string }
   ): { done: boolean; finalReport?: string; errored?: string } {
-    if (ev.type === "phase") {
-      const ph = ev.data ?? "";
+    if (ev.type === 'phase') {
+      const ph = ev.data ?? '';
       setPhase(ph);
-      if (ph === "done") {
+      if (ph === 'done') {
         setFiledAt(Date.now());
         const finalReport =
-          typeof ev.report === "string" ? ev.report : tokenAcc.current;
+          typeof ev.report === 'string' ? ev.report : tokenAcc.current;
         return { done: true, finalReport };
       }
       return { done: false };
     }
 
-    if (ev.type === "decomposed") {
+    if (ev.type === 'decomposed') {
       const qs = Array.isArray(ev.sub_questions) ? ev.sub_questions : [];
       setSubQuestions(qs);
       return { done: false };
     }
 
-    if (ev.type === "search_results") {
+    if (ev.type === 'search_results') {
       const idx =
-        typeof ev.sub_question_index === "number"
-          ? ev.sub_question_index
-          : 0;
+        typeof ev.sub_question_index === 'number' ? ev.sub_question_index : 0;
       const articles = Array.isArray(ev.articles) ? ev.articles : [];
-      setSearchResults((prev) => ({ ...prev, [idx]: articles }));
+      setSearchResults(prev => ({ ...prev, [idx]: articles }));
       return { done: false };
     }
 
-    if (ev.type === "token") {
-      tokenAcc.current = tokenAcc.current + (ev.data || "");
+    if (ev.type === 'token') {
+      tokenAcc.current = tokenAcc.current + (ev.data || '');
       setReportText(tokenAcc.current);
       return { done: false };
     }
 
-    if (ev.type === "subagent") {
+    if (ev.type === 'subagent') {
       const stage = ev.data;
-      const skill = ev.skill ?? "unknown";
-      const articleId =
-        typeof ev.article_id === "number" ? ev.article_id : -1;
+      const skill = ev.skill ?? 'unknown';
+      const articleId = typeof ev.article_id === 'number' ? ev.article_id : -1;
       const key = `${skill}:${articleId}`;
-      setSubagents((prev) => {
+      setSubagents(prev => {
         const next = new Map(prev);
         const existing = next.get(key);
-        if (stage === "start") {
+        if (stage === 'start') {
           next.set(key, {
             skill,
             articleId,
-            status: "running",
+            status: 'running',
             startedAt: existing?.startedAt ?? Date.now(),
           });
-        } else if (stage === "done") {
+        } else if (stage === 'done') {
           const startedAt = existing?.startedAt ?? Date.now();
           next.set(key, {
             skill,
             articleId,
-            status: "done",
+            status: 'done',
             startedAt,
             durationMs:
-              typeof ev.duration_ms === "number"
-                ? ev.duration_ms
-                : undefined,
+              typeof ev.duration_ms === 'number' ? ev.duration_ms : undefined,
             summary: ev.summary,
           });
-        } else if (stage === "error") {
+        } else if (stage === 'error') {
           const startedAt = existing?.startedAt ?? Date.now();
           next.set(key, {
             skill,
             articleId,
-            status: "error",
+            status: 'error',
             startedAt,
             message: ev.message,
           });
@@ -402,8 +478,8 @@ export function ResearchMode() {
       return { done: false };
     }
 
-    if (ev.type === "error") {
-      return { done: true, errored: ev.data || "Unknown error" };
+    if (ev.type === 'error') {
+      return { done: true, errored: ev.data || 'Unknown error' };
     }
     return { done: false };
   }
@@ -415,7 +491,7 @@ export function ResearchMode() {
   const conductResearch = async (questionOverride?: string) => {
     const question = (questionOverride ?? query).trim();
     if (!question) {
-      toast.error("Please enter a research query");
+      toast.error('Please enter a research query');
       return;
     }
 
@@ -425,15 +501,15 @@ export function ResearchMode() {
     }
 
     setIsResearching(true);
-    setPhase("Decomposing");
-    setReportText("");
+    setPhase('Decomposing');
+    setReportText('');
     setErrorMessage(null);
     setLastSubmittedQuery(question);
     setSubmittedAt(Date.now());
     setFiledAt(0);
-    setDispatchNum(String(Date.now() % 100000).padStart(5, "0"));
+    setDispatchNum(String(Date.now() % 100000).padStart(5, '0'));
     setCopied(false);
-    setSaveState("idle");
+    setSaveState('idle');
     setSubagents(new Map());
     setSubQuestions([]);
     setSearchResults({});
@@ -444,15 +520,15 @@ export function ResearchMode() {
     const ac = new AbortController();
     abortRef.current = ac;
 
-    const tokenAcc = { current: "" };
+    const tokenAcc = { current: '' };
 
     try {
       const url = `${API_BASE_URL}${API_ENDPOINTS.research}`;
       const resp = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
-          Accept: "text/event-stream",
+          'Content-Type': 'application/json',
+          Accept: 'text/event-stream',
         },
         body: JSON.stringify({ question }),
         signal: ac.signal,
@@ -462,18 +538,18 @@ export function ResearchMode() {
         let detail = `${resp.status} ${resp.statusText}`;
         try {
           const j = await resp.json();
-          if (j && typeof j.detail === "string") detail = j.detail;
+          if (j && typeof j.detail === 'string') detail = j.detail;
         } catch {
           // not JSON
         }
         throw new Error(detail);
       }
 
-      if (!resp.body) throw new Error("Streaming response has no body");
+      if (!resp.body) throw new Error('Streaming response has no body');
 
       const reader = resp.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      let buffer = "";
+      const decoder = new TextDecoder('utf-8');
+      let buffer = '';
       let finished = false;
 
       while (!finished) {
@@ -481,32 +557,32 @@ export function ResearchMode() {
         if (done) break;
         buffer += decoder.decode(value, { stream: true });
 
-        let sepIdx = buffer.indexOf("\n\n");
+        let sepIdx = buffer.indexOf('\n\n');
         while (sepIdx !== -1) {
           const frame = buffer.slice(0, sepIdx);
           buffer = buffer.slice(sepIdx + 2);
 
-          if (frame.startsWith(":")) {
-            sepIdx = buffer.indexOf("\n\n");
+          if (frame.startsWith(':')) {
+            sepIdx = buffer.indexOf('\n\n');
             continue;
           }
 
           const dataLines: string[] = [];
-          for (const line of frame.split("\n")) {
-            if (line.startsWith("data:")) {
-              dataLines.push(line.slice(5).replace(/^ /, ""));
+          for (const line of frame.split('\n')) {
+            if (line.startsWith('data:')) {
+              dataLines.push(line.slice(5).replace(/^ /, ''));
             }
           }
           if (dataLines.length > 0) {
-            const payload = dataLines.join("\n");
+            const payload = dataLines.join('\n');
             try {
               const ev = JSON.parse(payload) as AgentEvent;
               const r = handleEvent(ev, tokenAcc);
               if (r.done) {
                 if (r.errored) {
                   setErrorMessage(r.errored);
-                  setPhase("error");
-                } else if (typeof r.finalReport === "string") {
+                  setPhase('error');
+                } else if (typeof r.finalReport === 'string') {
                   setReportText(r.finalReport);
                 }
                 finished = true;
@@ -514,22 +590,19 @@ export function ResearchMode() {
               }
             } catch (parseErr) {
               // eslint-disable-next-line no-console
-              console.warn(
-                "research SSE: failed to parse frame",
-                parseErr
-              );
+              console.warn('research SSE: failed to parse frame', parseErr);
             }
           }
 
-          sepIdx = buffer.indexOf("\n\n");
+          sepIdx = buffer.indexOf('\n\n');
         }
       }
     } catch (err) {
-      if ((err as Error).name === "AbortError") return;
+      if ((err as Error).name === 'AbortError') return;
       // eslint-disable-next-line no-console
-      console.warn("research SSE: stream failed:", err);
-      setErrorMessage((err as Error).message || "research interrupted");
-      setPhase("error");
+      console.warn('research SSE: stream failed:', err);
+      setErrorMessage((err as Error).message || 'research interrupted');
+      setPhase('error');
     } finally {
       setIsResearching(false);
       if (abortRef.current === ac) abortRef.current = null;
@@ -546,7 +619,7 @@ export function ResearchMode() {
       abortRef.current = null;
     }
     setIsResearching(false);
-    setPhase("");
+    setPhase('');
     setErrorMessage(null);
   };
 
@@ -556,7 +629,7 @@ export function ResearchMode() {
       try {
         if (
           navigator.clipboard &&
-          typeof navigator.clipboard.writeText === "function"
+          typeof navigator.clipboard.writeText === 'function'
         ) {
           await navigator.clipboard.writeText(reportText);
           return true;
@@ -565,27 +638,27 @@ export function ResearchMode() {
         // fallthrough
       }
       try {
-        const ta = document.createElement("textarea");
+        const ta = document.createElement('textarea');
         ta.value = reportText;
-        ta.setAttribute("readonly", "");
-        ta.style.position = "fixed";
-        ta.style.opacity = "0";
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
         document.body.appendChild(ta);
         ta.select();
-        const ok = document.execCommand("copy");
+        const ok = document.execCommand('copy');
         document.body.removeChild(ta);
         return ok;
       } catch {
         return false;
       }
     };
-    void writeToClipboard().then((ok) => {
+    void writeToClipboard().then(ok => {
       if (!ok) {
-        toast.error("Copy failed");
+        toast.error('Copy failed');
         return;
       }
       setCopied(true);
-      toast.success("Report copied to clipboard");
+      toast.success('Report copied to clipboard');
       if (copiedTimerRef.current) clearTimeout(copiedTimerRef.current);
       copiedTimerRef.current = setTimeout(() => {
         setCopied(false);
@@ -595,13 +668,13 @@ export function ResearchMode() {
   };
 
   const onSaveResearch = async () => {
-    if (!reportText || saveState !== "idle") return;
-    setSaveState("saving");
+    if (!reportText || saveState !== 'idle') return;
+    setSaveState('saving');
     try {
       const url = `${API_BASE_URL}${API_ENDPOINTS.savedResearch}`;
       const resp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           question: lastSubmittedQuery,
           report_md: reportText,
@@ -612,36 +685,36 @@ export function ResearchMode() {
         let detail = `${resp.status} ${resp.statusText}`;
         try {
           const j = await resp.json();
-          if (j && typeof j.detail === "string") detail = j.detail;
+          if (j && typeof j.detail === 'string') detail = j.detail;
         } catch {
           // not JSON
         }
         throw new Error(detail);
       }
-      setSaveState("saved");
-      toast.success("Research saved", {
-        description: "Find it in the Saved tab.",
+      setSaveState('saved');
+      toast.success('Research saved', {
+        description: 'Find it in the Saved tab.',
         duration: 3000,
       });
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("research save failed:", err);
-      toast.error("Failed to save research", {
-        description: (err as Error).message || "Please try again.",
+      console.warn('research save failed:', err);
+      toast.error('Failed to save research', {
+        description: (err as Error).message || 'Please try again.',
         duration: 3000,
       });
-      setSaveState("idle");
+      setSaveState('idle');
     }
   };
 
   const onDownloadMarkdown = () => {
     if (!reportText) return;
     try {
-      const blob = new Blob([reportText], { type: "text/markdown" });
+      const blob = new Blob([reportText], { type: 'text/markdown' });
       const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
+      const a = document.createElement('a');
       a.href = url;
-      const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
       a.download = `research-${stamp}.md`;
       document.body.appendChild(a);
       a.click();
@@ -649,8 +722,8 @@ export function ResearchMode() {
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("research download failed:", err);
-      toast.error("Download failed");
+      console.warn('research download failed:', err);
+      toast.error('Download failed');
     }
   };
 
@@ -661,14 +734,14 @@ export function ResearchMode() {
 
   function truncateMessage(msg: string, max = 80): string {
     if (msg.length <= max) return msg;
-    return msg.slice(0, max - 1) + "...";
+    return msg.slice(0, max - 1) + '...';
   }
 
   // -----------------------------------------------------------------------
   // Derived state
   // -----------------------------------------------------------------------
 
-  const showErrorPanel = phase === "error" && errorMessage !== null;
+  const showErrorPanel = phase === 'error' && errorMessage !== null;
   const showReport = !showErrorPanel && reportText.length > 0;
   const hasActiveQuery =
     lastSubmittedQuery.length > 0 || isResearching || showErrorPanel;
@@ -681,17 +754,16 @@ export function ResearchMode() {
   let doneCount = 0;
   let erroredCount = 0;
   for (const row of subagentRows) {
-    if (row.status === "running") runningCount += 1;
-    else if (row.status === "done") doneCount += 1;
-    else if (row.status === "error") erroredCount += 1;
+    if (row.status === 'running') runningCount += 1;
+    else if (row.status === 'done') doneCount += 1;
+    else if (row.status === 'error') erroredCount += 1;
   }
   // The summary text doubles as the legacy `research-subagents-header`
   // -- the M3.M2 test contract asserts the regex
   //   /Subagents \(\d+ running, \d+ done, \d+ errored\)/i
   // so we keep it verbatim on an sr-only span. The visible mono line
   // above carries the editorial copy.
-  const subagentsHeaderText =
-    `Subagents (${runningCount} running, ${doneCount} done, ${erroredCount} errored)`;
+  const subagentsHeaderText = `Subagents (${runningCount} running, ${doneCount} done, ${erroredCount} errored)`;
 
   // Sub-question status derivation (unchanged from M3.M2).
   const subQuestionStatusByIndex: Record<number, SubQuestionStatus> = {};
@@ -699,47 +771,38 @@ export function ResearchMode() {
     const articles = searchResults[i];
     if (!articles) {
       subQuestionStatusByIndex[i] =
-        phase.startsWith("Searching") || subagentRows.length > 0
-          ? "in-progress"
-          : "pending";
+        phase.startsWith('Searching') || subagentRows.length > 0
+          ? 'in-progress'
+          : 'pending';
       continue;
     }
     if (articles.length === 0) {
-      subQuestionStatusByIndex[i] = "done";
+      subQuestionStatusByIndex[i] = 'done';
       continue;
     }
-    const articleIds = new Set(articles.map((a) => a.id));
+    const articleIds = new Set(articles.map(a => a.id));
     let anyRunning = false;
     let anyDoneOrError = false;
     for (const row of subagentRows) {
       if (articleIds.has(row.articleId)) {
-        if (row.status === "running") anyRunning = true;
-        if (row.status === "done" || row.status === "error")
+        if (row.status === 'running') anyRunning = true;
+        if (row.status === 'done' || row.status === 'error')
           anyDoneOrError = true;
       }
     }
-    if (anyRunning) subQuestionStatusByIndex[i] = "in-progress";
-    else if (
-      anyDoneOrError ||
-      phase === "Synthesizing" ||
-      phase === "done"
-    )
-      subQuestionStatusByIndex[i] = "done";
-    else subQuestionStatusByIndex[i] = "in-progress";
+    if (anyRunning) subQuestionStatusByIndex[i] = 'in-progress';
+    else if (anyDoneOrError || phase === 'Synthesizing' || phase === 'done')
+      subQuestionStatusByIndex[i] = 'done';
+    else subQuestionStatusByIndex[i] = 'in-progress';
   }
 
   // Backward-compat phase chip text -- mirrors the old single-chip
   // badge so `data-testid="research-phase-chip"` still works in the
   // existing Playwright suite. Maps directly to the SSE `phase` event.
   const phaseChipText =
-    phase === "done"
-      ? "Done"
-      : phase === "error"
-      ? "Error"
-      : phase || "";
+    phase === 'done' ? 'Done' : phase === 'error' ? 'Error' : phase || '';
 
-  const isActivePhase =
-    phase !== "" && phase !== "done" && phase !== "error";
+  const isActivePhase = phase !== '' && phase !== 'done' && phase !== 'error';
 
   // Total elapsed time -- counts up while running, freezes once done.
   const agentElapsedMs = (() => {
@@ -749,10 +812,10 @@ export function ResearchMode() {
     return 0;
   })();
   const elapsedSeconds =
-    agentElapsedMs > 0 ? (agentElapsedMs / 1000).toFixed(1) : "0.0";
+    agentElapsedMs > 0 ? (agentElapsedMs / 1000).toFixed(1) : '0.0';
 
   const followUps =
-    phase === "done" && reportText ? buildFollowUps(reportText) : [];
+    phase === 'done' && reportText ? buildFollowUps(reportText) : [];
 
   // Citation [N] -> article id map, derived client-side from the
   // `search_results` SSE events we already collected. Mirrors the
@@ -780,16 +843,16 @@ export function ResearchMode() {
 
   // Masthead timings.
   const openedTimeStr = useMemo(() => {
-    if (!submittedAt) return "";
+    if (!submittedAt) return '';
     return formatClock(new Date(submittedAt));
   }, [submittedAt]);
   const filedTimeStr = useMemo(() => {
-    if (!filedAt) return "";
+    if (!filedAt) return '';
     return formatClock(new Date(filedAt));
   }, [filedAt]);
 
   function toggleRowExpanded(key: string) {
-    setExpandedRows((prev) => {
+    setExpandedRows(prev => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
@@ -798,7 +861,7 @@ export function ResearchMode() {
   }
 
   function onSubmitKey(e: React.KeyboardEvent<HTMLTextAreaElement>) {
-    if (e.key === "Enter" && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!isResearching && query.trim()) {
         void conductResearch();
@@ -827,12 +890,12 @@ export function ResearchMode() {
           </h2>
           <p className="text-[15px] leading-[1.65] text-foreground-soft mb-6 max-w-3xl">
             The research agent decomposes your question into sub-questions,
-            dispatches subagents to read the relevant articles, and
-            synthesizes a cited report.
+            dispatches subagents to read the relevant articles, and synthesizes
+            a cited report.
           </p>
           <SuggestedQueries
             queries={EMPTY_STATE_QUERIES}
-            onSelect={(q) => {
+            onSelect={q => {
               setQuery(q);
               void conductResearch(q);
             }}
@@ -857,23 +920,25 @@ export function ResearchMode() {
           <span className="text-foreground">DISPATCH #{dispatchNum}</span>
           <span className="text-foreground-soft">━━━</span>
           <span className="text-foreground-soft">
-            {phase === "done" && filedTimeStr
+            {phase === 'done' && filedTimeStr
               ? `FILED ${filedTimeStr}`
               : openedTimeStr
-              ? `OPENED ${openedTimeStr}`
-              : "OPENED"}
+                ? `OPENED ${openedTimeStr}`
+                : 'OPENED'}
           </span>
           <span className="text-foreground-soft">━━━</span>
           <span
             data-testid="research-phase-chip"
             className={[
-              "ml-auto",
-              isActivePhase ? "text-signal live-cursor" : "text-foreground-soft",
-              phase === "done" ? "text-signal" : "",
-              phase === "error" ? "text-signal" : "",
+              'ml-auto',
+              isActivePhase
+                ? 'text-signal live-cursor'
+                : 'text-foreground-soft',
+              phase === 'done' ? 'text-signal' : '',
+              phase === 'error' ? 'text-signal' : '',
             ]
               .filter(Boolean)
-              .join(" ")}
+              .join(' ')}
           >
             {phaseChipText}
           </span>
@@ -887,13 +952,11 @@ export function ResearchMode() {
         <motion.div
           data-testid="research-user-message"
           className="border-b border-[var(--rule)] pb-6 mb-6"
-          initial={
-            reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }
-          }
+          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: reduceMotion ? 0 : 0.18,
-            ease: "easeOut",
+            ease: 'easeOut',
           }}
         >
           <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft mb-2">
@@ -901,7 +964,7 @@ export function ResearchMode() {
           </div>
           <p
             className="font-display italic text-[24px] leading-[1.3] text-foreground max-w-3xl"
-            style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+            style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
           >
             {lastSubmittedQuery}
           </p>
@@ -919,13 +982,11 @@ export function ResearchMode() {
       {hasActiveQuery && (
         <motion.div
           data-testid="research-report-card"
-          initial={
-            reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }
-          }
+          initial={reduceMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: 4 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{
             duration: reduceMotion ? 0 : 0.22,
-            ease: "easeOut",
+            ease: 'easeOut',
           }}
         >
           {/* ===== SECTION A -- DECOMPOSITION ===== */}
@@ -936,8 +997,8 @@ export function ResearchMode() {
                 <span className="flex-1 border-t border-[var(--rule)]" />
                 <span>
                   {subQuestions.length > 0
-                    ? `${subQuestions.length} sub-question${subQuestions.length === 1 ? "" : "s"}`
-                    : "decomposing..."}
+                    ? `${subQuestions.length} sub-question${subQuestions.length === 1 ? '' : 's'}`
+                    : 'decomposing...'}
                 </span>
               </div>
               <SubQuestionsPanel
@@ -951,10 +1012,7 @@ export function ResearchMode() {
 
           {/* ===== SECTION B -- DISPATCHING SUBAGENTS ===== */}
           {showSubagentsBlock && (
-            <section
-              data-testid="research-subagents-panel"
-              className="mb-6"
-            >
+            <section data-testid="research-subagents-panel" className="mb-6">
               {/* Visible mono header. Carries the legacy regex-matching
                   text so the M3.M2 test contract toBeVisible() +
                   /Subagents \(\d+ running, \d+ done, \d+ errored\)/i
@@ -973,28 +1031,28 @@ export function ResearchMode() {
                     const key = `${row.skill}:${row.articleId}`;
                     const isExpanded = expandedRows.has(key);
                     const canExpand =
-                      row.status === "done" &&
-                      typeof row.summary === "string" &&
+                      row.status === 'done' &&
+                      typeof row.summary === 'string' &&
                       row.summary.length > 0;
                     const statusGlyph =
-                      row.status === "running"
-                        ? "◉"
-                        : row.status === "done"
-                        ? "✓"
-                        : "✗";
+                      row.status === 'running'
+                        ? '◉'
+                        : row.status === 'done'
+                          ? '✓'
+                          : '✗';
                     const statusText =
-                      row.status === "running"
-                        ? "running"
-                        : row.status === "done"
-                        ? typeof row.durationMs === "number"
-                          ? formatDuration(row.durationMs)
-                          : "done"
-                        : "error";
+                      row.status === 'running'
+                        ? 'running'
+                        : row.status === 'done'
+                          ? typeof row.durationMs === 'number'
+                            ? formatDuration(row.durationMs)
+                            : 'done'
+                          : 'error';
                     return (
                       <motion.li
                         key={key}
                         data-testid="research-subagent-row"
-                        data-expanded={isExpanded ? "true" : "false"}
+                        data-expanded={isExpanded ? 'true' : 'false'}
                         initial={
                           reduceMotion
                             ? { opacity: 1, y: 0 }
@@ -1008,10 +1066,8 @@ export function ResearchMode() {
                         }
                         transition={{
                           duration: reduceMotion ? 0 : 0.18,
-                          delay: reduceMotion
-                            ? 0
-                            : Math.min(idx * 0.05, 0.25),
-                          ease: "easeOut",
+                          delay: reduceMotion ? 0 : Math.min(idx * 0.05, 0.25),
+                          ease: 'easeOut',
                         }}
                       >
                         <button
@@ -1021,38 +1077,38 @@ export function ResearchMode() {
                           disabled={!canExpand}
                           aria-expanded={isExpanded}
                           className={[
-                            "w-full flex items-center gap-3 text-left py-1",
+                            'w-full flex items-center gap-3 text-left py-1',
                             canExpand
-                              ? "cursor-pointer hover:text-foreground"
-                              : "cursor-default",
-                          ].join(" ")}
+                              ? 'cursor-pointer hover:text-foreground'
+                              : 'cursor-default',
+                          ].join(' ')}
                         >
                           <span
                             className={
-                              row.status === "error"
-                                ? "text-signal w-3 inline-block"
-                                : row.status === "running"
-                                ? "text-signal w-3 inline-block live-cursor"
-                                : "text-signal w-3 inline-block"
+                              row.status === 'error'
+                                ? 'text-signal w-3 inline-block'
+                                : row.status === 'running'
+                                  ? 'text-signal w-3 inline-block live-cursor'
+                                  : 'text-signal w-3 inline-block'
                             }
                           >
                             {statusGlyph}
                           </span>
                           <span
                             className="flex-1 text-foreground min-w-0"
-                            style={{ overflowWrap: "anywhere" }}
+                            style={{ overflowWrap: 'anywhere' }}
                           >
                             {row.skill} #{row.articleId}
                           </span>
                           <span className="text-foreground-soft text-[11px]">
                             {statusText}
-                            {row.status === "done" ? " done" : ""}
+                            {row.status === 'done' ? ' done' : ''}
                           </span>
-                          {row.status === "error" && row.message && (
+                          {row.status === 'error' && row.message && (
                             <span
                               className="text-foreground-soft text-[11px]"
                               title={row.message}
-                              style={{ overflowWrap: "anywhere" }}
+                              style={{ overflowWrap: 'anywhere' }}
                             >
                               {truncateMessage(row.message)}
                             </span>
@@ -1062,7 +1118,7 @@ export function ResearchMode() {
                           <div
                             data-testid="research-subagent-summary"
                             className="ml-6 mt-2 mb-2 text-foreground-soft text-[12px] leading-[1.55]"
-                            style={{ overflowWrap: "anywhere" }}
+                            style={{ overflowWrap: 'anywhere' }}
                           >
                             {row.summary}
                           </div>
@@ -1087,7 +1143,7 @@ export function ResearchMode() {
               {errorMessage && (
                 <p
                   className="text-foreground mb-3 leading-[1.55]"
-                  style={{ overflowWrap: "anywhere" }}
+                  style={{ overflowWrap: 'anywhere' }}
                 >
                   {errorMessage}
                 </p>
@@ -1107,7 +1163,7 @@ export function ResearchMode() {
               <section className="mb-6">
                 <div className="flex items-center gap-3 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft mb-3 flex-wrap">
                   <span>
-                    ━ {phase === "done" ? "DISPATCH" : "SYNTHESIZING REPORT"}
+                    ━ {phase === 'done' ? 'DISPATCH' : 'SYNTHESIZING REPORT'}
                   </span>
                   <span className="flex-1 border-t border-[var(--rule)]" />
                   <span>{elapsedSeconds}s elapsed</span>
@@ -1116,20 +1172,21 @@ export function ResearchMode() {
                   data-testid="research-report-body"
                   className="research-report min-w-0 overflow-hidden"
                   style={{
-                    overflowWrap: "anywhere",
-                    wordBreak: "break-word",
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
                   }}
                 >
                   {reportText.length > 0 ? (
                     <>
                       <MarkdownReport
                         text={reportText}
-                        linkifyCitations={phase === "done"}
+                        linkifyCitations={phase === 'done'}
                         renderCitation={
-                          phase === "done"
+                          phase === 'done'
                             ? (n, anchor) => {
                                 const articleId = citationArticleIds[n - 1];
-                                if (typeof articleId !== "number") return anchor;
+                                if (typeof articleId !== 'number')
+                                  return anchor;
                                 return (
                                   <CitationHoverCard
                                     articleId={articleId}
@@ -1142,7 +1199,7 @@ export function ResearchMode() {
                             : undefined
                         }
                       />
-                      {phase === "Synthesizing" && (
+                      {phase === 'Synthesizing' && (
                         <span className="stream-caret" />
                       )}
                     </>
@@ -1150,13 +1207,13 @@ export function ResearchMode() {
                     <div className="flex items-center gap-2 text-foreground-soft py-4 font-mono-tx text-[12px]">
                       <span className="live-cursor text-signal" />
                       <span>
-                        {phase === "Decomposing"
-                          ? "decomposing question..."
-                          : phase.startsWith("Searching")
-                          ? "searching for articles..."
-                          : phase === "Synthesizing"
-                          ? "synthesizing the dispatch..."
-                          : "thinking..."}
+                        {phase === 'Decomposing'
+                          ? 'decomposing question...'
+                          : phase.startsWith('Searching')
+                            ? 'searching for articles...'
+                            : phase === 'Synthesizing'
+                              ? 'synthesizing the dispatch...'
+                              : 'thinking...'}
                       </span>
                     </div>
                   )}
@@ -1168,7 +1225,7 @@ export function ResearchMode() {
           {/* -----------------------------------------------------------
            * Action bar -- mono pills. Cancel mid-flight, save/copy/dl on done.
            * ----------------------------------------------------------- */}
-          {(isResearching || phase === "done") && (
+          {(isResearching || phase === 'done') && (
             <div className="flex items-center gap-2 font-mono-tx text-[11px] uppercase-eyebrow mt-6 pt-4 border-t border-[var(--rule)] flex-wrap">
               {isResearching && (
                 <button
@@ -1181,41 +1238,49 @@ export function ResearchMode() {
                   Cancel <span className="text-foreground-mute ml-1">⌃X</span>
                 </button>
               )}
-              {showReport && phase === "done" && (
+              {showReport && phase === 'done' && (
                 <>
                   <button
                     type="button"
                     onClick={onSaveResearch}
                     data-testid="research-save-btn"
                     aria-label={
-                      saveState === "saved"
-                        ? "Saved"
-                        : saveState === "saving"
-                        ? "Saving"
-                        : "Save research"
+                      saveState === 'saved'
+                        ? 'Saved'
+                        : saveState === 'saving'
+                          ? 'Saving'
+                          : 'Save research'
                     }
                     aria-live="polite"
-                    disabled={saveState !== "idle"}
+                    disabled={saveState !== 'idle'}
                     className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40 transition-colors"
                   >
-                    {saveState === "saved"
-                      ? "Saved ✓"
-                      : saveState === "saving"
-                      ? "Saving…"
-                      : (
-                        <>Save <span className="text-foreground-mute ml-1">⌃S</span></>
-                      )}
+                    {saveState === 'saved' ? (
+                      'Saved ✓'
+                    ) : saveState === 'saving' ? (
+                      'Saving…'
+                    ) : (
+                      <>
+                        Save{' '}
+                        <span className="text-foreground-mute ml-1">⌃S</span>
+                      </>
+                    )}
                   </button>
                   <button
                     type="button"
                     onClick={onCopyMarkdown}
                     data-testid="research-copy-btn"
-                    aria-label={copied ? "Copied" : "Copy markdown"}
+                    aria-label={copied ? 'Copied' : 'Copy markdown'}
                     aria-live="polite"
                     className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal transition-colors"
                   >
-                    {copied ? "Copied ✓" : (
-                      <>Copy <span className="text-foreground-mute ml-1">⌃C</span></>
+                    {copied ? (
+                      'Copied ✓'
+                    ) : (
+                      <>
+                        Copy{' '}
+                        <span className="text-foreground-mute ml-1">⌃C</span>
+                      </>
                     )}
                   </button>
                   <button
@@ -1225,7 +1290,8 @@ export function ResearchMode() {
                     aria-label="Download markdown"
                     className="px-3 py-1.5 border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal transition-colors"
                   >
-                    Download .md <span className="text-foreground-mute ml-1">⌃D</span>
+                    Download .md{' '}
+                    <span className="text-foreground-mute ml-1">⌃D</span>
                   </button>
                 </>
               )}
@@ -1282,7 +1348,7 @@ export function ResearchMode() {
           <textarea
             ref={inputRef}
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             onKeyDown={onSubmitKey}
             rows={1}
             disabled={isResearching}
@@ -1296,8 +1362,12 @@ export function ResearchMode() {
             aria-label="Research"
             className="px-3 py-1.5 font-mono-tx text-[11px] uppercase-eyebrow border border-[var(--rule)] rounded-md hover:bg-[var(--background-tint)] hover:text-signal disabled:opacity-40 transition-colors"
           >
-            {isResearching ? "Running…" : (
-              <>Research <span className="text-foreground-mute ml-1">⏎</span></>
+            {isResearching ? (
+              'Running…'
+            ) : (
+              <>
+                Research <span className="text-foreground-mute ml-1">⏎</span>
+              </>
             )}
           </button>
         </div>

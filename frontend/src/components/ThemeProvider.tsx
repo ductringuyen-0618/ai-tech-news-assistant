@@ -16,9 +16,15 @@
  *    persistence test (which asserts a fresh browser context has empty
  *    localStorage on first paint).
  */
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 
-export type Theme = "dark" | "light";
+export type Theme = 'dark' | 'light';
 
 interface ThemeContextValue {
   theme: Theme;
@@ -28,24 +34,24 @@ interface ThemeContextValue {
 
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
-const STORAGE_KEY = "techpulse-theme";
+const STORAGE_KEY = 'techpulse-theme';
 
 function readStoredTheme(): Theme {
   try {
     const v = localStorage.getItem(STORAGE_KEY);
-    if (v === "light" || v === "dark") return v;
+    if (v === 'light' || v === 'dark') return v;
   } catch {
     // Privacy mode or storage disabled — fall through to default.
   }
-  return "dark";
+  return 'dark';
 }
 
 function applyThemeClass(theme: Theme) {
   const html = document.documentElement;
-  if (theme === "dark") {
-    html.classList.add("dark");
+  if (theme === 'dark') {
+    html.classList.add('dark');
   } else {
-    html.classList.remove("dark");
+    html.classList.remove('dark');
   }
 }
 
@@ -54,7 +60,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   // (and what localStorage says). On the server / SSR there's no document;
   // we guard with typeof checks for safety even though Vite is SPA-only.
   const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
+    if (typeof window === 'undefined') return 'dark';
     return readStoredTheme();
   });
 
@@ -74,7 +80,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
+  const toggleTheme = () => setTheme(theme === 'dark' ? 'light' : 'dark');
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>
@@ -86,7 +92,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
 export function useTheme(): ThemeContextValue {
   const ctx = useContext(ThemeContext);
   if (!ctx) {
-    throw new Error("useTheme must be used inside <ThemeProvider>");
+    throw new Error('useTheme must be used inside <ThemeProvider>');
   }
   return ctx;
 }

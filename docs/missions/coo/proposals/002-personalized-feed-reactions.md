@@ -1,9 +1,91 @@
 ---
-status: in_progress
-attempts: 0
+status: shipped
+attempts: 1
 branch: coo/personalized-feed-reactions
 ---
 # Personalized Feed Ranking via Lightweight Reactions
+
+## Attempt 1 notes
+Worker implemented the full feature (frontend/src/lib/interestWeights.ts,
+NewsCard.tsx reaction controls, UnifiedFeedView.tsx bounded reorder +
+personalization status/reset row, e2e coverage in news-feed.spec.ts).
+`npm run typecheck`, `npm run lint` (0 errors, no new warnings vs.
+baseline), and `npm run build` all passed on the first pass.
+
+Independent scrutiny validator (subagent, saw only the proposal + diff)
+found a real bug by tracing the code: `UnifiedFeedView`'s weights re-read
+was keyed off the `articles` array reference, but that reference changes
+on ordinary re-renders (App.tsx's `visibleFeedArticles` filter is
+unmemoized) and grows via append during infinite-scroll pagination -- not
+only on a genuine new feed load. That could silently re-read localStorage
+mid-scroll and reshuffle windows already rendered on screen, violating
+the "not a live jump-scare" behavioral assertion. Fixed by keying the
+re-read off the feed's leading article id instead (stable across
+appends, only moves on a real reload); added a regression test that
+reacts then triggers pagination and asserts the already-rendered prefix
+is untouched.
+
+Independent professional-feel reviewer (subagent, same isolation) scored
+the first pass FAIL on 3 must-fix items: (1) the reaction toast still
+claimed an effect after a weight was already at its -3..3 clamp -- fixed
+by having `nudgeInterestWeight` report whether it actually changed
+anything, and showing an honest "already at the limit" toast otherwise;
+(2) the "Personalized for you" status row hand-rolled its eyebrow styling
+instead of reusing the app's shared `.uppercase-eyebrow` class used by
+every other metadata row (including this same card's own source
+eyebrow) -- fixed by reusing it; (3) reactions had no persisted visible
+marker unlike Save/Read -- fixed by adding an `aria-pressed`,
+signal-colored state on the reaction buttons derived from the article's
+aggregate interest score, which survives a reload.
+
+All three fixes are committed on this branch along with e2e coverage for
+the clamp-honesty toast and the persisted pressed indicator.
+
+A second independent scrutiny pass on the fixed diff confirmed all four
+attempt-1 fixes hold, but by hand-tracing `reorderByInterest` against a
+pagination scenario with non-empty weights (the first regression test
+happened to only exercise empty weights, since an in-session reaction
+never flows into render state without a reload -- correct by design, but
+it meant that test didn't reach the buggy path), it found a real edge
+case: `reorderByInterest` re-chunks its fixed-size windows from scratch
+over the *entire* live `articles` array on every render. If an infinite-
+scroll append landed inside what would otherwise be a partial trailing
+window, the newly-fetched articles could get folded into a window that's
+already rendered on screen and sort above an already-visible card --
+this only failed to trigger before because the default page size (24)
+happened to be a multiple of the window size (6), not because it was
+actually guarded. Fixed by freezing a `personalizedThrough` boundary
+alongside `weights` (same leading-article-id trigger); only that frozen
+prefix ever gets re-windowed, anything appended beyond it is appended
+verbatim until the next real reload. Added a regression test that
+pre-seeds a weight so it's genuinely present in render state before
+pagination fires (the actual buggy path) and asserts the prefix stays
+untouched and new articles land strictly after it, never interleaved.
+
+A third independent pass confirmed that fix is correct and complete, and
+found one more small issue: `personalizedThrough` was hardcoded to `0`
+on mount instead of lazily initialized like `weights` is, which could
+flash the whole already-loaded list to unpersonalized order for one
+frame on a remount with `articles` already populated (e.g. a feed tab
+that unmounts on switch-away and doesn't refetch on return). Fixed by
+lazy-initializing it from `articles.length`, matching the `weights`
+pattern.
+
+`npm run typecheck` / `npm run lint` (0 errors throughout, no new
+warnings vs. the pre-existing baseline) / `npm run build` all passed
+after every fix. `npm run format:check` was checked once and found to
+already fail on ~85 pre-existing files unrelated to this change
+(including files this diff never touches) -- pre-existing repo-wide
+debt, not something this feature introduced or is in scope to fix; the
+one file this diff added from scratch (`interestWeights.ts`) was
+formatted to match the repo's prettier config regardless.
+`playwright test` itself was not run live -- `playwright.config.ts` is
+Windows-oriented (hardcoded `headless: false`, `C:/temp/...` artifact
+paths) and requires a live backend+frontend dev stack with a populated
+DB that isn't available in this container; the new/changed e2e cases
+were instead verified by hand-tracing the implementation against each
+test's mocked fixture data, three times over, by three independent
+review passes.
 
 ## What you get
 "More like this" and "Less like this" buttons on each news card. Reacting

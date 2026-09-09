@@ -22,10 +22,10 @@
  *  - data-testid="welcome-dismiss"         — quiet skip link
  *  - data-testid="atelier-hero"            — new, for redesign specs
  */
-import { useEffect, useMemo, useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { ArrowRight, Sparkles } from "lucide-react";
-import { API_ENDPOINTS, apiFetch } from "../../config/api";
+import { useEffect, useMemo, useState } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { ArrowRight, Sparkles } from 'lucide-react';
+import { API_ENDPOINTS, apiFetch } from '../../config/api';
 
 interface AtelierHeroProps {
   onTryResearch: () => void;
@@ -64,27 +64,21 @@ export function AtelierHero({
 
   // Memoize so the eyebrow doesn't flip mid-session if a re-render happens
   // to straddle a clock hour. Computed once per mount.
-  const greeting = useMemo(
-    () => greetingForHour(new Date().getHours()),
-    []
-  );
+  const greeting = useMemo(() => greetingForHour(new Date().getHours()), []);
 
   return (
-    <section
-      data-testid="welcome-screen"
-      className="pt-16 pb-12 px-2"
-    >
+    <section data-testid="welcome-screen" className="pt-16 pb-12 px-2">
       <motion.div
         data-testid="atelier-hero"
         initial={reduceMotion ? false : { opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: reduceMotion ? 0 : 0.4, ease: "easeOut" }}
+        transition={{ duration: reduceMotion ? 0 : 0.4, ease: 'easeOut' }}
       >
         {/* Quiet eyebrow — greeting + a single live-status dot. */}
         <div className="flex items-center gap-2 mb-6 text-[12px] text-foreground-mute uppercase tracking-wide">
           <Sparkles
             className="w-3.5 h-3.5"
-            style={{ color: "var(--accent-signal)" }}
+            style={{ color: 'var(--accent-signal)' }}
             aria-hidden
           />
           <span>{greeting}, here's your desk.</span>
@@ -101,9 +95,13 @@ export function AtelierHero({
             speaks; the document outline already has its h1. */}
         <h2
           className="font-display text-foreground"
-          style={{ fontSize: "44px", lineHeight: 1.1, letterSpacing: "-0.025em" }}
+          style={{
+            fontSize: '44px',
+            lineHeight: 1.1,
+            letterSpacing: '-0.025em',
+          }}
         >
-          I read{" "}
+          I read{' '}
           {storyCount !== null ? (
             <button
               type="button"
@@ -111,15 +109,26 @@ export function AtelierHero({
               data-testid="atelier-hero-count"
               aria-label={`Open today's brief — ${storyCount.toLocaleString()} stories scanned`}
               className="tabular-nums inline-baseline font-display hover:underline decoration-2 underline-offset-4 transition-all"
-              style={{ color: "var(--accent-signal)", background: "transparent", padding: 0, border: 0, font: "inherit", cursor: "pointer" }}
+              style={{
+                color: 'var(--accent-signal)',
+                background: 'transparent',
+                padding: 0,
+                border: 0,
+                font: 'inherit',
+                cursor: 'pointer',
+              }}
             >
-              {storyCount.toLocaleString()} {storyCount === 1 ? "story" : "stories"}
+              {storyCount.toLocaleString()}{' '}
+              {storyCount === 1 ? 'story' : 'stories'}
             </button>
           ) : (
-            <span style={{ color: "var(--accent-signal)" }} className="tabular-nums">
+            <span
+              style={{ color: 'var(--accent-signal)' }}
+              className="tabular-nums"
+            >
               every story
             </span>
-          )}{" "}
+          )}{' '}
           overnight.
           <br />
           <span className="text-foreground-soft">
@@ -162,9 +171,9 @@ export function AtelierHero({
 }
 
 function greetingForHour(h: number): string {
-  if (h < 5) return "Late night";
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  if (h < 21) return "Good evening";
-  return "Late night";
+  if (h < 5) return 'Late night';
+  if (h < 12) return 'Good morning';
+  if (h < 17) return 'Good afternoon';
+  if (h < 21) return 'Good evening';
+  return 'Late night';
 }

@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState } from "react";
-import { Search, X } from "lucide-react";
-import { Input } from "./ui/input";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
+import { useEffect, useRef, useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { Input } from './ui/input';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
 
 interface EntityResult {
   id: number;
@@ -27,8 +27,8 @@ interface SearchBarProps {
 
 export function SearchBar({
   onSearch,
-  placeholder = "Search tech news...",
-  initialQuery = "",
+  placeholder = 'Search tech news...',
+  initialQuery = '',
   onSelectEntity,
 }: SearchBarProps) {
   const [query, setQuery] = useState(initialQuery);
@@ -72,13 +72,13 @@ export function SearchBar({
     clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(async () => {
       try {
-        const params = new URLSearchParams({ q, limit: "6" });
+        const params = new URLSearchParams({ q, limit: '6' });
         const data = await apiFetch<{ entities: EntityResult[] }>(
           `${API_ENDPOINTS.knowledgeGraphSearch}?${params}`
         );
         setEntityResults(data.entities || []);
       } catch (err) {
-        console.error("SearchBar: entity search failed", err);
+        console.error('SearchBar: entity search failed', err);
         setEntityResults([]);
       } finally {
         setEntityLoading(false);
@@ -89,12 +89,15 @@ export function SearchBar({
 
   useEffect(() => {
     const onDocClick = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setShowResults(false);
       }
     };
-    document.addEventListener("mousedown", onDocClick);
-    return () => document.removeEventListener("mousedown", onDocClick);
+    document.addEventListener('mousedown', onDocClick);
+    return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -104,15 +107,15 @@ export function SearchBar({
   };
 
   const handleClear = () => {
-    setQuery("");
+    setQuery('');
     setEntityResults([]);
     setShowResults(false);
-    onSearch("");
+    onSearch('');
   };
 
   const pickEntity = (entity: EntityResult) => {
     onSelectEntity?.({ id: entity.id, name: entity.name });
-    setQuery("");
+    setQuery('');
     setEntityResults([]);
     setShowResults(false);
   };
@@ -130,20 +133,24 @@ export function SearchBar({
     (entityLoading || entityResults.length > 0);
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Escape" && showResults) {
+    if (e.key === 'Escape' && showResults) {
       e.preventDefault();
       setShowResults(false);
     }
   };
 
   return (
-    <form onSubmit={handleSubmit} className="relative w-full" ref={containerRef}>
+    <form
+      onSubmit={handleSubmit}
+      className="relative w-full"
+      ref={containerRef}
+    >
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
         <Input
           type="text"
           value={query}
-          onChange={(e) => setQuery(e.target.value)}
+          onChange={e => setQuery(e.target.value)}
           onFocus={() => setShowResults(true)}
           onKeyDown={handleKeyDown}
           placeholder={
@@ -174,14 +181,14 @@ export function SearchBar({
         <div
           data-testid="entity-search-results"
           className="absolute z-50 mt-1 border border-input rounded-md bg-card shadow-lg overflow-y-auto"
-          style={{ top: "100%", left: 0, right: 0, maxHeight: "16rem" }}
+          style={{ top: '100%', left: 0, right: 0, maxHeight: '16rem' }}
         >
           {entityLoading ? (
             <div className="px-3 py-2 text-[13px] text-muted-foreground">
               searching...
             </div>
           ) : (
-            entityResults.map((r) => (
+            entityResults.map(r => (
               <button
                 key={r.id}
                 type="button"

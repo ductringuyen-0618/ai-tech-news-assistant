@@ -17,4 +17,10 @@ Shipped: 1/3
   must-fix items, a pagination-windowing edge case, and a one-frame
   remount flash. `npm run typecheck`/`lint`/`build` all clean throughout.
   See `docs/missions/coo/reports/personalized-feed-reactions.md` for the
-  full trace. PR opened to main; branch pushed.
+  full trace. PR #5 opened, then merged to main (`b0fef6b`) after CI
+  went green -- along the way, another session fixed a repo-wide
+  prettier baseline and merged it in, which exposed an unrelated,
+  pre-existing CI workflow bug (artifact-check looked for `dist/`, but
+  this repo's Vite build outputs to `build/`); diagnosed it, proposed a
+  one-line patch in a PR comment rather than editing the workflow
+  unilaterally, and it landed the same way.

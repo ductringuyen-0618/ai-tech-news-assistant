@@ -563,6 +563,8 @@ media/
 # Generated reports
 reports/
 exports/
+!docs/missions/coo/reports/
+!docs/missions/coo/reports/**
 
 # Configuration overrides
 config.local.yml

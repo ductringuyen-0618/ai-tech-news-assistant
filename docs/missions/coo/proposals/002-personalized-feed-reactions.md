@@ -1,9 +1,46 @@
 ---
 status: in_progress
-attempts: 0
+attempts: 1
 branch: coo/personalized-feed-reactions
 ---
 # Personalized Feed Ranking via Lightweight Reactions
+
+## Attempt 1 notes
+Worker implemented the full feature (frontend/src/lib/interestWeights.ts,
+NewsCard.tsx reaction controls, UnifiedFeedView.tsx bounded reorder +
+personalization status/reset row, e2e coverage in news-feed.spec.ts).
+`npm run typecheck`, `npm run lint` (0 errors, no new warnings vs.
+baseline), and `npm run build` all passed on the first pass.
+
+Independent scrutiny validator (subagent, saw only the proposal + diff)
+found a real bug by tracing the code: `UnifiedFeedView`'s weights re-read
+was keyed off the `articles` array reference, but that reference changes
+on ordinary re-renders (App.tsx's `visibleFeedArticles` filter is
+unmemoized) and grows via append during infinite-scroll pagination -- not
+only on a genuine new feed load. That could silently re-read localStorage
+mid-scroll and reshuffle windows already rendered on screen, violating
+the "not a live jump-scare" behavioral assertion. Fixed by keying the
+re-read off the feed's leading article id instead (stable across
+appends, only moves on a real reload); added a regression test that
+reacts then triggers pagination and asserts the already-rendered prefix
+is untouched.
+
+Independent professional-feel reviewer (subagent, same isolation) scored
+the first pass FAIL on 3 must-fix items: (1) the reaction toast still
+claimed an effect after a weight was already at its -3..3 clamp -- fixed
+by having `nudgeInterestWeight` report whether it actually changed
+anything, and showing an honest "already at the limit" toast otherwise;
+(2) the "Personalized for you" status row hand-rolled its eyebrow styling
+instead of reusing the app's shared `.uppercase-eyebrow` class used by
+every other metadata row (including this same card's own source
+eyebrow) -- fixed by reusing it; (3) reactions had no persisted visible
+marker unlike Save/Read -- fixed by adding an `aria-pressed`,
+signal-colored state on the reaction buttons derived from the article's
+aggregate interest score, which survives a reload.
+
+All three fixes are committed on this branch along with e2e coverage for
+the clamp-honesty toast and the persisted pressed indicator. Re-running
+independent validation on the fixed diff before deciding to ship.
 
 ## What you get
 "More like this" and "Less like this" buttons on each news card. Reacting

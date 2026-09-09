@@ -19,26 +19,22 @@
  * test-id (callers can attach their own via ``data-testid`` through
  * the spread of native ``<p>`` attributes which would be a v2 add).
  */
-import type { ReactNode } from "react";
+import type { ReactNode } from 'react';
 
 export interface DropCapProps {
   children: ReactNode;
   /** Extra classes appended to the default editorial typography. */
   className?: string;
   /** Optional test-id for Playwright hooks. */
-  "data-testid"?: string;
+  'data-testid'?: string;
 }
 
-export function DropCap({
-  children,
-  className = "",
-  ...rest
-}: DropCapProps) {
+export function DropCap({ children, className = '', ...rest }: DropCapProps) {
   return (
     <p
       {...rest}
       className={
-        "editorial-drop font-display text-[16px] leading-[1.65] text-foreground " +
+        'editorial-drop font-display text-[16px] leading-[1.65] text-foreground ' +
         className
       }
     >

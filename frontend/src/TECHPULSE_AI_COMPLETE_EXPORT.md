@@ -24,6 +24,7 @@
 ## Project Overview
 
 **TechPulse AI** is an AI-powered tech news aggregation platform that:
+
 - Pulls news from multiple sources with de-duplication
 - Uses AI to summarize articles at different detail levels
 - Provides smart topic categorization and personalized feeds
@@ -38,7 +39,8 @@
 
 1. **News Feed** - Browse categorized tech news with multiple view modes
 2. **Research Mode** - AI agent conducts comprehensive research on queries
-3. **Knowledge Graph** - Interactive visualization of tech ecosystem relationships
+3. **Knowledge Graph** - Interactive visualization of tech ecosystem
+   relationships
 4. **Daily Digest** - Curated summary of top stories
 5. **Ask AI** - Conversational search interface
 6. **Settings** - Topic preferences with visual feedback
@@ -48,6 +50,7 @@
 ## Architecture
 
 ### Frontend
+
 - **React 18** with TypeScript
 - **Tailwind CSS 4.0** for styling
 - **shadcn/ui** component library
@@ -55,12 +58,14 @@
 - **Sonner** for toast notifications
 
 ### Backend
+
 - **Supabase** for database and authentication
 - **Edge Functions** (Deno runtime)
 - **Hono** web framework
 - **Key-Value Store** for user preferences
 
 ### Design System
+
 - **Font:** Space Grotesk (headings), Inter (body)
 - **Colors:** White Smoke (#F9FAFB), Rich Black-Gray (#111827)
 - **Primary:** Blue gradient (#3B82F6 → #2563EB)
@@ -71,18 +76,21 @@
 ## Setup Instructions
 
 ### Prerequisites
+
 - Node.js 18+ or Bun
 - Supabase account (free tier works)
 
 ### Local Development Setup
 
 #### 1. Create Project Directory
+
 ```bash
 mkdir techpulse-ai
 cd techpulse-ai
 ```
 
 #### 2. Create `package.json`
+
 ```json
 {
   "name": "techpulse-ai",
@@ -128,6 +136,7 @@ cd techpulse-ai
 ```
 
 #### 3. Create `vite.config.ts`
+
 ```typescript
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
@@ -144,6 +153,7 @@ export default defineConfig({
 ```
 
 #### 4. Create `tsconfig.json`
+
 ```json
 {
   "compilerOptions": {
@@ -172,6 +182,7 @@ export default defineConfig({
 ```
 
 #### 5. Create `index.html`
+
 ```html
 <!DOCTYPE html>
 <html lang="en">
@@ -179,7 +190,10 @@ export default defineConfig({
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>TechPulse AI - AI-Powered Tech News Aggregation</title>
-    <meta name="description" content="Stay ahead with AI-curated tech news from TechCrunch, The Verge, Wired, and more." />
+    <meta
+      name="description"
+      content="Stay ahead with AI-curated tech news from TechCrunch, The Verge, Wired, and more."
+    />
   </head>
   <body>
     <div id="root"></div>
@@ -189,6 +203,7 @@ export default defineConfig({
 ```
 
 #### 6. Create `main.tsx`
+
 ```typescript
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -203,6 +218,7 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
 ```
 
 #### 7. Install Dependencies
+
 ```bash
 npm install
 ```
@@ -213,6 +229,7 @@ npm install
 2. Get your Project URL and API keys from Settings → API
 3. Update `/utils/supabase/info.tsx` with your credentials
 4. Deploy the edge function:
+
 ```bash
 # Install Supabase CLI
 npm install -g supabase
@@ -228,6 +245,7 @@ supabase functions deploy make-server-3889d4d6
 ```
 
 #### 9. Run Development Server
+
 ```bash
 npm run dev
 ```
@@ -325,6 +343,7 @@ techpulse-ai/
 ### Core Application Files
 
 #### `/App.tsx`
+
 ```typescript
 import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "./components/ui/tabs";
@@ -478,7 +497,7 @@ export default function App() {
             Authorization: `Bearer ${publicAnonKey}`,
           },
         });
-        
+
         if (response.ok) {
           const prefs = await response.json();
           const cats = prefs.categories || ["AI/ML", "AI Agents"];
@@ -488,7 +507,7 @@ export default function App() {
       } catch (error) {
         console.error("Error loading preferences:", error);
       }
-      
+
       fetchArticles();
       fetchDigest();
     };
@@ -642,8 +661,8 @@ export default function App() {
               </div>
             ) : (
               <div className={`grid gap-6 ${
-                viewMode === "detailed" 
-                  ? "grid-cols-1 lg:grid-cols-2" 
+                viewMode === "detailed"
+                  ? "grid-cols-1 lg:grid-cols-2"
                   : "grid-cols-1"
               }`}>
                 {filteredArticles.map((article) => (
@@ -729,6 +748,7 @@ export default function App() {
 ### Component Files
 
 #### `/components/NewsCard.tsx`
+
 ```typescript
 import { useState } from "react";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
@@ -769,7 +789,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
     const date = new Date(dateString);
     const now = new Date();
     const hours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
-    
+
     if (hours < 1) return "Just now";
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
@@ -1016,6 +1036,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
 ```
 
 #### `/components/ChatInterface.tsx`
+
 ```typescript
 import { useState } from "react";
 import { MessageCircle, Send, Bot, User, Loader2 } from "lucide-react";
@@ -1067,7 +1088,7 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
 
     try {
       const response = await onAskQuestion(input);
-      
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
@@ -1120,7 +1141,7 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
                     <Bot className="w-4 h-4 text-white" />
                   </div>
                 )}
-                
+
                 <div
                   className={`max-w-[80%] rounded-lg p-3 ${
                     message.role === "user"
@@ -1129,7 +1150,7 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
                   }`}
                 >
                   <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                  
+
                   {message.relevantArticles && message.relevantArticles.length > 0 && (
                     <div className="mt-3 pt-3 border-t border-gray-300 space-y-2">
                       <p className="text-xs text-gray-600 mb-2">
@@ -1214,23 +1235,30 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
 ```
 
 #### `/components/ResearchMode.tsx`
-*See full file in the repository - includes AI research agent with Markdown export*
+
+_See full file in the repository - includes AI research agent with Markdown
+export_
 
 #### `/components/KnowledgeGraph.tsx`
-*See full file in the repository - includes interactive canvas visualization*
+
+_See full file in the repository - includes interactive canvas visualization_
 
 #### `/components/DigestView.tsx`
-*See full file in the repository - includes daily digest UI*
+
+_See full file in the repository - includes daily digest UI_
 
 #### `/components/TopicFilter.tsx`
-*See full file in the repository - includes preference management*
+
+_See full file in the repository - includes preference management_
 
 #### `/components/SearchBar.tsx`
-*See full file in the repository - includes search functionality*
+
+_See full file in the repository - includes search functionality_
 
 ### Styles
 
 #### `/styles/globals.css`
+
 ```css
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
@@ -1239,43 +1267,43 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
 :root {
   --font-size: 16px;
   /* Futuristic Light Theme */
-  --background: #F9FAFB;
+  --background: #f9fafb;
   --foreground: #111827;
-  --card: #FFFFFF;
+  --card: #ffffff;
   --card-foreground: #111827;
-  --popover: #FFFFFF;
+  --popover: #ffffff;
   --popover-foreground: #111827;
-  --primary: #2563EB;
-  --primary-foreground: #FFFFFF;
-  --secondary: #F3F4F6;
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f4f6;
   --secondary-foreground: #111827;
-  --muted: #F3F4F6;
-  --muted-foreground: #6B7280;
-  --accent: #EFF6FF;
-  --accent-foreground: #1E40AF;
-  --destructive: #DC2626;
-  --destructive-foreground: #FFFFFF;
-  --border: #E5E7EB;
-  --input: #E5E7EB;
-  --input-background: #FFFFFF;
-  --switch-background: #E5E7EB;
+  --muted: #f3f4f6;
+  --muted-foreground: #6b7280;
+  --accent: #eff6ff;
+  --accent-foreground: #1e40af;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #e5e7eb;
+  --input: #e5e7eb;
+  --input-background: #ffffff;
+  --switch-background: #e5e7eb;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: #2563EB;
-  --chart-1: #3B82F6;
-  --chart-2: #8B5CF6;
-  --chart-3: #EC4899;
-  --chart-4: #F59E0B;
-  --chart-5: #10B981;
+  --ring: #2563eb;
+  --chart-1: #3b82f6;
+  --chart-2: #8b5cf6;
+  --chart-3: #ec4899;
+  --chart-4: #f59e0b;
+  --chart-5: #10b981;
   --radius: 0.75rem;
-  --sidebar: #FFFFFF;
+  --sidebar: #ffffff;
   --sidebar-foreground: #111827;
-  --sidebar-primary: #2563EB;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #F3F4F6;
+  --sidebar-primary: #2563eb;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f3f4f6;
   --sidebar-accent-foreground: #111827;
-  --sidebar-border: #E5E7EB;
-  --sidebar-ring: #2563EB;
+  --sidebar-border: #e5e7eb;
+  --sidebar-ring: #2563eb;
 }
 
 @theme inline {
@@ -1326,11 +1354,19 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
 
   body {
     @apply bg-background text-foreground;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-family:
+      'Inter',
+      -apple-system,
+      BlinkMacSystemFont,
+      'Segoe UI',
+      sans-serif;
   }
-  
+
   /* Space Grotesk for headings */
-  h1, h2, h3, .heading {
+  h1,
+  h2,
+  h3,
+  .heading {
     font-family: 'Space Grotesk', 'Inter', sans-serif;
   }
 }
@@ -1341,46 +1377,66 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
     background: rgba(255, 255, 255, 0.8);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(229, 231, 235, 0.6);
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.05),
+      0 2px 4px -1px rgba(0, 0, 0, 0.03);
   }
-  
+
   .elevation-sm {
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 1px 3px 0 rgba(0, 0, 0, 0.1),
+      0 1px 2px -1px rgba(0, 0, 0, 0.1);
   }
-  
+
   .elevation-md {
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 4px 6px -1px rgba(0, 0, 0, 0.1),
+      0 2px 4px -2px rgba(0, 0, 0, 0.1);
   }
-  
+
   .elevation-lg {
-    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
+    box-shadow:
+      0 10px 15px -3px rgba(0, 0, 0, 0.1),
+      0 4px 6px -4px rgba(0, 0, 0, 0.1);
   }
-  
+
   .gradient-primary {
-    background: linear-gradient(135deg, #3B82F6 0%, #2563EB 100%);
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   }
-  
+
   .gradient-accent {
-    background: linear-gradient(135deg, #8B5CF6 0%, #6366F1 100%);
+    background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
   }
-  
+
   .subtle-pattern {
-    background-image: 
-      radial-gradient(circle at 25% 25%, rgba(37, 99, 235, 0.02) 0%, transparent 50%),
-      radial-gradient(circle at 75% 75%, rgba(139, 92, 246, 0.02) 0%, transparent 50%);
+    background-image:
+      radial-gradient(
+        circle at 25% 25%,
+        rgba(37, 99, 235, 0.02) 0%,
+        transparent 50%
+      ),
+      radial-gradient(
+        circle at 75% 75%,
+        rgba(139, 92, 246, 0.02) 0%,
+        transparent 50%
+      );
   }
-  
+
   .hover-lift {
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      box-shadow 0.2s ease;
   }
-  
+
   .hover-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 12px 20px -3px rgba(0, 0, 0, 0.12), 0 6px 8px -4px rgba(0, 0, 0, 0.08);
+    box-shadow:
+      0 12px 20px -3px rgba(0, 0, 0, 0.12),
+      0 6px 8px -4px rgba(0, 0, 0, 0.08);
   }
-  
+
   .text-gradient {
-    background: linear-gradient(135deg, #2563EB 0%, #7C3AED 100%);
+    background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -1407,19 +1463,22 @@ export function ChatInterface({ onAskQuestion }: ChatInterfaceProps) {
 ### Backend Server
 
 #### `/supabase/functions/server/index.tsx`
-*Complete Hono server with all API endpoints - see full file in repository*
+
+_Complete Hono server with all API endpoints - see full file in repository_
 
 #### `/utils/supabase/info.tsx`
+
 ```typescript
 /* Replace with your Supabase credentials */
 
-export const projectId = "YOUR_PROJECT_ID"
-export const publicAnonKey = "YOUR_ANON_KEY"
+export const projectId = 'YOUR_PROJECT_ID';
+export const publicAnonKey = 'YOUR_ANON_KEY';
 ```
 
 ### Utility Components
 
 #### `/components/figma/ImageWithFallback.tsx`
+
 ```typescript
 import React, { useState } from 'react'
 
@@ -1455,6 +1514,7 @@ export function ImageWithFallback(props: React.ImgHTMLAttributes<HTMLImageElemen
 ## Environment Configuration
 
 ### `.env` (Create this file locally)
+
 ```env
 # Supabase Configuration
 SUPABASE_URL=https://YOUR_PROJECT_ID.supabase.co
@@ -1471,6 +1531,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 ## Package Dependencies
 
 ### Full `package.json` with all dependencies:
+
 ```json
 {
   "name": "techpulse-ai",
@@ -1539,6 +1600,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 ## Features
 
 ### 1. News Feed
+
 - Multi-source news aggregation
 - Topic-based filtering (10 categories)
 - Search functionality
@@ -1548,6 +1610,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 - Real-time updates
 
 ### 2. Research Mode
+
 - AI-powered research queries
 - Multi-article analysis
 - Markdown export
@@ -1556,6 +1619,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 - Source credibility analysis
 
 ### 3. Knowledge Graph
+
 - Interactive canvas visualization
 - Force-directed graph layout
 - Company/person/technology nodes
@@ -1564,6 +1628,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 - Zoom controls
 
 ### 4. Daily Digest
+
 - Top stories compilation
 - Category breakdown charts
 - Trending topics
@@ -1571,6 +1636,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 - Personalized content
 
 ### 5. Ask AI
+
 - Conversational Q&A interface
 - Context-aware responses
 - Related articles
@@ -1578,6 +1644,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 - Real-time chat
 
 ### 6. Settings
+
 - Topic preferences
 - Visual feedback (unsaved changes badge)
 - Loading states
@@ -1589,6 +1656,7 @@ VITE_SUPABASE_ANON_KEY=${SUPABASE_ANON_KEY}
 ## Deployment
 
 ### Deploy to Vercel
+
 ```bash
 # Install Vercel CLI
 npm i -g vercel
@@ -1598,6 +1666,7 @@ vercel
 ```
 
 ### Deploy to Netlify
+
 ```bash
 # Install Netlify CLI
 npm i -g netlify-cli
@@ -1608,6 +1677,7 @@ netlify deploy --prod
 ```
 
 ### Deploy Supabase Edge Functions
+
 ```bash
 # Deploy the server
 supabase functions deploy make-server-3889d4d6
@@ -1642,7 +1712,8 @@ MIT
 
 ## Support
 
-For questions or issues, please open an issue on GitHub or contact the development team.
+For questions or issues, please open an issue on GitHub or contact the
+development team.
 
 ---
 

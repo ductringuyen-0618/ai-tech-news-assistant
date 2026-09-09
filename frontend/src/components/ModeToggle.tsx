@@ -17,7 +17,7 @@
  *  - data-testid="mode-toggle-atelier"
  *  - data-testid="mode-toggle-mission"
  */
-import { useMode } from "./ModeProvider";
+import { useMode } from './ModeProvider';
 
 export function ModeToggle() {
   const { mode, setMode } = useMode();
@@ -32,15 +32,15 @@ export function ModeToggle() {
       <button
         data-testid="mode-toggle-atelier"
         type="button"
-        onClick={() => setMode("atelier")}
-        aria-pressed={mode === "atelier"}
+        onClick={() => setMode('atelier')}
+        aria-pressed={mode === 'atelier'}
         title="Atelier — calm, conversational home"
         className={[
-          "px-3 py-1 transition-colors",
-          mode === "atelier"
-            ? "bg-foreground text-background"
-            : "text-foreground-soft hover:text-foreground",
-        ].join(" ")}
+          'px-3 py-1 transition-colors',
+          mode === 'atelier'
+            ? 'bg-foreground text-background'
+            : 'text-foreground-soft hover:text-foreground',
+        ].join(' ')}
       >
         Atelier
       </button>
@@ -48,15 +48,15 @@ export function ModeToggle() {
       <button
         data-testid="mode-toggle-mission"
         type="button"
-        onClick={() => setMode("mission")}
-        aria-pressed={mode === "mission"}
+        onClick={() => setMode('mission')}
+        aria-pressed={mode === 'mission'}
         title="Mission Control — dense, telemetry-rich workspace"
         className={[
-          "px-3 py-1 transition-colors",
-          mode === "mission"
-            ? "bg-foreground text-background"
-            : "text-foreground-soft hover:text-foreground",
-        ].join(" ")}
+          'px-3 py-1 transition-colors',
+          mode === 'mission'
+            ? 'bg-foreground text-background'
+            : 'text-foreground-soft hover:text-foreground',
+        ].join(' ')}
       >
         Mission
       </button>

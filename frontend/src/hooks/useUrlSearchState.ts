@@ -10,44 +10,47 @@
  * hand-edited URL) flow into whatever state the caller drives from this
  * hook.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from 'react';
 
 export interface UrlSearchState {
   q: string;
   topics: string[];
 }
 
-const EMPTY_STATE: UrlSearchState = { q: "", topics: [] };
+const EMPTY_STATE: UrlSearchState = { q: '', topics: [] };
 
 function readFromUrl(): UrlSearchState {
-  if (typeof window === "undefined") return EMPTY_STATE;
+  if (typeof window === 'undefined') return EMPTY_STATE;
   const params = new URLSearchParams(window.location.search);
-  const q = params.get("q") || "";
-  const topicsParam = params.get("topics") || "";
+  const q = params.get('q') || '';
+  const topicsParam = params.get('topics') || '';
   const topics = topicsParam
-    ? topicsParam.split(",").map((t) => t.trim()).filter(Boolean)
+    ? topicsParam
+        .split(',')
+        .map(t => t.trim())
+        .filter(Boolean)
     : [];
   return { q, topics };
 }
 
 function writeToUrl(state: UrlSearchState) {
-  if (typeof window === "undefined") return;
+  if (typeof window === 'undefined') return;
   const params = new URLSearchParams(window.location.search);
   if (state.q) {
-    params.set("q", state.q);
+    params.set('q', state.q);
   } else {
-    params.delete("q");
+    params.delete('q');
   }
   if (state.topics.length > 0) {
-    params.set("topics", state.topics.join(","));
+    params.set('topics', state.topics.join(','));
   } else {
-    params.delete("topics");
+    params.delete('topics');
   }
   const query = params.toString();
-  const nextUrl = `${window.location.pathname}${query ? `?${query}` : ""}`;
+  const nextUrl = `${window.location.pathname}${query ? `?${query}` : ''}`;
   const currentUrl = `${window.location.pathname}${window.location.search}`;
   if (nextUrl !== currentUrl) {
-    window.history.replaceState(window.history.state, "", nextUrl);
+    window.history.replaceState(window.history.state, '', nextUrl);
   }
 }
 
@@ -67,12 +70,12 @@ export function useUrlSearchState(): [
 
   useEffect(() => {
     const onPopState = () => setState(readFromUrl());
-    window.addEventListener("popstate", onPopState);
-    return () => window.removeEventListener("popstate", onPopState);
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
   }, []);
 
   const update = useCallback((next: Partial<UrlSearchState>) => {
-    setState((prev) => {
+    setState(prev => {
       const merged: UrlSearchState = { ...prev, ...next };
       const unchanged =
         merged.q === prev.q &&

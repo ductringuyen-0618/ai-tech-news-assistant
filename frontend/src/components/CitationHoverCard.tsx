@@ -31,9 +31,9 @@
  *   - 13px excerpt (line-clamp-3) in soft ink.
  *   - "read at <hostname> ->" mono link in signal color.
  */
-import { useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
 
 /** Subset of the article shape we render in the card. */
 interface CachedArticle {
@@ -77,14 +77,14 @@ function fetchArticle(articleId: number): Promise<CachedArticle | null> {
 
   const url = API_ENDPOINTS.newsById(String(articleId));
   const promise = apiFetch<ApiArticleEnvelope>(url)
-    .then((envelope) => {
+    .then(envelope => {
       const data = (envelope?.data ?? envelope) as CachedArticle | undefined;
-      if (!data || typeof data.title !== "string") {
+      if (!data || typeof data.title !== 'string') {
         return null;
       }
       return data;
     })
-    .catch((err) => {
+    .catch(err => {
       // Drop the cached failure so a later hover can retry.
       articleCache.delete(articleId);
       console.warn(
@@ -123,9 +123,9 @@ function formatDate(iso: string | null | undefined): string | null {
     const d = new Date(iso);
     if (Number.isNaN(d.getTime())) return null;
     return d.toLocaleDateString(undefined, {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
     });
   } catch {
     return null;
@@ -133,19 +133,19 @@ function formatDate(iso: string | null | undefined): string | null {
 }
 
 function buildSummaryPreview(article: CachedArticle): string {
-  const raw = (article.summary || article.content || "").toString().trim();
-  if (!raw) return "";
+  const raw = (article.summary || article.content || '').toString().trim();
+  if (!raw) return '';
   if (raw.length <= 240) return raw;
-  return raw.slice(0, 240).trimEnd() + "...";
+  return raw.slice(0, 240).trimEnd() + '...';
 }
 
 /** Best-effort hostname extractor -- strips leading `www.`. */
 function hostname(url: string | null | undefined): string {
-  if (!url) return "";
+  if (!url) return '';
   try {
-    return new URL(url).hostname.replace(/^www\./, "");
+    return new URL(url).hostname.replace(/^www\./, '');
   } catch {
-    return "";
+    return '';
   }
 }
 
@@ -210,22 +210,22 @@ export function CitationHoverCard({
     }, 100);
   };
 
-  const summary = article ? buildSummaryPreview(article) : "";
+  const summary = article ? buildSummaryPreview(article) : '';
   const dateLabel = article ? formatDate(article.published_at) : null;
-  const host = article ? hostname(article.url) : "";
-  const readAt = host || (article ? article.source : "");
+  const host = article ? hostname(article.url) : '';
+  const readAt = host || (article ? article.source : '');
 
   // The card is positioned near the cursor, slightly offset down/right.
   // We use position: fixed so it floats above content; pointer-events:
   // none means clicks pass through to the underlying citation anchor.
   const cardStyle: React.CSSProperties = {
-    position: "fixed",
+    position: 'fixed',
     left: `${pos.x + 12}px`,
     top: `${pos.y + 16}px`,
-    width: "420px",
-    maxWidth: "calc(100vw - 32px)",
+    width: '420px',
+    maxWidth: 'calc(100vw - 32px)',
     zIndex: 50,
-    pointerEvents: "none",
+    pointerEvents: 'none',
   };
 
   return (
@@ -242,22 +242,18 @@ export function CitationHoverCard({
             role="tooltip"
             style={cardStyle}
             className="block bg-background border border-[var(--rule)] p-4 shadow-lg"
-            initial={
-              reduceMotion ? { opacity: 1 } : { opacity: 0 }
-            }
+            initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
             animate={{ opacity: 1 }}
-            exit={
-              reduceMotion ? { opacity: 0 } : { opacity: 0 }
-            }
+            exit={reduceMotion ? { opacity: 0 } : { opacity: 0 }}
             transition={{
               duration: reduceMotion ? 0 : 0.18,
-              ease: "easeOut",
+              ease: 'easeOut',
             }}
           >
             <span className="flex items-center gap-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft mb-2">
               <span>━ SOURCE</span>
               <span className="flex-1 border-t border-[var(--rule)]" />
-              {typeof citationNumber === "number" && (
+              {typeof citationNumber === 'number' && (
                 <span className="text-foreground-soft">
                   [<span className="text-signal">{citationNumber}</span>]
                 </span>
@@ -274,10 +270,10 @@ export function CitationHoverCard({
               <span
                 className="block text-[13px] leading-[1.55] text-foreground-soft mb-2 line-clamp-3"
                 style={{
-                  display: "-webkit-box",
+                  display: '-webkit-box',
                   WebkitLineClamp: 3,
-                  WebkitBoxOrient: "vertical",
-                  overflow: "hidden",
+                  WebkitBoxOrient: 'vertical',
+                  overflow: 'hidden',
                 }}
               >
                 {summary}

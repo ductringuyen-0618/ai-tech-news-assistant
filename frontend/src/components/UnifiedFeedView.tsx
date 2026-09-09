@@ -23,15 +23,15 @@
  * from the pre-merge Atelier/Mission markup so existing specs keep
  * scoping to it).
  */
-import { ReactNode, useState } from "react";
-import { Loader2, Newspaper } from "lucide-react";
-import { NewsCard } from "./NewsCard";
-import { AtelierShell } from "./atelier/AtelierShell";
-import { MissionShell } from "./mission/MissionShell";
-import { DenseArticleRow } from "./mission/DenseArticleRow";
-import { AgentTelemetry } from "./mission/AgentTelemetry";
+import { ReactNode, useState } from 'react';
+import { Loader2, Newspaper } from 'lucide-react';
+import { NewsCard } from './NewsCard';
+import { AtelierShell } from './atelier/AtelierShell';
+import { MissionShell } from './mission/MissionShell';
+import { DenseArticleRow } from './mission/DenseArticleRow';
+import { AgentTelemetry } from './mission/AgentTelemetry';
 
-export type FeedDensity = "comfortable" | "compact";
+export type FeedDensity = 'comfortable' | 'compact';
 
 /**
  * Superset of the article fields NewsCard and DenseArticleRow each read.
@@ -93,7 +93,7 @@ export function UnifiedFeedView({
   heading,
   emptyState,
   showAgentStatus = true,
-  className = "",
+  className = '',
 }: UnifiedFeedViewProps) {
   const [statusOpen, setStatusOpen] = useState(true);
 
@@ -107,11 +107,11 @@ export function UnifiedFeedView({
 
   const body =
     articles.length === 0 ? (
-      emptyState ?? DefaultEmptyState
-    ) : density === "compact" ? (
+      (emptyState ?? DefaultEmptyState)
+    ) : density === 'compact' ? (
       <MissionShell heading={heading} showTelemetry={false}>
         <div data-testid="news-feed-list" className="flex flex-col">
-          {articles.map((article) => (
+          {articles.map(article => (
             <DenseArticleRow key={article.id} article={article} />
           ))}
         </div>
@@ -127,32 +127,39 @@ export function UnifiedFeedView({
           data-testid="news-feed-list"
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {articles.map((article) => (
+          {articles.map(article => (
             // NewsCard's article prop requires several fields (imageUrl,
             // category, summaryShort, ...) that UnifiedFeedArticle keeps
             // optional so DenseArticleRow's narrower subset also fits.
             // App.tsx's own article state is typed `any[]` for the same
             // reason -- not every ingested article carries every field.
-            <NewsCard key={article.id} article={article as any} viewMode="detailed" />
+            <NewsCard
+              key={article.id}
+              article={article as any}
+              viewMode="detailed"
+            />
           ))}
         </div>
       </AtelierShell>
     );
 
   return (
-    <div data-testid="unified-feed-view" className={["flex w-full", className].join(" ")}>
+    <div
+      data-testid="unified-feed-view"
+      className={['flex w-full', className].join(' ')}
+    >
       <div className="flex-1 min-w-0">{body}</div>
       {showAgentStatus && articles.length > 0 && (
         <div className="flex shrink-0">
           <button
             type="button"
             data-testid="unified-feed-status-toggle"
-            onClick={() => setStatusOpen((v) => !v)}
+            onClick={() => setStatusOpen(v => !v)}
             aria-expanded={statusOpen}
             aria-controls="unified-feed-agent-status"
             className="self-start px-1.5 py-2 text-[10px] uppercase tracking-wide text-foreground-mute hover:text-foreground border-l border-[var(--rule)] transition-colors"
           >
-            {statusOpen ? "›" : "‹"}
+            {statusOpen ? '›' : '‹'}
           </button>
           {statusOpen && (
             <div id="unified-feed-agent-status">

@@ -35,24 +35,24 @@
  *     category text live in <TopicFilter>, which is unchanged at
  *     the testid-contract level.
  */
-import { useState } from "react";
-import { useTheme, Theme } from "./ThemeProvider";
-import { TopicFilter } from "./TopicFilter";
+import { useState } from 'react';
+import { useTheme, Theme } from './ThemeProvider';
+import { TopicFilter } from './TopicFilter';
 
-export const DENSITY_STORAGE_KEY = "techpulse-density";
-export const DENSITY_PREFERENCE_KEY = "techpulse-density-preference";
-type Density = "compact" | "comfortable";
+export const DENSITY_STORAGE_KEY = 'techpulse-density';
+export const DENSITY_PREFERENCE_KEY = 'techpulse-density-preference';
+type Density = 'compact' | 'comfortable';
 
 function readStoredDensity(): Density {
   try {
     const v =
       localStorage.getItem(DENSITY_PREFERENCE_KEY) ??
       localStorage.getItem(DENSITY_STORAGE_KEY);
-    if (v === "compact" || v === "comfortable") return v;
+    if (v === 'compact' || v === 'comfortable') return v;
   } catch {
     // privacy mode etc.
   }
-  return "comfortable";
+  return 'comfortable';
 }
 
 interface SettingsProps {
@@ -84,11 +84,11 @@ function TickerOption({
       data-testid={testId}
       onClick={onClick}
       className={[
-        "font-mono-tx text-[11px] uppercase-eyebrow px-3 py-1 border transition-colors",
+        'font-mono-tx text-[11px] uppercase-eyebrow px-3 py-1 border transition-colors',
         active
-          ? "bg-signal-wash text-signal border-[var(--accent-signal)]"
-          : "bg-card text-foreground-soft border-[var(--rule)] hover:text-signal hover:border-[var(--accent-signal)]",
-      ].join(" ")}
+          ? 'bg-signal-wash text-signal border-[var(--accent-signal)]'
+          : 'bg-card text-foreground-soft border-[var(--rule)] hover:text-signal hover:border-[var(--accent-signal)]',
+      ].join(' ')}
     >
       [ {label} ]
     </button>
@@ -115,7 +115,9 @@ export function Settings({
   hasUnsavedChanges = false,
 }: SettingsProps) {
   const { theme, setTheme } = useTheme();
-  const [density, setDensityState] = useState<Density>(() => readStoredDensity());
+  const [density, setDensityState] = useState<Density>(() =>
+    readStoredDensity()
+  );
 
   const handleTheme = (next: Theme) => {
     setTheme(next);
@@ -132,10 +134,7 @@ export function Settings({
   };
 
   return (
-    <div
-      className="max-w-3xl mx-auto space-y-10"
-      data-testid="settings-root"
-    >
+    <div className="max-w-3xl mx-auto space-y-10" data-testid="settings-root">
       {/* === MASTHEAD ============================== */}
       <header className="space-y-1 border-b-2 border-[var(--foreground)] pb-3">
         <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
@@ -167,16 +166,18 @@ export function Settings({
           </div>
           <div className="flex items-center gap-2">
             <TickerOption
-              active={theme === "light"}
+              active={theme === 'light'}
               label="light"
-              onClick={() => handleTheme("light")}
+              onClick={() => handleTheme('light')}
               testId="settings-theme-light"
             />
-            <span className="font-mono-tx text-[11px] text-foreground-soft">·</span>
+            <span className="font-mono-tx text-[11px] text-foreground-soft">
+              ·
+            </span>
             <TickerOption
-              active={theme === "dark"}
+              active={theme === 'dark'}
               label="dark"
-              onClick={() => handleTheme("dark")}
+              onClick={() => handleTheme('dark')}
               testId="settings-theme-dark"
             />
           </div>
@@ -189,16 +190,18 @@ export function Settings({
           </div>
           <div className="flex items-center gap-2">
             <TickerOption
-              active={density === "comfortable"}
+              active={density === 'comfortable'}
               label="comfortable"
-              onClick={() => handleDensity("comfortable")}
+              onClick={() => handleDensity('comfortable')}
               testId="settings-density-comfortable"
             />
-            <span className="font-mono-tx text-[11px] text-foreground-soft">·</span>
+            <span className="font-mono-tx text-[11px] text-foreground-soft">
+              ·
+            </span>
             <TickerOption
-              active={density === "compact"}
+              active={density === 'compact'}
               label="compact"
-              onClick={() => handleDensity("compact")}
+              onClick={() => handleDensity('compact')}
               testId="settings-density-compact"
             />
           </div>

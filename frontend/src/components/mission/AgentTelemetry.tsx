@@ -15,22 +15,23 @@
  *
  * Test hook: data-testid="agent-telemetry"
  */
-import { useEffect, useState } from "react";
-import { motion, useReducedMotion, AnimatePresence } from "framer-motion";
+import { useEffect, useState } from 'react';
+import { motion, useReducedMotion, AnimatePresence } from 'framer-motion';
 
 interface AgentEvent {
   id: string;
   ts: number;
   label: string;
-  kind: "research" | "ingest" | "entity" | "digest";
+  kind: 'research' | 'ingest' | 'entity' | 'digest';
 }
 
-const KIND_STYLE: Record<AgentEvent["kind"], { color: string; glyph: string }> = {
-  research: { color: "var(--accent-signal)", glyph: "▮" },
-  ingest:   { color: "var(--accent-warm)",   glyph: "▮" },
-  entity:   { color: "var(--accent-soft)",   glyph: "▮" },
-  digest:   { color: "var(--foreground-soft)", glyph: "▮" },
-};
+const KIND_STYLE: Record<AgentEvent['kind'], { color: string; glyph: string }> =
+  {
+    research: { color: 'var(--accent-signal)', glyph: '▮' },
+    ingest: { color: 'var(--accent-warm)', glyph: '▮' },
+    entity: { color: 'var(--accent-soft)', glyph: '▮' },
+    digest: { color: 'var(--foreground-soft)', glyph: '▮' },
+  };
 
 export function AgentTelemetry() {
   const reduceMotion = useReducedMotion();
@@ -41,20 +42,22 @@ export function AgentTelemetry() {
     const onResearch = (e: Event) => {
       const ev = e as CustomEvent<{ active: boolean }>;
       const active = Boolean(ev.detail?.active);
-      setLiveCount((n) => Math.max(0, active ? n + 1 : n - 1));
+      setLiveCount(n => Math.max(0, active ? n + 1 : n - 1));
       if (active) {
         pushEvent({
           id: `r-${Date.now()}`,
           ts: Date.now(),
-          label: "research dispatch opened",
-          kind: "research",
+          label: 'research dispatch opened',
+          kind: 'research',
         });
       }
     };
     const onAgent = (e: Event) => {
-      const ev = e as CustomEvent<Partial<AgentEvent> & { label?: string; kind?: AgentEvent["kind"] }>;
+      const ev = e as CustomEvent<
+        Partial<AgentEvent> & { label?: string; kind?: AgentEvent['kind'] }
+      >;
       const label = ev.detail?.label;
-      const kind = ev.detail?.kind || "ingest";
+      const kind = ev.detail?.kind || 'ingest';
       if (!label) return;
       pushEvent({
         id: `a-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -64,14 +67,23 @@ export function AgentTelemetry() {
       });
     };
     const pushEvent = (next: AgentEvent) => {
-      setEvents((prev) => [next, ...prev].slice(0, 8));
+      setEvents(prev => [next, ...prev].slice(0, 8));
     };
 
-    window.addEventListener("techpulse:research-stream", onResearch as EventListener);
-    window.addEventListener("techpulse:agent-event", onAgent as EventListener);
+    window.addEventListener(
+      'techpulse:research-stream',
+      onResearch as EventListener
+    );
+    window.addEventListener('techpulse:agent-event', onAgent as EventListener);
     return () => {
-      window.removeEventListener("techpulse:research-stream", onResearch as EventListener);
-      window.removeEventListener("techpulse:agent-event", onAgent as EventListener);
+      window.removeEventListener(
+        'techpulse:research-stream',
+        onResearch as EventListener
+      );
+      window.removeEventListener(
+        'techpulse:agent-event',
+        onAgent as EventListener
+      );
     };
   }, []);
 
@@ -87,13 +99,18 @@ export function AgentTelemetry() {
           aria-hidden
           className="inline-block w-2 h-2 rounded-full"
           style={{
-            background: liveCount > 0 ? "var(--accent-signal)" : "var(--foreground-mute)",
+            background:
+              liveCount > 0 ? 'var(--accent-signal)' : 'var(--foreground-mute)',
             animation:
-              liveCount > 0 && !reduceMotion ? "tp-pulse 2s ease-in-out infinite" : undefined,
+              liveCount > 0 && !reduceMotion
+                ? 'tp-pulse 2s ease-in-out infinite'
+                : undefined,
           }}
         />
         <span className="text-foreground font-medium uppercase tracking-wide">
-          {liveCount > 0 ? `${liveCount} agent${liveCount > 1 ? "s" : ""} live` : "idle"}
+          {liveCount > 0
+            ? `${liveCount} agent${liveCount > 1 ? 's' : ''} live`
+            : 'idle'}
         </span>
       </div>
 
@@ -107,25 +124,29 @@ export function AgentTelemetry() {
       <div className="flex flex-col gap-1.5" aria-live="polite">
         {events.length > 0 && (
           <>
-            <span className="text-foreground-mute uppercase tracking-wide">Recent ticks</span>
+            <span className="text-foreground-mute uppercase tracking-wide">
+              Recent ticks
+            </span>
             <ul className="flex flex-col gap-1 mono" data-mono>
               <AnimatePresence initial={false}>
-                {events.map((ev) => {
-              const style = KIND_STYLE[ev.kind];
-              return (
-                <motion.li
-                  key={ev.id}
-                  initial={reduceMotion ? false : { opacity: 0, x: 8 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={reduceMotion ? undefined : { opacity: 0 }}
-                  transition={{ duration: reduceMotion ? 0 : 0.18 }}
-                  className="flex items-center gap-2 text-foreground"
-                >
-                  <span aria-hidden style={{ color: style.color }}>{style.glyph}</span>
-                  <span className="truncate">{ev.label}</span>
-                </motion.li>
-              );
-            })}
+                {events.map(ev => {
+                  const style = KIND_STYLE[ev.kind];
+                  return (
+                    <motion.li
+                      key={ev.id}
+                      initial={reduceMotion ? false : { opacity: 0, x: 8 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={reduceMotion ? undefined : { opacity: 0 }}
+                      transition={{ duration: reduceMotion ? 0 : 0.18 }}
+                      className="flex items-center gap-2 text-foreground"
+                    >
+                      <span aria-hidden style={{ color: style.color }}>
+                        {style.glyph}
+                      </span>
+                      <span className="truncate">{ev.label}</span>
+                    </motion.li>
+                  );
+                })}
               </AnimatePresence>
             </ul>
           </>
@@ -136,8 +157,12 @@ export function AgentTelemetry() {
           from /api/news/stats once the agent-event channel is wired
           to the ingestion job. */}
       <div className="mt-auto pt-3 border-t border-[var(--rule)] text-foreground-soft">
-        <span className="text-foreground-mute uppercase tracking-wide block mb-1">Last cycle</span>
-        <span className="text-foreground mono" data-mono>scan → surface → cluster</span>
+        <span className="text-foreground-mute uppercase tracking-wide block mb-1">
+          Last cycle
+        </span>
+        <span className="text-foreground mono" data-mono>
+          scan → surface → cluster
+        </span>
       </div>
 
       <style>{`

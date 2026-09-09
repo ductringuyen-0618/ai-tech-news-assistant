@@ -14,8 +14,8 @@
  * Tinted background, terminal-style 12px base type, tabular numerics —
  * the visual cues that say "this is a workspace, not a reading view".
  */
-import { ReactNode } from "react";
-import { AgentTelemetry } from "./AgentTelemetry";
+import { ReactNode } from 'react';
+import { AgentTelemetry } from './AgentTelemetry';
 
 interface MissionShellProps {
   children: ReactNode;
@@ -30,12 +30,16 @@ interface MissionShellProps {
   showTelemetry?: boolean;
 }
 
-export function MissionShell({ children, heading, showTelemetry = true }: MissionShellProps) {
+export function MissionShell({
+  children,
+  heading,
+  showTelemetry = true,
+}: MissionShellProps) {
   return (
     <div
       data-testid="mission-shell"
       className="flex w-full min-h-[calc(100vh-130px)]"
-      style={{ fontSize: "12px" }}
+      style={{ fontSize: '12px' }}
     >
       <section className="flex-1 min-w-0 flex flex-col">
         {heading && (

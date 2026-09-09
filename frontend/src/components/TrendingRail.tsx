@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { Skeleton } from "./ui/skeleton";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
+import { useEffect, useState } from 'react';
+import { Skeleton } from './ui/skeleton';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
 
 /**
  * TrendingRail -- horizontal ticker tape of the top entities by mention
@@ -62,7 +62,7 @@ export function TrendingRail({
       try {
         setLoading(true);
         const params = new URLSearchParams({
-          days: "7",
+          days: '7',
           limit: String(limit),
         });
         const data = await apiFetch<any>(
@@ -78,7 +78,7 @@ export function TrendingRail({
         setTrending(sorted);
       } catch (err) {
         if (!cancelled) {
-          console.error("TrendingRail: failed to load trending entities", err);
+          console.error('TrendingRail: failed to load trending entities', err);
           setTrending([]);
         }
       } finally {
@@ -103,13 +103,13 @@ export function TrendingRail({
 
     const loadSourceCounts = async () => {
       const results = await Promise.allSettled(
-        trending.map((t) =>
+        trending.map(t =>
           apiFetch<{ articles?: { source?: string }[] }>(
             `/api/knowledge-graph/entity/${t.id}`
-          ).then((detail) => {
+          ).then(detail => {
             const sources = new Set(
               (detail.articles || [])
-                .map((a) => a.source)
+                .map(a => a.source)
                 .filter((s): s is string => Boolean(s))
             );
             return [t.id, sources.size] as const;
@@ -117,10 +117,10 @@ export function TrendingRail({
         )
       );
       if (cancelled) return;
-      setSourceCounts((prev) => {
+      setSourceCounts(prev => {
         const next = { ...prev };
         for (const r of results) {
-          if (r.status === "fulfilled") {
+          if (r.status === 'fulfilled') {
             const [id, count] = r.value;
             next[id] = count;
           }
@@ -142,7 +142,9 @@ export function TrendingRail({
         className="relative border-y border-[var(--rule)] py-2 overflow-hidden"
       >
         <div className="flex items-center gap-4 font-mono-tx text-[11px] uppercase-eyebrow whitespace-nowrap">
-          <span className="text-foreground-soft shrink-0">&#9658; trending</span>
+          <span className="text-foreground-soft shrink-0">
+            &#9658; trending
+          </span>
           {Array.from({ length: 4 }).map((_, i) => (
             <Skeleton key={i} className="h-4 w-20" />
           ))}
@@ -162,7 +164,7 @@ export function TrendingRail({
     >
       <div className="flex items-center gap-4 font-mono-tx text-[11px] uppercase-eyebrow whitespace-nowrap">
         <span className="text-foreground-soft shrink-0">&#9658; trending</span>
-        {trending.map((t) => {
+        {trending.map(t => {
           const isActive = selectedEntityIds.includes(t.id);
           const sourceCount = sourceCounts[t.id];
           return (
@@ -176,21 +178,21 @@ export function TrendingRail({
               onClick={() => onSelectEntity({ id: t.id, name: t.name })}
               title={
                 sourceCount != null
-                  ? `Covered by ${sourceCount} source${sourceCount === 1 ? "" : "s"}`
+                  ? `Covered by ${sourceCount} source${sourceCount === 1 ? '' : 's'}`
                   : undefined
               }
               className={[
-                "shrink-0 px-1.5 py-0.5 border transition-colors",
+                'shrink-0 px-1.5 py-0.5 border transition-colors',
                 isActive
-                  ? "text-signal border-[var(--rule)]"
-                  : "text-foreground-soft border-transparent hover:border-[var(--rule)] hover:text-foreground",
-              ].join(" ")}
+                  ? 'text-signal border-[var(--rule)]'
+                  : 'text-foreground-soft border-transparent hover:border-[var(--rule)] hover:text-foreground',
+              ].join(' ')}
             >
-              {t.name.toUpperCase()}{" "}
+              {t.name.toUpperCase()}{' '}
               <span className="text-signal">&#9612;{t.mention_count}</span>
               {sourceCount != null && sourceCount > 1 && (
                 <span className="text-foreground-soft">
-                  {" "}
+                  {' '}
                   &middot; {sourceCount}src
                 </span>
               )}

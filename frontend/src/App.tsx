@@ -1,31 +1,25 @@
-import { useState, useEffect, useRef } from "react";
-import { motion, useReducedMotion } from "framer-motion";
-import { Tabs, TabsContent } from "./components/ui/tabs";
-import { Button } from "./components/ui/button";
-import { Badge } from "./components/ui/badge";
-import { Toaster } from "./components/ui/sonner";
-import { toast } from "sonner";
-import { Settings } from "./components/Settings";
-import { SearchBar } from "./components/SearchBar";
-import { DigestView } from "./components/DigestView";
-import { TrendingRail } from "./components/TrendingRail";
-import { ResearchMode } from "./components/ResearchMode";
-import { SavedResearchList } from "./components/SavedResearchList";
-import SavedArticlesList from "./components/SavedArticlesList";
-import UnifiedFeedView from "./components/UnifiedFeedView";
-import ArticleReader from "./components/ArticleReader";
-import { ThemeProvider } from "./components/ThemeProvider";
-import { CommandPaletteProvider } from "./components/CommandPalette";
-import { Sidebar } from "./components/Sidebar";
-import {
-  Newspaper,
-  TrendingUp,
-  Loader2,
-  Grid,
-  List,
-} from "lucide-react";
-import { API_ENDPOINTS, apiFetch } from "./config/api";
-import { useUrlSearchState } from "./hooks/useUrlSearchState";
+import { useState, useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'framer-motion';
+import { Tabs, TabsContent } from './components/ui/tabs';
+import { Button } from './components/ui/button';
+import { Badge } from './components/ui/badge';
+import { Toaster } from './components/ui/sonner';
+import { toast } from 'sonner';
+import { Settings } from './components/Settings';
+import { SearchBar } from './components/SearchBar';
+import { DigestView } from './components/DigestView';
+import { TrendingRail } from './components/TrendingRail';
+import { ResearchMode } from './components/ResearchMode';
+import { SavedResearchList } from './components/SavedResearchList';
+import SavedArticlesList from './components/SavedArticlesList';
+import UnifiedFeedView from './components/UnifiedFeedView';
+import ArticleReader from './components/ArticleReader';
+import { ThemeProvider } from './components/ThemeProvider';
+import { CommandPaletteProvider } from './components/CommandPalette';
+import { Sidebar } from './components/Sidebar';
+import { Newspaper, TrendingUp, Loader2, Grid, List } from 'lucide-react';
+import { API_ENDPOINTS, apiFetch } from './config/api';
+import { useUrlSearchState } from './hooks/useUrlSearchState';
 
 /**
  * AppShell — the actual UI. Lives inside <ThemeProvider> via the default
@@ -79,7 +73,7 @@ function AppShell() {
   const [curatedHeadlines, setCuratedHeadlines] = useState<any[] | null>(null);
   const [topicClusters, setTopicClusters] = useState<any[] | null>(null);
   const [loading, setLoading] = useState(true);
-  const [viewMode, setViewMode] = useState<"compact" | "detailed">("detailed");
+  const [viewMode, setViewMode] = useState<'compact' | 'detailed'>('detailed');
   const [showTrendingOnly, setShowTrendingOnly] = useState(false);
   const [isSavingPreferences, setIsSavingPreferences] = useState(false);
   const [savedCategories, setSavedCategories] = useState<string[]>([]);
@@ -88,7 +82,7 @@ function AppShell() {
   // of the *previous* visit, read once at mount before we stamp today's
   // newest timestamp back into localStorage. Used only to compute a count
   // for the banner above the feed; never touched again this session.
-  const LAST_SEEN_KEY = "techpulse-last-seen-timestamp";
+  const LAST_SEEN_KEY = 'techpulse-last-seen-timestamp';
   // Read once at mount and never updated again this session -- the
   // freshest timestamp gets written straight to localStorage (see the
   // effect below) without needing to flow back through state.
@@ -104,11 +98,11 @@ function AppShell() {
   // dismissed (manually, or automatically the first time infinite scroll
   // actually fires), since there's no other visual signal that the feed
   // keeps loading as you scroll.
-  const SCROLL_HINT_KEY = "techpulse-scroll-hint-dismissed";
+  const SCROLL_HINT_KEY = 'techpulse-scroll-hint-dismissed';
   const [scrollHintDismissed, setScrollHintDismissed] = useState<boolean>(
     () => {
       try {
-        return localStorage.getItem(SCROLL_HINT_KEY) === "1";
+        return localStorage.getItem(SCROLL_HINT_KEY) === '1';
       } catch {
         return false;
       }
@@ -117,7 +111,7 @@ function AppShell() {
   const dismissScrollHint = () => {
     setScrollHintDismissed(true);
     try {
-      localStorage.setItem(SCROLL_HINT_KEY, "1");
+      localStorage.setItem(SCROLL_HINT_KEY, '1');
     } catch {
       // Best-effort; ignore quota / privacy-mode failures.
     }
@@ -126,7 +120,7 @@ function AppShell() {
   // its own bit of state (rather than folding into `activeTab`) since the
   // reader opens *on top of* whichever tab was active, not instead of it.
   const readArticleIdFromPath = (): string | null => {
-    if (typeof window === "undefined") return null;
+    if (typeof window === 'undefined') return null;
     const m = window.location.pathname.match(/^\/article\/([^/]+)\/?$/);
     return m ? decodeURIComponent(m[1]) : null;
   };
@@ -135,15 +129,19 @@ function AppShell() {
   );
   const openArticleReader = (articleId: string) => {
     setReaderArticleId(articleId);
-    if (typeof window !== "undefined") {
-      window.history.pushState(null, "", `/article/${encodeURIComponent(articleId)}`);
+    if (typeof window !== 'undefined') {
+      window.history.pushState(
+        null,
+        '',
+        `/article/${encodeURIComponent(articleId)}`
+      );
     }
   };
   const closeArticleReader = () => {
     setReaderArticleId(null);
-    if (typeof window !== "undefined" && readArticleIdFromPath()) {
+    if (typeof window !== 'undefined' && readArticleIdFromPath()) {
       const desired = TAB_TO_PATH[activeTab] || `/${activeTab}`;
-      window.history.pushState(null, "", desired);
+      window.history.pushState(null, '', desired);
     }
   };
   // ---------------------------------------------------------------------- //
@@ -166,36 +164,42 @@ function AppShell() {
   // "knowledge" removed -- the canvas graph tab was cut; entity filtering
   // now lives in SearchBar's onSelectEntity dropdown. Any old /knowledge
   // bookmark falls through readPathTab's `|| null` -> defaults to feed.
-  const VALID_TABS = ["feed", "research", "digest", "saved", "preferences"] as const;
+  const VALID_TABS = [
+    'feed',
+    'research',
+    'digest',
+    'saved',
+    'preferences',
+  ] as const;
   // Internal tab id -> URL path segment. Most are identical; preferences
   // maps to /settings because that's the user-facing label and the
   // shorter URL reads better.
   const TAB_TO_PATH: Record<string, string> = {
-    feed: "/feed",
-    research: "/research",
-    digest: "/digest",
-    saved: "/saved",
-    preferences: "/settings",
+    feed: '/feed',
+    research: '/research',
+    digest: '/digest',
+    saved: '/saved',
+    preferences: '/settings',
   };
   const PATH_TO_TAB: Record<string, string> = {
-    feed: "feed",
-    research: "research",
-    digest: "digest",
-    saved: "saved",
-    settings: "preferences",
+    feed: 'feed',
+    research: 'research',
+    digest: 'digest',
+    saved: 'saved',
+    settings: 'preferences',
     // Backwards-compat: keep /preferences working for any old bookmarks.
-    preferences: "preferences",
+    preferences: 'preferences',
   };
   // No welcome/splash screen -- "/" and any unrecognized path land
   // straight on the News Feed tab.
   const readPathTab = (): string | null => {
-    if (typeof window === "undefined") return null;
-    const seg = window.location.pathname.replace(/^\/+/, "").split("/")[0];
+    if (typeof window === 'undefined') return null;
+    const seg = window.location.pathname.replace(/^\/+/, '').split('/')[0];
     if (!seg) return null; // "/" -> feed
     return PATH_TO_TAB[seg] || null;
   };
   const [activeTab, setActiveTabState] = useState<string>(
-    () => readPathTab() || "feed"
+    () => readPathTab() || 'feed'
   );
 
   // Tab setter that also pushes the new path into history. Wrapped so
@@ -203,28 +207,28 @@ function AppShell() {
   // automatically. Uses pushState so back/forward navigates between tabs.
   const setActiveTab = (next: string) => {
     setActiveTabState(next);
-    if (typeof window !== "undefined") {
+    if (typeof window !== 'undefined') {
       const desired = TAB_TO_PATH[next] || `/${next}`;
       if (window.location.pathname !== desired) {
-        window.history.pushState(null, "", desired);
+        window.history.pushState(null, '', desired);
       }
     }
   };
 
   // Navigate to the News Feed (home). Sidebar logo uses this.
   const goHome = () => {
-    setActiveTab("feed");
+    setActiveTab('feed');
   };
 
   // Listen for popstate (back/forward button, manual URL edit) and
   // reflect the new path into state.
   useEffect(() => {
     const onPop = () => {
-      setActiveTabState(readPathTab() || "feed");
+      setActiveTabState(readPathTab() || 'feed');
       setReaderArticleId(readArticleIdFromPath());
     };
-    window.addEventListener("popstate", onPop);
-    return () => window.removeEventListener("popstate", onPop);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
   }, []);
 
   // Keep the URL's ?q=/?topics= in sync whenever the user changes the
@@ -250,7 +254,6 @@ function AppShell() {
     setSelectedCategories(urlSearchState.topics);
   }, [urlSearchState]);
 
-
   const reduceMotion = useReducedMotion();
   // Page-tab fade-in: each TabsContent's children are wrapped in a
   // motion.div that fades in from opacity 0 → 1 on mount. Radix unmounts
@@ -259,7 +262,10 @@ function AppShell() {
   // fade. Reduced-motion resolves to instant.
   const panelInitial = reduceMotion ? { opacity: 1 } : { opacity: 0 };
   const panelAnimate = { opacity: 1 };
-  const panelTransition = { duration: reduceMotion ? 0 : 0.2, ease: "easeOut" as const };
+  const panelTransition = {
+    duration: reduceMotion ? 0 : 0.2,
+    ease: 'easeOut' as const,
+  };
 
   // -------------------------------------------------------------------------
   // M1 — research-streaming signal for the masthead dateline.
@@ -277,12 +283,12 @@ function AppShell() {
       setIsResearchStreaming(Boolean(ev.detail?.active));
     };
     window.addEventListener(
-      "techpulse:research-stream",
+      'techpulse:research-stream',
       onStreamChange as EventListener
     );
     return () =>
       window.removeEventListener(
-        "techpulse:research-stream",
+        'techpulse:research-stream',
         onStreamChange as EventListener
       );
   }, []);
@@ -309,21 +315,22 @@ function AppShell() {
     // Prefer the longer of `summary` vs `content` so cards feel
     // substantive even when the backend's `summary` field is a one-line
     // teaser. Falls back to either if only one is present.
-    const summary = (a.summary || "").toString().trim();
-    const content = (a.content || "").toString().trim();
-    const body = content.length > summary.length * 1.5 ? content : (summary || content);
+    const summary = (a.summary || '').toString().trim();
+    const content = (a.content || '').toString().trim();
+    const body =
+      content.length > summary.length * 1.5 ? content : summary || content;
     // Bumped from 200 -> 280 chars so the 2-3 line summary preview
     // actually fills the line-clamp-3 box on cards. Medium stays at
     // 800 for the expanded "Read more" view.
     const summaryShort = !body
-      ? ""
+      ? ''
       : body.length > 280
-        ? body.slice(0, 280).trimEnd() + "..."
+        ? body.slice(0, 280).trimEnd() + '...'
         : body;
     const summaryMedium = !body
-      ? ""
+      ? ''
       : body.length > 800
-        ? body.slice(0, 800).trimEnd() + "..."
+        ? body.slice(0, 800).trimEnd() + '...'
         : body;
     return {
       id: a.id,
@@ -336,7 +343,7 @@ function AppShell() {
       // Polish iter (design-review #9): pass the raw image_url through
       // without an unconditional placeholder fallback -- NewsCard omits
       // the image slot entirely when this is empty.
-      imageUrl: a.image_url || "",
+      imageUrl: a.image_url || '',
       category: a.categories || [],
       source: a.source,
       // Was a hardcoded 85 for every card regardless of the actual
@@ -346,7 +353,7 @@ function AppShell() {
       // dressed up as a real score.
       credibilityScore: a.credibility_score ?? a.credibilityScore ?? 70,
       trending: false,
-      sentiment: "neutral",
+      sentiment: 'neutral',
       keyInsights: [],
       sourcesUsed: [a.source],
       // Present only when a search query is active -- backend-computed
@@ -361,7 +368,7 @@ function AppShell() {
   // from what's already on screen.
   const buildFeedParams = (pageSize: number): URLSearchParams => {
     const params = new URLSearchParams();
-    params.append("page_size", String(pageSize));
+    params.append('page_size', String(pageSize));
     // The default browse view only shows articles with art (filtering
     // server-side means every page is full-sized instead of shrinking as
     // image-less rows get dropped client-side). But once someone is
@@ -374,12 +381,12 @@ function AppShell() {
     const isSearchingOrFiltering =
       Boolean(searchQuery) || selectedEntities.length > 0;
     if (!isSearchingOrFiltering) {
-      params.append("has_image", "true");
+      params.append('has_image', 'true');
     }
     if (selectedCategories.length > 0) {
       for (const cat of selectedCategories) {
         if (cat && cat.trim()) {
-          params.append("category", cat);
+          params.append('category', cat);
         }
       }
     }
@@ -388,10 +395,10 @@ function AppShell() {
       // validated but never actually applied to the query -- typing a
       // search term silently did nothing. `q` does a real title/content
       // substring match (see article_repository.list_articles).
-      params.append("q", searchQuery);
+      params.append('q', searchQuery);
     }
     for (const entity of selectedEntities) {
-      params.append("entity_id", String(entity.id));
+      params.append('entity_id', String(entity.id));
     }
     return params;
   };
@@ -406,10 +413,10 @@ function AppShell() {
       setLoading(true);
       setHasMoreFeed(true);
       const params = buildFeedParams(FEED_PAGE_SIZE);
-      params.append("page", "1");
+      params.append('page', '1');
 
       const data = await apiFetch<any>(`${API_ENDPOINTS.news}?${params}`);
-      console.log("API Response:", data);
+      console.log('API Response:', data);
 
       const rawArticles = data.data || data.items || [];
       const mapped = rawArticles.map(mapApiArticle);
@@ -421,8 +428,8 @@ function AppShell() {
       setFeedCursor(nextCursor);
       setHasMoreFeed(Boolean(nextCursor));
     } catch (error) {
-      console.error("Error fetching articles:", error);
-      toast.error("Failed to fetch articles. Please try again.");
+      console.error('Error fetching articles:', error);
+      toast.error('Failed to fetch articles. Please try again.');
       setHasMoreFeed(false);
     } finally {
       setLoading(false);
@@ -442,14 +449,14 @@ function AppShell() {
     try {
       setLoadingMore(true);
       const params = buildFeedParams(FEED_PAGE_SIZE);
-      params.append("cursor", feedCursor);
+      params.append('cursor', feedCursor);
 
       const data = await apiFetch<any>(`${API_ENDPOINTS.news}?${params}`);
       const rawArticles = data.data || data.items || [];
       const mapped = rawArticles.map(mapApiArticle);
 
-      setArticles((prev) => {
-        const seen = new Set(prev.map((a) => a.id));
+      setArticles(prev => {
+        const seen = new Set(prev.map(a => a.id));
         const fresh = mapped.filter((a: any) => !seen.has(a.id));
         return [...prev, ...fresh];
       });
@@ -458,7 +465,7 @@ function AppShell() {
       setFeedCursor(nextCursor);
       setHasMoreFeed(Boolean(nextCursor));
     } catch (error) {
-      console.error("Error fetching more articles:", error);
+      console.error('Error fetching more articles:', error);
       // Don't toast here -- a failed background page-load shouldn't
       // interrupt someone mid-scroll. They can just scroll again to retry.
       setHasMoreFeed(false);
@@ -472,8 +479,8 @@ function AppShell() {
       const data = await apiFetch<any>(API_ENDPOINTS.digest);
       setDigest(data);
     } catch (error) {
-      console.error("Error fetching digest:", error);
-      toast.error("Failed to fetch digest. Please try again.");
+      console.error('Error fetching digest:', error);
+      toast.error('Failed to fetch digest. Please try again.');
     }
   };
 
@@ -485,7 +492,7 @@ function AppShell() {
       const data = await apiFetch<any>(API_ENDPOINTS.digestDailySummary);
       setDailySummary(data);
     } catch (error) {
-      console.error("Error fetching daily summary:", error);
+      console.error('Error fetching daily summary:', error);
       // No toast — the hero card just stays hidden on failure.
     } finally {
       setDailySummaryLoading(false);
@@ -495,11 +502,9 @@ function AppShell() {
   const fetchCuratedHeadlines = async () => {
     try {
       const data = await apiFetch<any>(API_ENDPOINTS.digestCurated);
-      setCuratedHeadlines(
-        Array.isArray(data?.headlines) ? data.headlines : []
-      );
+      setCuratedHeadlines(Array.isArray(data?.headlines) ? data.headlines : []);
     } catch (error) {
-      console.error("Error fetching curated headlines:", error);
+      console.error('Error fetching curated headlines:', error);
       setCuratedHeadlines([]);
     }
   };
@@ -509,7 +514,7 @@ function AppShell() {
       const data = await apiFetch<any>(API_ENDPOINTS.digestTopics);
       setTopicClusters(Array.isArray(data?.topics) ? data.topics : []);
     } catch (error) {
-      console.error("Error fetching topic clusters:", error);
+      console.error('Error fetching topic clusters:', error);
       setTopicClusters([]);
     }
   };
@@ -524,7 +529,7 @@ function AppShell() {
       };
 
       const envelope = await apiFetch<any>(API_ENDPOINTS.settings, {
-        method: "PUT",
+        method: 'PUT',
         body: JSON.stringify(body),
       });
       const saved = envelope?.data ?? envelope;
@@ -537,23 +542,23 @@ function AppShell() {
 
       try {
         localStorage.setItem(
-          "techpulse_categories",
+          'techpulse_categories',
           JSON.stringify(persistedCategories)
         );
       } catch {
         // Best-effort cache; ignore quota / privacy-mode failures.
       }
 
-      toast.success("Preferences saved successfully!", {
-        description: `Your feed will now show ${persistedCategories.length} selected topic${persistedCategories.length !== 1 ? "s" : ""}.`,
+      toast.success('Preferences saved successfully!', {
+        description: `Your feed will now show ${persistedCategories.length} selected topic${persistedCategories.length !== 1 ? 's' : ''}.`,
         duration: 3000,
       });
 
       await fetchArticles();
     } catch (error) {
-      console.error("Error saving preferences:", error);
-      toast.error("Failed to save preferences", {
-        description: "Please try again later.",
+      console.error('Error saving preferences:', error);
+      toast.error('Failed to save preferences', {
+        description: 'Please try again later.',
         duration: 3000,
       });
     } finally {
@@ -566,7 +571,7 @@ function AppShell() {
       try {
         const envelope = await apiFetch<any>(API_ENDPOINTS.settings);
         const data = envelope?.data ?? envelope;
-        if (data && typeof data === "object") {
+        if (data && typeof data === 'object') {
           if (Array.isArray(data.categories)) {
             // Don't clobber topic filters a shared/reloaded URL already
             // specified -- still track what's actually persisted server-
@@ -578,27 +583,27 @@ function AppShell() {
             setSavedCategories(data.categories);
             try {
               localStorage.setItem(
-                "techpulse_categories",
+                'techpulse_categories',
                 JSON.stringify(data.categories)
               );
             } catch {
               // Ignore cache write failures.
             }
           }
-          if (data.view_mode === "compact" || data.view_mode === "detailed") {
+          if (data.view_mode === 'compact' || data.view_mode === 'detailed') {
             setViewMode(data.view_mode);
           }
-          if (typeof data.show_trending_only === "boolean") {
+          if (typeof data.show_trending_only === 'boolean') {
             setShowTrendingOnly(data.show_trending_only);
           }
         }
       } catch (backendError) {
         console.warn(
-          "Backend settings unreachable; falling back to localStorage cache",
+          'Backend settings unreachable; falling back to localStorage cache',
           backendError
         );
         try {
-          const saved = localStorage.getItem("techpulse_categories");
+          const saved = localStorage.getItem('techpulse_categories');
           if (saved) {
             const cats = JSON.parse(saved);
             if (Array.isArray(cats)) {
@@ -607,7 +612,7 @@ function AppShell() {
             }
           }
         } catch (cacheError) {
-          console.error("Error loading preferences from cache:", cacheError);
+          console.error('Error loading preferences from cache:', cacheError);
         }
       }
 
@@ -676,7 +681,7 @@ function AppShell() {
     Boolean(searchQuery) || selectedEntities.length > 0;
   const visibleFeedArticles = isSearchingOrFiltering
     ? filteredArticles
-    : filteredArticles.filter((a) => Boolean(a.imageUrl));
+    : filteredArticles.filter(a => Boolean(a.imageUrl));
 
   // "New since you last visited" -- count of currently-visible articles
   // newer than the previous visit's newest-seen timestamp. Not shown
@@ -687,7 +692,7 @@ function AppShell() {
     lastSeenTimestamp == null || isSearchingOrFiltering
       ? 0
       : visibleFeedArticles.filter(
-          (a) => new Date(a.publishedAt).getTime() > lastSeenTimestamp
+          a => new Date(a.publishedAt).getTime() > lastSeenTimestamp
         ).length;
 
   // Infinite scroll -- observe a sentinel just past the end of the feed
@@ -699,18 +704,26 @@ function AppShell() {
   const feedSentinelRef = useRef<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = feedSentinelRef.current;
-    if (!el || activeTab !== "feed" || !hasMoreFeed) return;
+    if (!el || activeTab !== 'feed' || !hasMoreFeed) return;
     const observer = new IntersectionObserver(
-      (entries) => {
+      entries => {
         if (entries[0]?.isIntersecting) {
           fetchMoreArticles();
         }
       },
-      { rootMargin: "600px" }
+      { rootMargin: '600px' }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [activeTab, feedCursor, hasMoreFeed, loadingMore, selectedCategories, searchQuery, selectedEntities]);
+  }, [
+    activeTab,
+    feedCursor,
+    hasMoreFeed,
+    loadingMore,
+    selectedCategories,
+    searchQuery,
+    selectedEntities,
+  ]);
 
   // -------------------------------------------------------------------------
   // Render — sidebar + main pane inside a controlled Radix Tabs root.
@@ -740,14 +753,14 @@ function AppShell() {
         <Sidebar
           activeTab={activeTab}
           onGoHome={goHome}
-          badges={hasUnsavedChanges ? { preferences: "unsaved" } : undefined}
+          badges={hasUnsavedChanges ? { preferences: 'unsaved' } : undefined}
         />
 
         <main
           id="main-content"
           data-slot="main-content"
           className="flex-1 min-w-0 flex flex-col overflow-x-hidden"
-          onClick={(e) => {
+          onClick={e => {
             // Article reader route -- delegated so it catches clicks on
             // any NewsCard rendered anywhere under here (including inside
             // UnifiedFeedView), without that component needing to know
@@ -758,7 +771,7 @@ function AppShell() {
               '[data-slot="card-title"]'
             );
             if (!titleEl) return;
-            const cardEl = titleEl.closest<HTMLElement>("[data-article-id]");
+            const cardEl = titleEl.closest<HTMLElement>('[data-article-id]');
             const articleId = cardEl?.dataset.articleId;
             if (articleId) {
               e.preventDefault();
@@ -788,14 +801,14 @@ function AppShell() {
                     (now.getTime() - startOfYear.getTime()) / 86400000
                   );
                   const dateline = now
-                    .toLocaleDateString("en-US", {
-                      weekday: "short",
-                      day: "2-digit",
-                      month: "short",
-                      year: "numeric",
+                    .toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      day: '2-digit',
+                      month: 'short',
+                      year: 'numeric',
                     })
                     .toUpperCase()
-                    .replace(/,/g, "");
+                    .replace(/,/g, '');
                   return (
                     <>
                       <span>VOL III · NO. {dayOfYear}</span>
@@ -819,7 +832,10 @@ function AppShell() {
                 <span className="sr-only">TechPulse AI</span>
                 <span aria-hidden>Tech intelligence,</span>
                 <br />
-                <em aria-hidden className="text-foreground-soft font-display italic">
+                <em
+                  aria-hidden
+                  className="text-foreground-soft font-display italic"
+                >
                   from the agentic desk.
                 </em>
               </h1>
@@ -842,95 +858,96 @@ function AppShell() {
                 transition={panelTransition}
                 className="space-y-5"
               >
-              {/* News-feed toolbar -- terminal pills. Search input keeps its
+                {/* News-feed toolbar -- terminal pills. Search input keeps its
                   existing skin (M3 will revisit), trending/view toggles are
                   recast as mono [ ] / [+] pills. SearchBar's onSelectEntity
                   replaces the cut Knowledge Graph tab: typing shows matching
                   entities in a dropdown, picking one adds it to the same
                   entity_id filter the TrendingRail chips below drive. */}
-              <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
-                <div className="flex-1 w-full md:max-w-md">
-                  <SearchBar
-                    onSearch={setSearchQuery}
-                    initialQuery={searchQuery}
-                    onSelectEntity={(entity) => {
-                      setSelectedEntities((prev) =>
-                        prev.some((e) => e.id === entity.id)
-                          ? prev
-                          : [...prev, entity]
-                      );
-                    }}
-                  />
-                </div>
-                <div className="flex gap-2 items-center font-mono-tx text-[11px] uppercase-eyebrow">
-                  <button
-                    type="button"
-                    onClick={() => setShowTrendingOnly(!showTrendingOnly)}
-                    aria-pressed={showTrendingOnly}
-                    className={[
-                      "inline-flex items-center gap-1.5 px-2 py-1 border transition-colors",
-                      showTrendingOnly
-                        ? "border-[var(--rule)] text-signal"
-                        : "border-[var(--rule)] text-foreground-soft hover:text-foreground",
-                    ].join(" ")}
-                  >
-                    <TrendingUp className="w-3 h-3" />
-                    {showTrendingOnly ? "[ trending ]" : "[ trending ]"}
-                  </button>
-                  <div className="inline-flex border border-[var(--rule)]">
+                <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+                  <div className="flex-1 w-full md:max-w-md">
+                    <SearchBar
+                      onSearch={setSearchQuery}
+                      initialQuery={searchQuery}
+                      onSelectEntity={entity => {
+                        setSelectedEntities(prev =>
+                          prev.some(e => e.id === entity.id)
+                            ? prev
+                            : [...prev, entity]
+                        );
+                      }}
+                    />
+                  </div>
+                  <div className="flex gap-2 items-center font-mono-tx text-[11px] uppercase-eyebrow">
                     <button
                       type="button"
-                      onClick={() => setViewMode("detailed")}
-                      aria-pressed={viewMode === "detailed"}
+                      onClick={() => setShowTrendingOnly(!showTrendingOnly)}
+                      aria-pressed={showTrendingOnly}
                       className={[
-                        "inline-flex items-center px-2 py-1 transition-colors",
-                        viewMode === "detailed"
-                          ? "bg-[var(--background-tint)] text-signal"
-                          : "text-foreground-soft hover:text-foreground",
-                      ].join(" ")}
+                        'inline-flex items-center gap-1.5 px-2 py-1 border transition-colors',
+                        showTrendingOnly
+                          ? 'border-[var(--rule)] text-signal'
+                          : 'border-[var(--rule)] text-foreground-soft hover:text-foreground',
+                      ].join(' ')}
                     >
-                      <Grid className="w-3 h-3" />
+                      <TrendingUp className="w-3 h-3" />
+                      {showTrendingOnly ? '[ trending ]' : '[ trending ]'}
                     </button>
-                    <button
-                      type="button"
-                      onClick={() => setViewMode("compact")}
-                      aria-pressed={viewMode === "compact"}
-                      className={[
-                        "inline-flex items-center px-2 py-1 border-l border-[var(--rule)] transition-colors",
-                        viewMode === "compact"
-                          ? "bg-[var(--background-tint)] text-signal"
-                          : "text-foreground-soft hover:text-foreground",
-                      ].join(" ")}
-                    >
-                      <List className="w-3 h-3" />
-                    </button>
+                    <div className="inline-flex border border-[var(--rule)]">
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('detailed')}
+                        aria-pressed={viewMode === 'detailed'}
+                        className={[
+                          'inline-flex items-center px-2 py-1 transition-colors',
+                          viewMode === 'detailed'
+                            ? 'bg-[var(--background-tint)] text-signal'
+                            : 'text-foreground-soft hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        <Grid className="w-3 h-3" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setViewMode('compact')}
+                        aria-pressed={viewMode === 'compact'}
+                        className={[
+                          'inline-flex items-center px-2 py-1 border-l border-[var(--rule)] transition-colors',
+                          viewMode === 'compact'
+                            ? 'bg-[var(--background-tint)] text-signal'
+                            : 'text-foreground-soft hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        <List className="w-3 h-3" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Polish iter 3 / Part D — Trending Now rail. Driven by the
+                {/* Polish iter 3 / Part D — Trending Now rail. Driven by the
                   knowledge-graph trending-entities endpoint (top entities
                   this week). Clicking a chip toggles the entity in
                   ``selectedEntities``, which drives the real backend
                   entity_id filter (see buildFeedParams). */}
-              <TrendingRail
-                selectedEntityIds={selectedEntities.map((e) => e.id)}
-                onSelectEntity={(entity) => {
-                  setSelectedEntities((prev) =>
-                    prev.some((e) => e.id === entity.id)
-                      ? prev.filter((e) => e.id !== entity.id)
-                      : [...prev, entity]
-                  );
-                }}
-              />
+                <TrendingRail
+                  selectedEntityIds={selectedEntities.map(e => e.id)}
+                  onSelectEntity={entity => {
+                    setSelectedEntities(prev =>
+                      prev.some(e => e.id === entity.id)
+                        ? prev.filter(e => e.id !== entity.id)
+                        : [...prev, entity]
+                    );
+                  }}
+                />
 
-              {(selectedCategories.length > 0 || selectedEntities.length > 0) && (
-                <div
-                  data-testid="news-feed-active-filters"
-                  className="flex flex-wrap gap-2 items-center border-t border-b border-[var(--rule)] py-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft"
-                >
-                  <span className="mr-2">filtered &#9656;</span>
-                  {/* Each chip is its own remove button (click anywhere on
+                {(selectedCategories.length > 0 ||
+                  selectedEntities.length > 0) && (
+                  <div
+                    data-testid="news-feed-active-filters"
+                    className="flex flex-wrap gap-2 items-center border-t border-b border-[var(--rule)] py-2 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft"
+                  >
+                    <span className="mr-2">filtered &#9656;</span>
+                    {/* Each chip is its own remove button (click anywhere on
                       it, including the ×, to drop just that one filter) --
                       no need to hit "Clear Filters" to remove a single term.
                       The inner <span> carrying just the raw `cat` text keeps
@@ -939,71 +956,71 @@ function AppShell() {
                       which matches an element whose textContent equals the
                       value exactly. Bracket/× decoration lives in aria-hidden
                       sibling spans so the visual "[ AI × ]" survives. */}
-                  {selectedCategories.map((cat) => (
+                    {selectedCategories.map(cat => (
+                      <button
+                        key={`cat-${cat}`}
+                        type="button"
+                        onClick={() =>
+                          setSelectedCategories(prev =>
+                            prev.filter(c => c !== cat)
+                          )
+                        }
+                        aria-label={`Remove filter ${cat}`}
+                        className="inline-flex items-center px-1.5 py-0.5 border border-[var(--rule)] text-foreground hover:border-[var(--accent-signal)] hover:text-signal transition-colors"
+                      >
+                        <span aria-hidden="true">[&nbsp;</span>
+                        <span>{cat}</span>
+                        <span aria-hidden="true">&nbsp;&#215;]</span>
+                      </button>
+                    ))}
+                    {selectedEntities.map(ent => (
+                      <button
+                        key={`ent-${ent.id}`}
+                        type="button"
+                        onClick={() =>
+                          setSelectedEntities(prev =>
+                            prev.filter(e => e.id !== ent.id)
+                          )
+                        }
+                        aria-label={`Remove filter ${ent.name}`}
+                        className="inline-flex items-center px-1.5 py-0.5 border border-[var(--rule)] text-signal hover:border-[var(--accent-signal)] hover:text-foreground transition-colors"
+                      >
+                        <span aria-hidden="true">[&nbsp;</span>
+                        <span>{ent.name}</span>
+                        <span aria-hidden="true">&nbsp;&#215;]</span>
+                      </button>
+                    ))}
                     <button
-                      key={`cat-${cat}`}
                       type="button"
-                      onClick={() =>
-                        setSelectedCategories((prev) =>
-                          prev.filter((c) => c !== cat)
-                        )
-                      }
-                      aria-label={`Remove filter ${cat}`}
-                      className="inline-flex items-center px-1.5 py-0.5 border border-[var(--rule)] text-foreground hover:border-[var(--accent-signal)] hover:text-signal transition-colors"
+                      onClick={() => {
+                        setSelectedCategories([]);
+                        setSelectedEntities([]);
+                      }}
+                      className="ml-auto hover:text-signal"
                     >
-                      <span aria-hidden="true">[&nbsp;</span>
-                      <span>{cat}</span>
-                      <span aria-hidden="true">&nbsp;&#215;]</span>
+                      Clear Filters &#215;
                     </button>
-                  ))}
-                  {selectedEntities.map((ent) => (
-                    <button
-                      key={`ent-${ent.id}`}
-                      type="button"
-                      onClick={() =>
-                        setSelectedEntities((prev) =>
-                          prev.filter((e) => e.id !== ent.id)
-                        )
-                      }
-                      aria-label={`Remove filter ${ent.name}`}
-                      className="inline-flex items-center px-1.5 py-0.5 border border-[var(--rule)] text-signal hover:border-[var(--accent-signal)] hover:text-foreground transition-colors"
-                    >
-                      <span aria-hidden="true">[&nbsp;</span>
-                      <span>{ent.name}</span>
-                      <span aria-hidden="true">&nbsp;&#215;]</span>
-                    </button>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedCategories([]);
-                      setSelectedEntities([]);
-                    }}
-                    className="ml-auto hover:text-signal"
-                  >
-                    Clear Filters &#215;
-                  </button>
-                </div>
-              )}
+                  </div>
+                )}
 
-              {/* "New since you last visited" -- small localStorage-only
+                {/* "New since you last visited" -- small localStorage-only
                   banner comparing the newest article timestamp from the
                   previous visit against what's in the feed now. */}
-              {newSinceLastVisitCount > 0 && (
-                <div
-                  data-testid="news-feed-new-since-banner"
-                  className="flex items-center gap-2 border-t border-b border-[var(--rule)] py-2 font-mono-tx text-[11px] uppercase-eyebrow text-signal"
-                >
-                  <span aria-hidden="true">&#9650;</span>
-                  <span>
-                    {newSinceLastVisitCount} new{" "}
-                    {newSinceLastVisitCount === 1 ? "story" : "stories"} since
-                    your last visit
-                  </span>
-                </div>
-              )}
+                {newSinceLastVisitCount > 0 && (
+                  <div
+                    data-testid="news-feed-new-since-banner"
+                    className="flex items-center gap-2 border-t border-b border-[var(--rule)] py-2 font-mono-tx text-[11px] uppercase-eyebrow text-signal"
+                  >
+                    <span aria-hidden="true">&#9650;</span>
+                    <span>
+                      {newSinceLastVisitCount} new{' '}
+                      {newSinceLastVisitCount === 1 ? 'story' : 'stories'} since
+                      your last visit
+                    </span>
+                  </div>
+                )}
 
-              {/* News-feed body -- REDESIGN Phase F: a single density-aware
+                {/* News-feed body -- REDESIGN Phase F: a single density-aware
                   UnifiedFeedView replaces the old mode==="mission"
                   MissionShell/DenseArticleRow branch and the Atelier
                   NewsCard grid/compact-list branch (the review flagged
@@ -1018,72 +1035,78 @@ function AppShell() {
                   stay untouched so Research and Digest (which fetch
                   independently) still see every story regardless of image
                   availability. */}
-              <UnifiedFeedView
-                articles={visibleFeedArticles}
-                density={viewMode === "compact" ? "compact" : "comfortable"}
-                loading={loading}
-                emptyState={
-                  <div
-                    data-testid="news-feed-list"
-                    className="text-center py-12 border-t border-b border-[var(--rule)] space-y-3"
-                  >
-                    <Newspaper className="w-12 h-12 text-foreground mx-auto" />
-                    <h3 className="font-display text-[22px] font-medium text-foreground">No articles found</h3>
-                    <p className="text-[14px] text-foreground-soft">
-                      Try adjusting your filters or search query
-                    </p>
-                    <Button
-                      onClick={() => {
-                        setSearchQuery("");
-                        setShowTrendingOnly(false);
-                        setSelectedCategories([]);
-                        setSelectedEntities([]);
-                      }}
+                <UnifiedFeedView
+                  articles={visibleFeedArticles}
+                  density={viewMode === 'compact' ? 'compact' : 'comfortable'}
+                  loading={loading}
+                  emptyState={
+                    <div
+                      data-testid="news-feed-list"
+                      className="text-center py-12 border-t border-b border-[var(--rule)] space-y-3"
                     >
-                      Reset Filters
-                    </Button>
-                  </div>
-                }
-              />
+                      <Newspaper className="w-12 h-12 text-foreground mx-auto" />
+                      <h3 className="font-display text-[22px] font-medium text-foreground">
+                        No articles found
+                      </h3>
+                      <p className="text-[14px] text-foreground-soft">
+                        Try adjusting your filters or search query
+                      </p>
+                      <Button
+                        onClick={() => {
+                          setSearchQuery('');
+                          setShowTrendingOnly(false);
+                          setSelectedCategories([]);
+                          setSelectedEntities([]);
+                        }}
+                      >
+                        Reset Filters
+                      </Button>
+                    </div>
+                  }
+                />
 
-              {/* Infinite-scroll sentinel -- an IntersectionObserver
+                {/* Infinite-scroll sentinel -- an IntersectionObserver
                   watches this and fetches the next cursor page once it
                   nears the viewport. Only rendered once the initial load
                   has settled and there's actually more to fetch. */}
-              {!loading && visibleFeedArticles.length > 0 && (
-                <div ref={feedSentinelRef} className="h-px" aria-hidden="true" />
-              )}
-              {loadingMore && (
-                <div className="flex items-center justify-center py-6">
-                  <Loader2 className="w-5 h-5 animate-spin text-foreground-soft" />
-                </div>
-              )}
-              {!loading && !hasMoreFeed && visibleFeedArticles.length > 0 && (
-                <div className="text-center py-6 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-                  — end of feed —
-                </div>
-              )}
+                {!loading && visibleFeedArticles.length > 0 && (
+                  <div
+                    ref={feedSentinelRef}
+                    className="h-px"
+                    aria-hidden="true"
+                  />
+                )}
+                {loadingMore && (
+                  <div className="flex items-center justify-center py-6">
+                    <Loader2 className="w-5 h-5 animate-spin text-foreground-soft" />
+                  </div>
+                )}
+                {!loading && !hasMoreFeed && visibleFeedArticles.length > 0 && (
+                  <div className="text-center py-6 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+                    — end of feed —
+                  </div>
+                )}
 
-              {/* "Scroll for more ↓" hint -- infinite scroll has no other
+                {/* "Scroll for more ↓" hint -- infinite scroll has no other
                   visual affordance signaling more content loads on
                   scroll. Dismissible; auto-dismisses the first time
                   fetchMoreArticles actually fires (see there). */}
-              {!scrollHintDismissed &&
-                !loading &&
-                hasMoreFeed &&
-                visibleFeedArticles.length > 0 && (
-                  <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--rule)] bg-background/95 backdrop-blur shadow-lg font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-                    <span>scroll for more &#8595;</span>
-                    <button
-                      type="button"
-                      onClick={dismissScrollHint}
-                      aria-label="Dismiss scroll hint"
-                      className="text-foreground-mute hover:text-foreground"
-                    >
-                      &#215;
-                    </button>
-                  </div>
-                )}
+                {!scrollHintDismissed &&
+                  !loading &&
+                  hasMoreFeed &&
+                  visibleFeedArticles.length > 0 && (
+                    <div className="fixed bottom-5 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--rule)] bg-background/95 backdrop-blur shadow-lg font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+                      <span>scroll for more &#8595;</span>
+                      <button
+                        type="button"
+                        onClick={dismissScrollHint}
+                        aria-label="Dismiss scroll hint"
+                        className="text-foreground-mute hover:text-foreground"
+                      >
+                        &#215;
+                      </button>
+                    </div>
+                  )}
               </motion.div>
             </TabsContent>
 

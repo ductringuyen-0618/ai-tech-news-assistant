@@ -1,10 +1,16 @@
-import { useEffect, useState } from "react";
-import { Badge } from "./ui/badge";
-import { Button } from "./ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "./ui/card";
-import { Checkbox } from "./ui/checkbox";
-import { Filter, X, Loader2, Check } from "lucide-react";
-import { API_ENDPOINTS, apiFetch } from "../config/api";
+import { useEffect, useState } from 'react';
+import { Badge } from './ui/badge';
+import { Button } from './ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from './ui/card';
+import { Checkbox } from './ui/checkbox';
+import { Filter, X, Loader2, Check } from 'lucide-react';
+import { API_ENDPOINTS, apiFetch } from '../config/api';
 
 interface TopicFilterProps {
   selectedCategories: string[];
@@ -24,19 +30,19 @@ interface CategoryOption {
 // New categories that aren't in the map fall back to a neutral icon, so the
 // UI never crashes when the backend introduces a new tag.
 const CATEGORY_ICONS: Record<string, string> = {
-  "AI/ML": "🤖",
-  "AI Agents": "🎯",
-  "Robotics": "🦾",
-  "Biotech": "🧬",
-  "Military Tech": "⚔️",
-  "Hardware": "💻",
-  "Cloud": "☁️",
-  "Security": "🔒",
-  "Quantum Computing": "⚛️",
-  "Healthcare": "🏥",
+  'AI/ML': '🤖',
+  'AI Agents': '🎯',
+  Robotics: '🦾',
+  Biotech: '🧬',
+  'Military Tech': '⚔️',
+  Hardware: '💻',
+  Cloud: '☁️',
+  Security: '🔒',
+  'Quantum Computing': '⚛️',
+  Healthcare: '🏥',
 };
 
-const FALLBACK_ICON = "📰";
+const FALLBACK_ICON = '📰';
 
 export function TopicFilter({
   selectedCategories,
@@ -52,7 +58,9 @@ export function TopicFilter({
   // "No articles found" because no feed mapped to them.
   const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [loadingCategories, setLoadingCategories] = useState(true);
-  const [categoryLoadError, setCategoryLoadError] = useState<string | null>(null);
+  const [categoryLoadError, setCategoryLoadError] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -62,8 +70,10 @@ export function TopicFilter({
         const envelope = await apiFetch<any>(API_ENDPOINTS.newsCategories);
         if (cancelled) return;
         const data = envelope?.data ?? envelope;
-        const list: string[] = Array.isArray(data?.categories) ? data.categories : [];
-        const opts: CategoryOption[] = list.map((id) => ({
+        const list: string[] = Array.isArray(data?.categories)
+          ? data.categories
+          : [];
+        const opts: CategoryOption[] = list.map(id => ({
           id,
           label: id,
           icon: CATEGORY_ICONS[id] ?? FALLBACK_ICON,
@@ -71,7 +81,7 @@ export function TopicFilter({
         setCategories(opts);
       } catch (err) {
         if (cancelled) return;
-        console.error("Failed to load categories:", err);
+        console.error('Failed to load categories:', err);
         setCategoryLoadError("Couldn't load topics from the server.");
       } finally {
         if (!cancelled) {
@@ -88,7 +98,7 @@ export function TopicFilter({
 
   const toggleCategory = (categoryId: string) => {
     if (selectedCategories.includes(categoryId)) {
-      onCategoriesChange(selectedCategories.filter((c) => c !== categoryId));
+      onCategoriesChange(selectedCategories.filter(c => c !== categoryId));
     } else {
       onCategoriesChange([...selectedCategories, categoryId]);
     }
@@ -99,7 +109,7 @@ export function TopicFilter({
   };
 
   const selectAll = () => {
-    onCategoriesChange(categories.map((c) => c.id));
+    onCategoriesChange(categories.map(c => c.id));
   };
 
   return (
@@ -141,7 +151,7 @@ export function TopicFilter({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-            {categories.map((category) => (
+            {categories.map(category => (
               <label
                 key={category.id}
                 className="flex items-center gap-3 p-3 border border-border rounded-lg cursor-pointer hover:bg-accent transition-colors"
@@ -164,15 +174,19 @@ export function TopicFilter({
                 Selected Topics ({selectedCategories.length})
               </p>
               {hasUnsavedChanges && (
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800 border-yellow-300">
+                <Badge
+                  variant="secondary"
+                  className="bg-yellow-100 text-yellow-800 border-yellow-300"
+                >
                   Unsaved changes
                 </Badge>
               )}
             </div>
             <div className="flex flex-wrap gap-2 mb-4">
-              {selectedCategories.map((catId) => {
-                const category = categories.find((c) => c.id === catId);
-                const icon = category?.icon ?? CATEGORY_ICONS[catId] ?? FALLBACK_ICON;
+              {selectedCategories.map(catId => {
+                const category = categories.find(c => c.id === catId);
+                const icon =
+                  category?.icon ?? CATEGORY_ICONS[catId] ?? FALLBACK_ICON;
                 const label = category?.label ?? catId;
                 return (
                   <Badge key={catId} variant="default" className="gap-1">

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { useEffect, useState } from 'react';
+import { ImageWithFallback } from './figma/ImageWithFallback';
 
 /**
  * NewsCard -- broadsheet secondary-article tile.
@@ -35,8 +35,8 @@ import { ImageWithFallback } from "./figma/ImageWithFallback";
  *   may need updating to match this card's actual 18px title.
  */
 
-const SAVED_ARTICLES_KEY = "techpulse-saved-articles";
-const READ_ARTICLES_KEY = "techpulse-read-articles";
+const SAVED_ARTICLES_KEY = 'techpulse-saved-articles';
+const READ_ARTICLES_KEY = 'techpulse-read-articles';
 
 function readSavedSet(): Set<string> {
   try {
@@ -82,10 +82,10 @@ function markRead(articleId: string): void {
 }
 
 /** Strip protocol + leading `www.` from a URL, return up to the first slash. */
-function hostname(url: string, fallback = "source"): string {
+function hostname(url: string, fallback = 'source'): string {
   try {
     const u = new URL(url);
-    return u.hostname.replace(/^www\./, "");
+    return u.hostname.replace(/^www\./, '');
   } catch {
     return fallback;
   }
@@ -114,7 +114,7 @@ interface NewsCardProps {
      *  when a search query is active. Rendered under the headline. */
     matchedSnippet?: string;
   };
-  viewMode: "compact" | "detailed";
+  viewMode: 'compact' | 'detailed';
 }
 
 export function NewsCard({ article, viewMode }: NewsCardProps) {
@@ -151,7 +151,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
     const hours = Math.floor(
       (now.getTime() - date.getTime()) / (1000 * 60 * 60)
     );
-    if (hours < 1) return "Just now";
+    if (hours < 1) return 'Just now';
     if (hours < 24) return `${hours}h ago`;
     const days = Math.floor(hours / 24);
     return `${days}d ago`;
@@ -160,14 +160,16 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
   // Read-More expander logic -- preserved from the previous NewsCard
   // implementation. Rubric category 1 clicks "Read More" on the first
   // card to surface the full body, so we keep the same predicate.
-  const short = (article.summaryShort || "").trim();
-  const fullBody = (article.content || article.summaryMedium || "").trim();
+  const short = (article.summaryShort || '').trim();
+  const fullBody = (article.content || article.summaryMedium || '').trim();
   const hasMoreBody = fullBody.length > short.length + 40;
   const hasInsights =
     Array.isArray(article.keyInsights) && article.keyInsights.length > 0;
   const hasMore = hasMoreBody || hasInsights;
   const expandedBody =
-    fullBody.length > 1800 ? fullBody.slice(0, 1800).trimEnd() + "..." : fullBody;
+    fullBody.length > 1800
+      ? fullBody.slice(0, 1800).trimEnd() + '...'
+      : fullBody;
 
   // "Why this was surfaced" -- honest, derived only from fields actually
   // present on the article. Trending (backed by source count when we have
@@ -176,7 +178,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
   const surfacedReason = article.trending
     ? sourceCount > 1
       ? `Trending — mentioned in ${sourceCount} sources`
-      : "Trending now"
+      : 'Trending now'
     : article.category[0]
       ? `Matches your ${article.category[0]} interest`
       : null;
@@ -191,7 +193,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
       data-read={isRead || undefined}
       data-article-id={article.id}
       className={`group relative p-3 bg-[var(--background-tint)] border border-transparent hover:border-[var(--rule)] rounded-lg transition-colors ${
-        isRead ? "opacity-60 hover:opacity-100" : ""
+        isRead ? 'opacity-60 hover:opacity-100' : ''
       }`}
     >
       {/* Image — 16:10, soft tinted fallback frame, rounded corners.
@@ -209,11 +211,11 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             type="button"
             data-testid="news-card-save-btn"
             onClick={toggleSaved}
-            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-label={isSaved ? 'Unsave article' : 'Save article'}
             aria-pressed={isSaved}
             className="absolute top-2 right-2 text-[11px] font-medium px-2.5 py-1 bg-background/90 backdrop-blur border border-[var(--rule)] text-foreground hover:bg-background rounded-md transition-colors"
           >
-            {isSaved ? "Saved" : "Save"}
+            {isSaved ? 'Saved' : 'Save'}
           </button>
         </div>
       )}
@@ -232,13 +234,19 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             {'✓'}
           </span>
         )}
-        <span className="text-gray-500 uppercase-eyebrow">{article.source}</span>
+        <span className="text-gray-500 uppercase-eyebrow">
+          {article.source}
+        </span>
         <span className="text-foreground-soft">.</span>
-        <span className="text-foreground-soft">{timeAgo(article.publishedAt)}</span>
+        <span className="text-foreground-soft">
+          {timeAgo(article.publishedAt)}
+        </span>
         {article.credibilityScore !== undefined && (
           <>
             <span className="text-foreground-soft">.</span>
-            <span className="text-foreground-soft">v{article.credibilityScore}</span>
+            <span className="text-foreground-soft">
+              v{article.credibilityScore}
+            </span>
           </>
         )}
         {!article.imageUrl && (
@@ -246,11 +254,11 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             type="button"
             data-testid="news-card-save-btn"
             onClick={toggleSaved}
-            aria-label={isSaved ? "Unsave article" : "Save article"}
+            aria-label={isSaved ? 'Unsave article' : 'Save article'}
             aria-pressed={isSaved}
             className="ml-auto text-[11px] font-medium px-2.5 py-1 border border-[var(--rule)] text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
           >
-            {isSaved ? "Saved" : "Save"}
+            {isSaved ? 'Saved' : 'Save'}
           </button>
         )}
       </div>
@@ -285,20 +293,20 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
         role="button"
         tabIndex={0}
         aria-label={`Open "${article.title}" in the article reader`}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
+        onKeyDown={e => {
+          if (e.key === 'Enter' || e.key === ' ') {
             e.preventDefault();
             e.currentTarget.click();
           }
         }}
         style={{
-          overflowWrap: "anywhere",
-          wordBreak: "break-word",
-          fontSize: "18px",
+          overflowWrap: 'anywhere',
+          wordBreak: 'break-word',
+          fontSize: '18px',
           lineHeight: 1.3,
-          letterSpacing: "-0.02em",
+          letterSpacing: '-0.02em',
           fontWeight: 600,
-          cursor: "pointer",
+          cursor: 'pointer',
         }}
         className="font-display text-foreground mb-2 line-clamp-2 group-hover:underline card-title-focus-ring"
       >
@@ -311,7 +319,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
       {article.matchedSnippet && (
         <p
           data-testid="news-card-matched-snippet"
-          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+          style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
           className="text-[13px] italic leading-[1.5] text-signal mb-2 line-clamp-2"
         >
           &hellip;{article.matchedSnippet}&hellip;
@@ -322,7 +330,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
       {article.summaryShort ? (
         <p
           data-testid="news-card-summary"
-          style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+          style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
           className="text-[14px] leading-[1.55] text-foreground-soft mb-3 line-clamp-3 min-h-[3.5rem]"
         >
           {article.summaryShort}
@@ -340,14 +348,14 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           exactly "Read More" \u2014 news-feed.spec.ts clicks `getByText(/Read More/i)`
           on the first card to surface the full body. The bracket framing
           is gone; the button is now a quiet underlined affordance. */}
-      {viewMode === "detailed" && hasMore && (
+      {viewMode === 'detailed' && hasMore && (
         <div className="mb-3">
           {expanded ? (
             <div className="space-y-2">
               {hasMoreBody && (
                 <p
                   className="text-[14px] leading-[1.55] text-foreground whitespace-pre-line"
-                  style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                  style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
                 >
                   {expandedBody}
                 </p>
@@ -363,8 +371,15 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
                         key={idx}
                         className="text-[14px] leading-[1.55] text-foreground flex items-start gap-2"
                       >
-                        <span style={{ color: "var(--accent-signal)" }} className="mt-1.5 leading-none">\u25cf</span>
-                        <span style={{ overflowWrap: "anywhere" }}>{insight}</span>
+                        <span
+                          style={{ color: 'var(--accent-signal)' }}
+                          className="mt-1.5 leading-none"
+                        >
+                          \u25cf
+                        </span>
+                        <span style={{ overflowWrap: 'anywhere' }}>
+                          {insight}
+                        </span>
                       </li>
                     ))}
                   </ul>
@@ -407,7 +422,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           {article.category.length > 1 && (
             <span
               className="text-foreground-mute"
-              aria-label={`plus ${article.category.length - 1} more categories: ${article.category.slice(1).join(", ")}`}
+              aria-label={`plus ${article.category.length - 1} more categories: ${article.category.slice(1).join(', ')}`}
             >
               · +{article.category.length - 1}
             </span>
@@ -421,7 +436,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             rel="noopener noreferrer"
             aria-label="Share on X"
             title="Share on X"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
             className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors font-mono-tx"
           >
             X
@@ -433,7 +448,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             rel="noopener noreferrer"
             aria-label="Share on LinkedIn"
             title="Share on LinkedIn"
-            onClick={(e) => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
             className="px-1.5 py-0.5 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors font-mono-tx"
           >
             in
@@ -445,7 +460,7 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
             rel="noopener noreferrer"
             onClick={markAsRead}
             className="inline-flex items-center gap-1 font-medium hover:underline"
-            style={{ color: "var(--accent-signal)" }}
+            style={{ color: 'var(--accent-signal)' }}
           >
             read at {hostname(article.url)} {'\u2192'}
           </a>

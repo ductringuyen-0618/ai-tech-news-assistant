@@ -1,8 +1,8 @@
-import { useEffect, useState } from "react";
-import { toast } from "sonner";
-import { MarkdownReport } from "./MarkdownReport";
-import { API_ENDPOINTS, apiFetch, API_BASE_URL } from "../config/api";
-import { Loader2, AlertCircle } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { toast } from 'sonner';
+import { MarkdownReport } from './MarkdownReport';
+import { API_ENDPOINTS, apiFetch, API_BASE_URL } from '../config/api';
+import { Loader2, AlertCircle } from 'lucide-react';
 
 /**
  * SavedResearchList -- M5 broadsheet-row restyle.
@@ -59,9 +59,9 @@ interface SavedFull {
 function normalizeIso(iso: string): string {
   return /Z|[+-]\d{2}:?\d{2}$/.test(iso)
     ? iso
-    : iso.includes("T")
+    : iso.includes('T')
       ? `${iso}Z`
-      : `${iso.replace(" ", "T")}Z`;
+      : `${iso.replace(' ', 'T')}Z`;
 }
 
 function formatRelativeTime(iso: string): string {
@@ -70,7 +70,7 @@ function formatRelativeTime(iso: string): string {
   const now = Date.now();
   const delta = Math.max(0, now - then);
   const sec = Math.round(delta / 1000);
-  if (sec < 60) return "just now";
+  if (sec < 60) return 'just now';
   const min = Math.round(sec / 60);
   if (min < 60) return `${min}m ago`;
   const hr = Math.round(min / 60);
@@ -90,12 +90,12 @@ function formatDateline(iso: string): string {
   const then = Date.parse(normalizeIso(iso));
   if (Number.isNaN(then)) return iso;
   const d = new Date(then);
-  const wd = d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase();
-  const day = d.toLocaleDateString("en-US", { day: "2-digit" });
-  const mon = d.toLocaleDateString("en-US", { month: "short" }).toUpperCase();
-  const time = d.toLocaleTimeString("en-US", {
-    hour: "2-digit",
-    minute: "2-digit",
+  const wd = d.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase();
+  const day = d.toLocaleDateString('en-US', { day: '2-digit' });
+  const mon = d.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+  const time = d.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
     hour12: false,
   });
   return `${wd} ${day} ${mon} ${time}`;
@@ -105,7 +105,7 @@ function formatDateline(iso: string): string {
  *  row meta strip. */
 function lineCountOf(md: string): number {
   if (!md) return 0;
-  return md.split(/\r?\n/).filter((l) => l.trim().length > 0).length;
+  return md.split(/\r?\n/).filter(l => l.trim().length > 0).length;
 }
 
 // ---------------------------------------------------------------------- //
@@ -138,8 +138,8 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
       setRows(Array.isArray(data) ? data : []);
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("SavedResearchList: list fetch failed", err);
-      setError((err as Error).message || "Failed to load saved research");
+      console.warn('SavedResearchList: list fetch failed', err);
+      setError((err as Error).message || 'Failed to load saved research');
       setRows(null);
     } finally {
       setLoading(false);
@@ -172,10 +172,10 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
         if (!cancelled) setDetail(data);
       } catch (err) {
         // eslint-disable-next-line no-console
-        console.warn("SavedResearchList: detail fetch failed", err);
+        console.warn('SavedResearchList: detail fetch failed', err);
         if (!cancelled) {
           setDetailError(
-            (err as Error).message || "Failed to load saved report"
+            (err as Error).message || 'Failed to load saved report'
           );
           setDetail(null);
         }
@@ -194,20 +194,20 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
 
   async function handleDelete(id: number) {
     const prev = rows ?? [];
-    setRows(prev.filter((r) => r.id !== id));
+    setRows(prev.filter(r => r.id !== id));
     if (detailId === id) setDetailId(null);
 
     try {
       const url = `${API_BASE_URL}${API_ENDPOINTS.savedResearchById(id)}`;
-      const resp = await fetch(url, { method: "DELETE" });
+      const resp = await fetch(url, { method: 'DELETE' });
       if (!resp.ok && resp.status !== 204) {
         throw new Error(`DELETE failed: ${resp.status} ${resp.statusText}`);
       }
-      toast.success("Saved research deleted");
+      toast.success('Saved research deleted');
     } catch (err) {
       // eslint-disable-next-line no-console
-      console.warn("SavedResearchList: delete failed", err);
-      toast.error("Failed to delete saved research");
+      console.warn('SavedResearchList: delete failed', err);
+      toast.error('Failed to delete saved research');
       setRows(prev);
     }
   }
@@ -267,18 +267,19 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
           <article className="space-y-4">
             <header className="space-y-2 border-b-2 border-[var(--foreground)] pb-4">
               <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-                ━ FILED — {formatDateline(detail.created_at)} · saved {formatRelativeTime(detail.created_at)}
+                ━ FILED — {formatDateline(detail.created_at)} · saved{' '}
+                {formatRelativeTime(detail.created_at)}
               </div>
               <h2
                 className="font-display text-[28px] font-medium tracking-tight text-foreground leading-[1.1] break-words"
-                style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
               >
                 {detail.question}
               </h2>
             </header>
             <div
               className="min-w-0 overflow-hidden"
-              style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+              style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}
             >
               <MarkdownReport text={detail.report_md} linkifyCitations />
             </div>
@@ -306,7 +307,8 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
           Saved Dispatches
         </h2>
         <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-          research reports you've filed away · click a row to re-open · [ × ] removes
+          research reports you've filed away · click a row to re-open · [ × ]
+          removes
         </p>
       </header>
 
@@ -352,7 +354,7 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
 
       {!loading && !error && rows && rows.length > 0 && (
         <ul>
-          {rows.map((row) => (
+          {rows.map(row => (
             <li
               key={row.id}
               data-testid="saved-research-item"
@@ -370,7 +372,10 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
                   <span
                     className="font-display text-[22px] font-medium text-foreground leading-[1.2] group-hover:text-signal w-full break-words"
                     title={row.question}
-                    style={{ overflowWrap: "anywhere", wordBreak: "break-word" }}
+                    style={{
+                      overflowWrap: 'anywhere',
+                      wordBreak: 'break-word',
+                    }}
                   >
                     {row.question}
                   </span>
@@ -380,7 +385,7 @@ export function SavedResearchList({ refreshKey = 0 }: SavedResearchListProps) {
                 </button>
                 <button
                   type="button"
-                  onClick={(e) => {
+                  onClick={e => {
                     e.stopPropagation();
                     void handleDelete(row.id);
                   }}

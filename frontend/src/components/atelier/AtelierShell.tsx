@@ -12,18 +12,18 @@
  * digest). It does not apply when mode === "mission" — Mission Control
  * uses its own dense 3-column shell.
  */
-import { ReactNode } from "react";
+import { ReactNode } from 'react';
 
 interface AtelierShellProps {
   children: ReactNode;
   className?: string;
 }
 
-export function AtelierShell({ children, className = "" }: AtelierShellProps) {
+export function AtelierShell({ children, className = '' }: AtelierShellProps) {
   return (
     <div
       data-testid="atelier-shell"
-      className={["mx-auto w-full max-w-[1120px]", className].join(" ")}
+      className={['mx-auto w-full max-w-[1120px]', className].join(' ')}
     >
       {children}
     </div>

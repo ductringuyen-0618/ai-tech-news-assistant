@@ -23,13 +23,19 @@
  * from the pre-merge Atelier/Mission markup so existing specs keep
  * scoping to it).
  */
-import { ReactNode, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 import { Loader2, Newspaper } from 'lucide-react';
+import { toast } from 'sonner';
 import { NewsCard } from './NewsCard';
 import { AtelierShell } from './atelier/AtelierShell';
 import { MissionShell } from './mission/MissionShell';
 import { DenseArticleRow } from './mission/DenseArticleRow';
 import { AgentTelemetry } from './mission/AgentTelemetry';
+import {
+  readInterestWeights,
+  clearInterestWeights,
+  reorderByInterest,
+} from '../lib/interestWeights';
 
 export type FeedDensity = 'comfortable' | 'compact';
 
@@ -97,6 +103,63 @@ export function UnifiedFeedView({
 }: UnifiedFeedViewProps) {
   const [statusOpen, setStatusOpen] = useState(true);
 
+  const [weights, setWeights] = useState<Record<string, number>>(() =>
+    readInterestWeights()
+  );
+  // How much of `articles` (from the front) the current `weights` snapshot
+  // covers. Frozen alongside `weights` for the same reason -- see below --
+  // so an infinite-scroll append can only ever land *after* this boundary,
+  // never inside an already-windowed, already-rendered region.
+  // Lazily initialized (not a hardcoded 0) for the same reason `weights`
+  // is: if this component remounts with `articles` already populated --
+  // e.g. a tab that unmounts on switch-away and doesn't refetch on
+  // return -- a hardcoded 0 would render the whole already-loaded list
+  // unpersonalized for one frame before the mount effect below corrects
+  // it. Matching the initial `weights` read here keeps that first render
+  // consistent with what it will immediately snap to anyway.
+  const [personalizedThrough, setPersonalizedThrough] = useState(
+    () => articles.length
+  );
+  // Re-read weights only when the feed's *leading* article changes -- a
+  // real reload/refresh/filter change -- never on a bare re-render or an
+  // infinite-scroll append. `articles` gets a brand-new array reference on
+  // most App renders (it's an unmemoized filter in App.tsx) and grows via
+  // append during infinite scroll, so keying this off array identity would
+  // re-read localStorage -- and pick up any reaction made earlier in the
+  // session -- on scroll, silently reshuffling windows already on screen.
+  // The leading id is stable across both of those and only moves on a
+  // genuine new fetch, so this is a safe proxy for "next feed load".
+  const leadingArticleId = articles[0]?.id;
+  useEffect(() => {
+    setWeights(readInterestWeights());
+    setPersonalizedThrough(articles.length);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leadingArticleId]);
+  const orderedArticles = useMemo(() => {
+    // reorderByInterest re-chunks its fixed-size windows from scratch over
+    // whatever array it's given. If a paginated append landed inside what
+    // would otherwise be a partial trailing window, re-chunking the *full*
+    // array on every append could merge newly-fetched articles into a
+    // window that's already on screen and sort one above an
+    // already-rendered card -- a live jump-scare pagination itself was
+    // supposed to be immune to. Only ever re-window the frozen prefix; new
+    // articles beyond it are always appended after, in their given order,
+    // until the next real personalization snapshot.
+    const personalized = reorderByInterest(
+      articles.slice(0, personalizedThrough),
+      weights
+    );
+    return [...personalized, ...articles.slice(personalizedThrough)];
+  }, [articles, weights, personalizedThrough]);
+  const isPersonalized = Object.keys(weights).length > 0;
+
+  const handleResetPersonalization = () => {
+    clearInterestWeights();
+    setWeights({});
+    setPersonalizedThrough(articles.length);
+    toast.success('Personalization reset — showing latest first');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -105,13 +168,33 @@ export function UnifiedFeedView({
     );
   }
 
+  const personalizationRow = isPersonalized && articles.length > 0 && (
+    <div
+      data-testid="personalization-status"
+      className="mb-3 flex items-center justify-between gap-2"
+    >
+      <span className="font-mono-tx uppercase-eyebrow">
+        Personalized for you — based on your reactions
+      </span>
+      <button
+        type="button"
+        data-testid="personalization-reset"
+        onClick={handleResetPersonalization}
+        className="font-mono-tx uppercase-eyebrow underline-offset-4 hover:underline hover:text-foreground transition-colors"
+      >
+        Reset
+      </button>
+    </div>
+  );
+
   const body =
     articles.length === 0 ? (
       (emptyState ?? DefaultEmptyState)
     ) : density === 'compact' ? (
       <MissionShell heading={heading} showTelemetry={false}>
+        {personalizationRow}
         <div data-testid="news-feed-list" className="flex flex-col">
-          {articles.map(article => (
+          {orderedArticles.map(article => (
             <DenseArticleRow key={article.id} article={article} />
           ))}
         </div>
@@ -123,11 +206,12 @@ export function UnifiedFeedView({
             {heading}
           </div>
         )}
+        {personalizationRow}
         <div
           data-testid="news-feed-list"
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {articles.map(article => (
+          {orderedArticles.map(article => (
             // NewsCard's article prop requires several fields (imageUrl,
             // category, summaryShort, ...) that UnifiedFeedArticle keeps
             // optional so DenseArticleRow's narrower subset also fits.

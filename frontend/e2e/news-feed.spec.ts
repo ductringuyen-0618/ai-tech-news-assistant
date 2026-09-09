@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from '@playwright/test';
 import {
   assertNoHtmlEntities,
   assertNoMojibake,
@@ -8,7 +8,7 @@ import {
   assertNoHorizontalOverflow,
   installConsoleErrorListener,
   assertConsoleClean,
-} from "./_lib/rubric";
+} from './_lib/rubric';
 
 /**
  * News Feed tab â€” asserts real article data renders and filter/search work.
@@ -24,18 +24,18 @@ import {
  */
 
 const KNOWN_REAL_SOURCES = [
-  "TechCrunch",
-  "Ars Technica",
-  "The Verge",
-  "MIT Technology Review",
-  "Hacker News",
-  "Wired",
+  'TechCrunch',
+  'Ars Technica',
+  'The Verge',
+  'MIT Technology Review',
+  'Hacker News',
+  'Wired',
 ];
 
 // Reset filters by clearing the in-page category chips before each test.
 // This isolates the news-feed assertions from whatever the user saved last.
-async function clearFiltersIfPresent(page: import("@playwright/test").Page) {
-  const clearBtn = page.getByRole("button", { name: /^Clear Filters$/i });
+async function clearFiltersIfPresent(page: import('@playwright/test').Page) {
+  const clearBtn = page.getByRole('button', { name: /^Clear Filters$/i });
   if (await clearBtn.isVisible().catch(() => false)) {
     await clearBtn.click();
     // Give React a tick to refetch.
@@ -43,25 +43,37 @@ async function clearFiltersIfPresent(page: import("@playwright/test").Page) {
   }
 }
 
-test.describe("News Feed tab", () => {
+test.describe('News Feed tab', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/feed");
-    await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
+    await page.goto('/feed');
+    await expect(
+      page.getByRole('heading', { name: /TechPulse AI/i })
+    ).toBeVisible();
     // Wait for the initial article fetch to settle (or empty-state to render).
-    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {});
-    await expect(page.locator(".animate-spin").first()).toBeHidden({ timeout: 20_000 });
+    await page
+      .waitForLoadState('networkidle', { timeout: 20_000 })
+      .catch(() => {});
+    await expect(page.locator('.animate-spin').first()).toBeHidden({
+      timeout: 20_000,
+    });
   });
 
-  test("page renders with branding and at least one article", async ({ page }) => {
-    await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
+  test('page renders with branding and at least one article', async ({
+    page,
+  }) => {
+    await expect(
+      page.getByRole('heading', { name: /TechPulse AI/i })
+    ).toBeVisible();
 
     // If a filter mismatch shows the empty-state, clear filters and try again.
     const emptyState = page.getByText(/No articles found/i);
     if (await emptyState.isVisible().catch(() => false)) {
       await clearFiltersIfPresent(page);
       // Wait for the refetch to settle.
-      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-      await expect(page.locator(".animate-spin").first()).toBeHidden({
+      await page
+        .waitForLoadState('networkidle', { timeout: 10_000 })
+        .catch(() => {});
+      await expect(page.locator('.animate-spin').first()).toBeHidden({
         timeout: 15_000,
       });
     }
@@ -74,33 +86,39 @@ test.describe("News Feed tab", () => {
     expect(count).toBeGreaterThan(0);
   });
 
-  test("no article title is seed-data", async ({ page }) => {
+  test('no article title is seed-data', async ({ page }) => {
     const emptyState = page.getByText(/No articles found/i);
     if (await emptyState.isVisible().catch(() => false)) {
       await clearFiltersIfPresent(page);
-      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-      await expect(page.locator(".animate-spin").first()).toBeHidden({
+      await page
+        .waitForLoadState('networkidle', { timeout: 10_000 })
+        .catch(() => {});
+      await expect(page.locator('.animate-spin').first()).toBeHidden({
         timeout: 15_000,
       });
     }
 
     // CardTitle nodes carry data-slot="card-title".
-    const titles = await page.locator('[data-slot="card-title"]').allTextContents();
+    const titles = await page
+      .locator('[data-slot="card-title"]')
+      .allTextContents();
     expect(titles.length).toBeGreaterThan(0);
     for (const title of titles) {
       const trimmed = title.trim().toLowerCase();
       // Worker 1 wiped seed='seed' rows; this test would fail if they came back.
       expect(trimmed).not.toMatch(/^seed[-_ ]/);
-      expect(trimmed).not.toContain("seed summary");
+      expect(trimmed).not.toContain('seed summary');
     }
   });
 
-  test("source badges show real sources", async ({ page }) => {
+  test('source badges show real sources', async ({ page }) => {
     const emptyState = page.getByText(/No articles found/i);
     if (await emptyState.isVisible().catch(() => false)) {
       await clearFiltersIfPresent(page);
-      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-      await expect(page.locator(".animate-spin").first()).toBeHidden({
+      await page
+        .waitForLoadState('networkidle', { timeout: 10_000 })
+        .catch(() => {});
+      await expect(page.locator('.animate-spin').first()).toBeHidden({
         timeout: 15_000,
       });
     }
@@ -111,59 +129,61 @@ test.describe("News Feed tab", () => {
       .locator('[data-slot="card"] .text-gray-500')
       .allTextContents();
 
-    const hasRealSource = sourceTexts.some((s) =>
-      KNOWN_REAL_SOURCES.some((known) =>
+    const hasRealSource = sourceTexts.some(s =>
+      KNOWN_REAL_SOURCES.some(known =>
         s.toLowerCase().includes(known.toLowerCase())
       )
     );
 
     expect(
       hasRealSource,
-      `Expected at least one source from ${KNOWN_REAL_SOURCES.join(", ")}; saw: ${sourceTexts.slice(0, 10).join(" | ")}`
+      `Expected at least one source from ${KNOWN_REAL_SOURCES.join(', ')}; saw: ${sourceTexts.slice(0, 10).join(' | ')}`
     ).toBe(true);
 
     for (const s of sourceTexts) {
-      expect(s.trim().toLowerCase()).not.toBe("seed");
+      expect(s.trim().toLowerCase()).not.toBe('seed');
     }
   });
 
-  test("M3.M3 â€” Trending Now rail is visible with at least one category chip", async ({
+  test('M3.M3 â€” Trending Now rail is visible with at least one category chip', async ({
     page,
   }) => {
     // The TrendingRail aggregates category counts; in worst case it may
     // need a moment for the per-category /api/news?category=X round-trips
     // to settle. Wait up to 20s for at least one chip.
-    const rail = page.getByTestId("news-feed-trending-rail");
+    const rail = page.getByTestId('news-feed-trending-rail');
     await expect(rail).toBeVisible({ timeout: 20_000 });
 
     // Loading state renders skeletons; wait for actual chip buttons.
-    const chips = page.getByTestId("news-feed-trending-chip");
+    const chips = page.getByTestId('news-feed-trending-chip');
     await expect(chips.first()).toBeVisible({ timeout: 20_000 });
 
     const chipCount = await chips.count();
     expect(
       chipCount,
-      "Trending rail should render at least one category chip â€” backend categories are empty?"
+      'Trending rail should render at least one category chip â€” backend categories are empty?'
     ).toBeGreaterThanOrEqual(1);
 
     // Clicking a chip should change the filter set. We assert via the
     // visible "Filtered by:" panel that the chip's category now appears.
     const firstChip = chips.first();
-    const chipCategory = await firstChip.getAttribute("data-category");
+    const chipCategory = await firstChip.getAttribute('data-category');
     expect(chipCategory).toBeTruthy();
     await firstChip.click();
 
     // Either the active-filters bar shows the chip, or the chip itself
     // toggled to its active state.
-    const activeFilters = page.getByTestId("news-feed-active-filters");
+    const activeFilters = page.getByTestId('news-feed-active-filters');
     if (chipCategory) {
-      await expect(activeFilters.getByText(chipCategory, { exact: true })).toBeVisible({
+      await expect(
+        activeFilters.getByText(chipCategory, { exact: true })
+      ).toBeVisible({
         timeout: 5_000,
       });
     }
   });
 
-  test("M3.M3 â€” article cards use Linear-dense styling (font â‰¤ 14px, padding â‰¤ 12px)", async ({
+  test('M3.M3 â€” article cards use Linear-dense styling (font â‰¤ 14px, padding â‰¤ 12px)', async ({
     page,
   }) => {
     // Ensure at least one card is present.
@@ -172,10 +192,14 @@ test.describe("News Feed tab", () => {
     });
 
     const metrics = await page.evaluate(() => {
-      const card = document.querySelector('[data-slot="card"]') as HTMLElement | null;
+      const card = document.querySelector(
+        '[data-slot="card"]'
+      ) as HTMLElement | null;
       if (!card) return null;
       const cardStyle = window.getComputedStyle(card);
-      const title = card.querySelector('[data-slot="card-title"]') as HTMLElement | null;
+      const title = card.querySelector(
+        '[data-slot="card-title"]'
+      ) as HTMLElement | null;
       const titleSize = title
         ? parseFloat(window.getComputedStyle(title).fontSize)
         : null;
@@ -186,7 +210,7 @@ test.describe("News Feed tab", () => {
       return { titleSize, padTop, padBottom, padLeft, padRight };
     });
 
-    expect(metrics, "Expected to find an article card").not.toBeNull();
+    expect(metrics, 'Expected to find an article card').not.toBeNull();
     // Title font cap: dense layout = text-sm (14px). Tolerate up to 16px
     // for safety against root-font scaling.
     expect(
@@ -198,7 +222,7 @@ test.describe("News Feed tab", () => {
     expect(metrics!.padLeft).toBeLessThanOrEqual(14);
   });
 
-  test("search input updates the article list", async ({ page }) => {
+  test('search input updates the article list', async ({ page }) => {
     // Regression test for review-07's confirmed bug: submitting a search
     // updated the "N STORIES" count but left the rendered list
     // pixel-identical to the unfiltered feed (search/count desync). The
@@ -214,13 +238,13 @@ test.describe("News Feed tab", () => {
 
     // A deliberately unlikely-to-match-everything term so a real filter
     // is very likely to narrow (or empty) the result set.
-    const NEEDLE = "zzz-nonexistent-query-term-xyz";
+    const NEEDLE = 'zzz-nonexistent-query-term-xyz';
     await searchInput.fill(NEEDLE);
-    await searchInput.press("Enter");
+    await searchInput.press('Enter');
 
     // Small debounce â€” the search refetches; let it settle.
     await page.waitForTimeout(2000);
-    await expect(page.locator(".animate-spin").first()).toBeHidden({
+    await expect(page.locator('.animate-spin').first()).toBeHidden({
       timeout: 15_000,
     });
 
@@ -232,7 +256,7 @@ test.describe("News Feed tab", () => {
 
     expect(
       cardsVisible || emptyVisible,
-      "Search should either return results or show the empty state â€” never a blank/crashed page"
+      'Search should either return results or show the empty state â€” never a blank/crashed page'
     ).toBe(true);
 
     // The core regression check: a nonsense query must NOT leave the same
@@ -244,7 +268,7 @@ test.describe("News Feed tab", () => {
         .allTextContents();
       expect(
         titlesAfter,
-        "Search results should differ from the unfiltered list â€” the list must not stay pixel-identical after a query is submitted"
+        'Search results should differ from the unfiltered list â€” the list must not stay pixel-identical after a query is submitted'
       ).not.toEqual(titlesBefore);
     }
   });
@@ -254,21 +278,31 @@ test.describe("News Feed tab", () => {
 // Rubric â€” categories 1, 2, 3, 4, 7, 8 applied to the News Feed tab.
 // ---------------------------------------------------------------------------
 
-test.describe("rubric â€” News Feed", () => {
+test.describe('rubric â€” News Feed', () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto("/feed");
-    await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
-    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {});
-    await expect(page.locator(".animate-spin").first()).toBeHidden({ timeout: 20_000 });
+    await page.goto('/feed');
+    await expect(
+      page.getByRole('heading', { name: /TechPulse AI/i })
+    ).toBeVisible();
+    await page
+      .waitForLoadState('networkidle', { timeout: 20_000 })
+      .catch(() => {});
+    await expect(page.locator('.animate-spin').first()).toBeHidden({
+      timeout: 20_000,
+    });
     // Make sure there are real cards to assert against.
     const empty = page.getByText(/No articles found/i);
     if (await empty.isVisible().catch(() => false)) {
-      const reset = page.getByRole("button", { name: /^Reset Filters$/i });
-      const clear = page.getByRole("button", { name: /^Clear Filters$/i });
+      const reset = page.getByRole('button', { name: /^Reset Filters$/i });
+      const clear = page.getByRole('button', { name: /^Clear Filters$/i });
       if (await reset.isVisible().catch(() => false)) await reset.click();
       else if (await clear.isVisible().catch(() => false)) await clear.click();
-      await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
-      await expect(page.locator(".animate-spin").first()).toBeHidden({ timeout: 15_000 });
+      await page
+        .waitForLoadState('networkidle', { timeout: 10_000 })
+        .catch(() => {});
+      await expect(page.locator('.animate-spin').first()).toBeHidden({
+        timeout: 15_000,
+      });
     }
     // Ensure at least one article card has rendered before assertions run.
     await expect(page.locator('[data-slot="card"]').first()).toBeVisible({
@@ -276,14 +310,14 @@ test.describe("rubric â€” News Feed", () => {
     });
   });
 
-  test("category 1 â€” article body has no HTML entities, mojibake, or stringified placeholders", async ({
+  test('category 1 â€” article body has no HTML entities, mojibake, or stringified placeholders', async ({
     page,
   }) => {
     // Read More / Show More on the first card so we exercise the full body too.
     const readMore = page
       .locator('[data-slot="card"]')
       .first()
-      .getByRole("button", { name: /Read More/i });
+      .getByRole('button', { name: /Read More/i });
     if (await readMore.isVisible().catch(() => false)) {
       await readMore.click();
     }
@@ -293,24 +327,30 @@ test.describe("rubric â€” News Feed", () => {
     await assertNoUndefinedNullObjectObject(page, scope);
   });
 
-  test("category 3 â€” article cards list has no duplicate titles", async ({ page }) => {
+  test('category 3 â€” article cards list has no duplicate titles', async ({
+    page,
+  }) => {
     await assertNoDuplicateSiblings(
       page,
       '[data-slot="card-title"]',
-      "news-feed article titles"
+      'news-feed article titles'
     );
   });
 
-  test("category 4 â€” article cards do not horizontally overflow", async ({ page }) => {
+  test('category 4 â€” article cards do not horizontally overflow', async ({
+    page,
+  }) => {
     await assertNoHorizontalOverflow(page, '[data-slot="card"]');
   });
 
-  test("category 7 â€” feed has no seed/mock/example/epoch data", async ({ page }) => {
+  test('category 7 â€” feed has no seed/mock/example/epoch data', async ({
+    page,
+  }) => {
     // Scope to the active feed panel â€” other tabs have their own checks.
     await assertNoMockDataLeak(page, '[data-state="active"][role="tabpanel"]');
   });
 
-  test("category 8 â€” every visible article card image actually loaded", async ({
+  test('category 8 â€” every visible article card image actually loaded', async ({
     page,
   }) => {
     // Allow up to 1 broken thumbnail â€” feeds occasionally serve a bad URL
@@ -319,7 +359,7 @@ test.describe("rubric â€” News Feed", () => {
     await assertImagesLoadedInFeed(page);
   });
 
-  test("category 2 â€” taxonomy: each chip the user can click yields results or a clear empty-state", async ({
+  test('category 2 â€” taxonomy: each chip the user can click yields results or a clear empty-state', async ({
     page,
     request,
   }) => {
@@ -329,8 +369,7 @@ test.describe("rubric â€” News Feed", () => {
     // at the end. This test rotates through chips by saving them server-
     // side, so without restoration we'd leave the next test (Settings)
     // looking at whatever chip we happened to end on.
-    const backendBase =
-      process.env.BACKEND_URL || "http://127.0.0.1:8000";
+    const backendBase = process.env.BACKEND_URL || 'http://127.0.0.1:8000';
     const savedBefore: string[] = await (async () => {
       try {
         const r = await request.get(`${backendBase}/api/settings`);
@@ -347,11 +386,15 @@ test.describe("rubric â€” News Feed", () => {
     // suite stays under its 60s budget; if there are fewer chips, we test
     // them all. We never silently skip â€” having zero chips here is a
     // regression on its own (means /api/news/categories returned empty).
-    await page.getByRole("tab", { name: /Settings/i }).click();
-    await expect(page.getByText(/Topic Preferences/i)).toBeVisible({ timeout: 10_000 });
+    await page.getByRole('tab', { name: /Settings/i }).click();
+    await expect(page.getByText(/Topic Preferences/i)).toBeVisible({
+      timeout: 10_000,
+    });
 
     // Wait for the categories endpoint to populate.
-    await expect(page.getByText(/Loading topics/i)).toBeHidden({ timeout: 15_000 }).catch(() => {});
+    await expect(page.getByText(/Loading topics/i))
+      .toBeHidden({ timeout: 15_000 })
+      .catch(() => {});
 
     // Each chip is a <label> wrapping a Radix checkbox button + an emoji
     // span + a label span. The visible label sits in the LAST <span> in
@@ -366,17 +409,17 @@ test.describe("rubric â€” News Feed", () => {
     const rowCount = await rowLocator.count();
     expect(
       rowCount,
-      "TopicFilter rendered zero chips â€” /api/news/categories has no real categories"
+      'TopicFilter rendered zero chips â€” /api/news/categories has no real categories'
     ).toBeGreaterThan(0);
 
-    const chipLabels = await rowLocator.evaluateAll((els) =>
-      (els as HTMLElement[]).map((el) => {
+    const chipLabels = await rowLocator.evaluateAll(els =>
+      (els as HTMLElement[]).map(el => {
         // The visible label is the LAST <span> direct child of the row.
-        const spans = Array.from(el.querySelectorAll(":scope > span"));
+        const spans = Array.from(el.querySelectorAll(':scope > span'));
         if (spans.length > 0) {
-          return (spans[spans.length - 1].textContent || "").trim();
+          return (spans[spans.length - 1].textContent || '').trim();
         }
-        return (el.innerText || "").trim().split("\n").pop() || "";
+        return (el.innerText || '').trim().split('\n').pop() || '';
       })
     );
 
@@ -387,7 +430,7 @@ test.describe("rubric â€” News Feed", () => {
         const label = chipLabels[i] || `chip ${i}`;
 
         // Clear any active selection first so each chip is tested in isolation.
-        const clearAll = page.getByRole("button", { name: /^Clear All$/i });
+        const clearAll = page.getByRole('button', { name: /^Clear All$/i });
         if (await clearAll.isEnabled().catch(() => false)) {
           await clearAll.click();
         }
@@ -399,21 +442,21 @@ test.describe("rubric â€” News Feed", () => {
         // Save and wait for the toast to confirm the backend persisted. We
         // use `.first()` so a stale toast from a previous iteration doesn't
         // confuse the matcher.
-        await page.getByRole("button", { name: /Save Preferences/i }).click();
+        await page.getByRole('button', { name: /Save Preferences/i }).click();
         await expect(
           page.getByText(/Preferences saved successfully/i).first()
         ).toBeVisible({ timeout: 15_000 });
 
-        await page.getByRole("tab", { name: /News Feed/i }).click();
+        await page.getByRole('tab', { name: /News Feed/i }).click();
 
         // Wait for the refetch.
-        await expect(page.locator(".animate-spin").first()).toBeHidden({
+        await expect(page.locator('.animate-spin').first()).toBeHidden({
           timeout: 15_000,
         });
 
         const cards = page.locator('[data-slot="card"]');
         const cardCount = await cards.count();
-        const resetBtn = page.getByRole("button", { name: /^Reset Filters$/i });
+        const resetBtn = page.getByRole('button', { name: /^Reset Filters$/i });
         const resetVisible = await resetBtn.isVisible().catch(() => false);
 
         expect(
@@ -425,8 +468,10 @@ test.describe("rubric â€” News Feed", () => {
         // Back to settings for the next iteration. Give the toast queue a
         // beat to drain so the `Preferences saved successfully` matcher
         // doesn't latch onto a stale toast.
-        await page.getByRole("tab", { name: /Settings/i }).click();
-        await expect(page.getByText(/Topic Preferences/i)).toBeVisible({ timeout: 10_000 });
+        await page.getByRole('tab', { name: /Settings/i }).click();
+        await expect(page.getByText(/Topic Preferences/i)).toBeVisible({
+          timeout: 10_000,
+        });
         await page.waitForTimeout(800);
       }
     } finally {
@@ -444,7 +489,7 @@ test.describe("rubric â€” News Feed", () => {
       // Pick fallbacks from chips we know exist in the current category
       // vocabulary; the actual values were collected at the top of this
       // test from the live TopicFilter.
-      const fallbackPool = chipLabels.filter((c) => c.length > 0);
+      const fallbackPool = chipLabels.filter(c => c.length > 0);
       for (const chip of fallbackPool) {
         if (restoreSet.size >= 2) break;
         restoreSet.add(chip);
@@ -453,7 +498,7 @@ test.describe("rubric â€” News Feed", () => {
         await request.put(`${backendBase}/api/settings`, {
           data: {
             categories: Array.from(restoreSet),
-            view_mode: "detailed",
+            view_mode: 'detailed',
             show_trending_only: false,
           },
         });
@@ -463,7 +508,7 @@ test.describe("rubric â€” News Feed", () => {
     }
   });
 
-  test("category 6 â€” page load + tab navigation produces no console errors", async ({
+  test('category 6 â€” page load + tab navigation produces no console errors', async ({
     browser,
   }) => {
     // Fresh context so we don't inherit listeners from the file-level beforeEach.
@@ -474,24 +519,534 @@ test.describe("rubric â€” News Feed", () => {
       // error. The ignore list is empty for now; we want every error to
       // surface. If a known-noisy third-party shows up, add a regex here.
     ]);
-    await page.goto("/feed");
-    await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
-    await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {});
-    await expect(page.locator(".animate-spin").first()).toBeHidden({ timeout: 20_000 });
+    await page.goto('/feed');
+    await expect(
+      page.getByRole('heading', { name: /TechPulse AI/i })
+    ).toBeVisible();
+    await page
+      .waitForLoadState('networkidle', { timeout: 20_000 })
+      .catch(() => {});
+    await expect(page.locator('.animate-spin').first()).toBeHidden({
+      timeout: 20_000,
+    });
     assertConsoleClean(errors);
     await ctx.close();
+  });
+});
+
+// ------------------------------------------------------------------ //
+//  Personalized feed reactions (proposal 002) â€” "more/less like this"
+//  and the bounded interest-weighted reorder in UnifiedFeedView.
+//
+//  These run against a mocked /api/news/ response instead of live data:
+//  the reorder behavior needs a fixed, known article order to assert
+//  against, which real backend data can't guarantee run to run.
+// ------------------------------------------------------------------ //
+
+const INTEREST_WEIGHTS_KEY = 'techpulse-interest-weights';
+
+const REACTION_TEST_ARTICLES = [
+  {
+    id: 'e2e-react-1',
+    title: 'Reaction Test Article One',
+    source: 'Alpha Source',
+    category: 'Alpha Topic',
+    hoursAgo: 1,
+  },
+  {
+    id: 'e2e-react-2',
+    title: 'Reaction Test Article Two',
+    source: 'Bravo Source',
+    category: 'Bravo Topic',
+    hoursAgo: 2,
+  },
+  {
+    id: 'e2e-react-3',
+    title: 'Reaction Test Article Three',
+    source: 'Charlie Source',
+    category: 'Charlie Topic',
+    hoursAgo: 3,
+  },
+  {
+    id: 'e2e-react-4',
+    title: 'Reaction Test Article Four',
+    source: 'Delta Source',
+    category: 'Delta Topic',
+    hoursAgo: 4,
+  },
+  {
+    id: 'e2e-react-5',
+    title: 'Reaction Test Article Five',
+    source: 'Echo Source',
+    category: 'Echo Topic',
+    hoursAgo: 5,
+  },
+  {
+    id: 'e2e-react-6',
+    title: 'Reaction Test Article Six',
+    source: 'Foxtrot Source',
+    category: 'Foxtrot Topic',
+    hoursAgo: 6,
+  },
+  {
+    id: 'e2e-react-7',
+    title: 'Reaction Test Article Seven',
+    source: 'Golf Source',
+    category: 'Golf Topic',
+    hoursAgo: 7,
+  },
+  {
+    id: 'e2e-react-8',
+    title: 'Reaction Test Article Eight',
+    source: 'Hotel Source',
+    category: 'Hotel Topic',
+    hoursAgo: 8,
+  },
+];
+
+// windowSize in reorderByInterest defaults to 6, so this fixture spans two
+// windows: articles 1-6, then 7-8. A weight seeded on article 6's source
+// should only ever move it within the first window, never past article 7.
+const BASELINE_ORDER = REACTION_TEST_ARTICLES.map(a => a.id);
+const FAVORED_SOURCE = 'Foxtrot Source'; // article 6 -- last in the first window
+const REORDERED_WITH_FAVORED_SOURCE = [
+  'e2e-react-6',
+  'e2e-react-1',
+  'e2e-react-2',
+  'e2e-react-3',
+  'e2e-react-4',
+  'e2e-react-5',
+  'e2e-react-7',
+  'e2e-react-8',
+];
+
+type ReactionTestArticle = (typeof REACTION_TEST_ARTICLES)[number];
+
+function toApiArticle(a: ReactionTestArticle, now: number) {
+  return {
+    id: a.id,
+    title: a.title,
+    url: `https://example.com/${a.id}`,
+    source: a.source,
+    published_at: new Date(now - a.hoursAgo * 3_600_000).toISOString(),
+    image_url: '',
+    categories: [a.category],
+    summary: `${a.title} â€” summary for e2e personalization tests.`,
+    content: `${a.title} â€” full body for e2e personalization tests.`,
+    credibility_score: 80,
+  };
+}
+
+async function mockNewsFeed(page: import('@playwright/test').Page) {
+  const now = Date.now();
+  const payload = {
+    data: REACTION_TEST_ARTICLES.map(a => toApiArticle(a, now)),
+  };
+  await page.route('**/api/news/**', async route => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify(payload),
+    });
+  });
+}
+
+async function seedInterestWeights(
+  context: import('@playwright/test').BrowserContext,
+  weights: Record<string, number>
+) {
+  await context.addInitScript(
+    ([key, value]) => {
+      try {
+        window.localStorage.setItem(key as string, value as string);
+      } catch {
+        /* privacy mode -- fall through, the spec will still navigate */
+      }
+    },
+    [INTEREST_WEIGHTS_KEY, JSON.stringify(weights)]
+  );
+}
+
+async function getRenderedArticleIds(
+  page: import('@playwright/test').Page
+): Promise<string[]> {
+  return page
+    .locator('[data-testid="news-card"]')
+    .evaluateAll(nodes =>
+      nodes.map(n => n.getAttribute('data-article-id') || '')
+    );
+}
+
+async function gotoMockedFeed(page: import('@playwright/test').Page) {
+  await page.goto('/feed');
+  await expect(
+    page.getByRole('heading', { name: /TechPulse AI/i })
+  ).toBeVisible();
+  await page
+    .waitForLoadState('networkidle', { timeout: 20_000 })
+    .catch(() => {});
+  await expect(page.locator('.animate-spin').first()).toBeHidden({
+    timeout: 20_000,
+  });
+  await expect(page.getByTestId('news-card').first()).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
+test.describe('News Feed tab â€” personalized feed reactions', () => {
+  test('each card renders More/Less like this reaction controls', async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const cardCount = await page.getByTestId('news-card').count();
+    expect(cardCount).toBe(REACTION_TEST_ARTICLES.length);
+    await expect(page.getByTestId('reaction-more')).toHaveCount(cardCount);
+    await expect(page.getByTestId('reaction-less')).toHaveCount(cardCount);
+  });
+
+  test('reacting persists a source + category weight and confirms with a toast', async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const firstCard = page.getByTestId('news-card').first();
+    await firstCard.getByTestId('reaction-more').click();
+
+    await expect(
+      page.getByText(/Showing more from Alpha Source/i).first()
+    ).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const stored = await page.evaluate(
+      key => window.localStorage.getItem(key),
+      INTEREST_WEIGHTS_KEY
+    );
+    const weights = JSON.parse(stored || '{}');
+    expect(weights['source:Alpha Source']).toBe(1);
+    expect(weights['category:Alpha Topic']).toBe(1);
+  });
+
+  test('a fresh visitor (empty localStorage) sees byte-identical chronological order', async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    expect(await getRenderedArticleIds(page)).toEqual(BASELINE_ORDER);
+    await expect(page.getByTestId('personalization-status')).toHaveCount(0);
+  });
+
+  test('reacting to one card does not immediately reorder the feed', async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const before = await getRenderedArticleIds(page);
+    // React to a mid-list card with the strongest possible signal.
+    const targetCard = page.locator(
+      '[data-testid="news-card"][data-article-id="e2e-react-4"]'
+    );
+    for (let i = 0; i < 3; i++) {
+      await targetCard.getByTestId('reaction-more').click();
+    }
+    // Give React a beat to settle -- the reorder must NOT apply here; it
+    // only applies on the next feed load, per the proposal's "not a live
+    // jump-scare mid-scroll" requirement.
+    await page.waitForTimeout(500);
+    const after = await getRenderedArticleIds(page);
+    expect(after).toEqual(before);
+  });
+
+  test('a reacted card shows a persisted pressed indicator on its reaction button', async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const card = page.locator(
+      '[data-testid="news-card"][data-article-id="e2e-react-3"]'
+    );
+    const moreBtn = card.getByTestId('reaction-more');
+    const lessBtn = card.getByTestId('reaction-less');
+
+    await expect(moreBtn).toHaveAttribute('aria-pressed', 'false');
+    await moreBtn.click();
+    await expect(moreBtn).toHaveAttribute('aria-pressed', 'true');
+    await expect(lessBtn).toHaveAttribute('aria-pressed', 'false');
+
+    // Reload -- the indicator must be re-derived from the persisted
+    // weight, not just held in transient component state.
+    await page.reload();
+    await gotoMockedFeed(page);
+    await expect(
+      page
+        .locator('[data-testid="news-card"][data-article-id="e2e-react-3"]')
+        .getByTestId('reaction-more')
+    ).toHaveAttribute('aria-pressed', 'true');
+  });
+
+  test("reacting past the clamp stops claiming an effect it didn't have", async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const card = page.locator(
+      '[data-testid="news-card"][data-article-id="e2e-react-5"]'
+    );
+    const moreBtn = card.getByTestId('reaction-more');
+
+    // Weight range is clamped to -3..3, so the 4th "more" click on a
+    // fresh (zero-weight) subject has no real effect.
+    for (let i = 0; i < 3; i++) {
+      await moreBtn.click();
+      await expect(
+        page.getByText(/Showing more from Echo Source/i).first()
+      ).toBeVisible({
+        timeout: 10_000,
+      });
+    }
+    await moreBtn.click();
+    await expect(
+      page
+        .getByText(/Already showing as much from Echo Source as possible/i)
+        .first()
+    ).toBeVisible({ timeout: 10_000 });
+
+    const stored = await page.evaluate(
+      key => window.localStorage.getItem(key),
+      INTEREST_WEIGHTS_KEY
+    );
+    const weights = JSON.parse(stored || '{}');
+    expect(weights['source:Echo Source']).toBe(3);
+  });
+
+  test('a pre-seeded favored source reorders within its window on load, without crossing it', async ({
+    page,
+    context,
+  }) => {
+    await seedInterestWeights(context, { [`source:${FAVORED_SOURCE}`]: 3 });
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    expect(await getRenderedArticleIds(page)).toEqual(
+      REORDERED_WITH_FAVORED_SOURCE
+    );
+    await expect(page.getByTestId('personalization-status')).toBeVisible();
+  });
+
+  test('the reset control clears weights and restores chronological order instantly', async ({
+    page,
+    context,
+  }) => {
+    await seedInterestWeights(context, { [`source:${FAVORED_SOURCE}`]: 3 });
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    expect(await getRenderedArticleIds(page)).toEqual(
+      REORDERED_WITH_FAVORED_SOURCE
+    );
+
+    await page.getByTestId('personalization-reset').click();
+
+    await expect(page.getByTestId('personalization-status')).toHaveCount(0);
+    expect(await getRenderedArticleIds(page)).toEqual(BASELINE_ORDER);
+    const stored = await page.evaluate(
+      key => window.localStorage.getItem(key),
+      INTEREST_WEIGHTS_KEY
+    );
+    expect(stored).toBeNull();
+  });
+
+  test('a negative reaction never removes an article from the feed', async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const before = await getRenderedArticleIds(page);
+    const targetCard = page.locator(
+      '[data-testid="news-card"][data-article-id="e2e-react-2"]'
+    );
+    for (let i = 0; i < 3; i++) {
+      await targetCard.getByTestId('reaction-less').click();
+    }
+    await page.reload();
+    await gotoMockedFeed(page);
+
+    const after = await getRenderedArticleIds(page);
+    expect(after.sort()).toEqual([...before].sort());
+    expect(after.length).toBe(before.length);
+  });
+
+  test('infinite-scroll pagination never reshuffles already-rendered windows', async ({
+    page,
+  }) => {
+    // Regression test: App.tsx's `articles` prop is an unmemoized filter
+    // that gets a new array reference on most renders, and infinite
+    // scroll appends to it too. An earlier version of this feature keyed
+    // its weights re-read off that array reference, which meant loading
+    // more articles could re-read localStorage mid-scroll and silently
+    // reshuffle windows already on screen -- exactly the "jump-scare"
+    // the proposal rules out. Reacting mid-session (as this test does)
+    // writes localStorage but must NOT flow into this render's `weights`
+    // state without a real reload, so this also confirms that boundary --
+    // see the next test for the case where weights are non-empty *before*
+    // pagination fires, which exercises the windowing math itself.
+    const now = Date.now();
+    const secondPageArticles: ReactionTestArticle[] = [
+      {
+        id: 'e2e-react-9',
+        title: 'Reaction Test Article Nine',
+        source: 'India Source',
+        category: 'India Topic',
+        hoursAgo: 9,
+      },
+      {
+        id: 'e2e-react-10',
+        title: 'Reaction Test Article Ten',
+        source: 'Juliet Source',
+        category: 'Juliet Topic',
+        hoursAgo: 10,
+      },
+    ];
+    const firstPage = {
+      data: REACTION_TEST_ARTICLES.map(a => toApiArticle(a, now)),
+      pagination: { next_cursor: 'e2e-cursor-2' },
+    };
+    const secondPage = {
+      data: secondPageArticles.map(a => toApiArticle(a, now)),
+      pagination: { next_cursor: null },
+    };
+    await page.route('**/api/news/**', async route => {
+      const url = new URL(route.request().url());
+      const body = url.searchParams.has('cursor') ? secondPage : firstPage;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
+    await gotoMockedFeed(page);
+
+    // React to a card before pagination fires so a real weight exists in
+    // localStorage for the reshuffle-on-append bug to have latched onto.
+    const targetCard = page.locator(
+      '[data-testid="news-card"][data-article-id="e2e-react-6"]'
+    );
+    await targetCard.getByTestId('reaction-more').click();
+    await expect(
+      page.getByText(/Showing more from Foxtrot Source/i).first()
+    ).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const beforeScroll = await getRenderedArticleIds(page);
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(
+      page.locator('[data-testid="news-card"][data-article-id="e2e-react-9"]')
+    ).toBeVisible({ timeout: 15_000 });
+
+    const afterScroll = await getRenderedArticleIds(page);
+    expect(afterScroll.slice(0, beforeScroll.length)).toEqual(beforeScroll);
+    expect(afterScroll.slice(beforeScroll.length)).toEqual([
+      'e2e-react-9',
+      'e2e-react-10',
+    ]);
+  });
+
+  test('pagination with pre-seeded weights never re-windows already-rendered articles', async ({
+    page,
+    context,
+  }) => {
+    // Regression test for a windowing edge case: reorderByInterest chunks
+    // fixed-size windows from scratch over whatever array it's given. If a
+    // paginated append isn't handled as a frozen prefix + a plain append,
+    // the newly-arrived articles can get folded into what was previously a
+    // window that's already rendered on screen and sorted above an
+    // already-visible card -- a live jump-scare, exactly what pagination
+    // itself is supposed to be immune to. Unlike the previous test, this
+    // one seeds the weight *before* the first load, so it's genuinely
+    // present in this render's `weights` state (not just in localStorage)
+    // when the append lands -- the case the windowing math actually runs.
+    await seedInterestWeights(context, { [`source:${FAVORED_SOURCE}`]: 3 });
+
+    const now = Date.now();
+    const secondPageArticles: ReactionTestArticle[] = [
+      {
+        id: 'e2e-react-9',
+        title: 'Reaction Test Article Nine',
+        source: 'India Source',
+        category: 'India Topic',
+        hoursAgo: 9,
+      },
+      {
+        id: 'e2e-react-10',
+        title: 'Reaction Test Article Ten',
+        source: 'Juliet Source',
+        category: 'Juliet Topic',
+        hoursAgo: 10,
+      },
+    ];
+    const firstPage = {
+      data: REACTION_TEST_ARTICLES.map(a => toApiArticle(a, now)),
+      pagination: { next_cursor: 'e2e-cursor-2' },
+    };
+    const secondPage = {
+      data: secondPageArticles.map(a => toApiArticle(a, now)),
+      pagination: { next_cursor: null },
+    };
+    await page.route('**/api/news/**', async route => {
+      const url = new URL(route.request().url());
+      const body = url.searchParams.has('cursor') ? secondPage : firstPage;
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(body),
+      });
+    });
+
+    await gotoMockedFeed(page);
+
+    // The seeded weight should already have reordered the first page.
+    const beforeScroll = await getRenderedArticleIds(page);
+    expect(beforeScroll).toEqual(REORDERED_WITH_FAVORED_SOURCE);
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(
+      page.locator('[data-testid="news-card"][data-article-id="e2e-react-10"]')
+    ).toBeVisible({ timeout: 15_000 });
+
+    const afterScroll = await getRenderedArticleIds(page);
+    // The already-rendered, already-personalized prefix must be untouched
+    // -- neither of the new (zero-weight) articles may sort above any of
+    // it, regardless of window-boundary arithmetic.
+    expect(afterScroll.slice(0, beforeScroll.length)).toEqual(beforeScroll);
+    // And the new articles are simply appended in their given order, never
+    // interleaved with the personalized prefix.
+    expect(afterScroll.slice(beforeScroll.length)).toEqual([
+      'e2e-react-9',
+      'e2e-react-10',
+    ]);
   });
 });
 
 // Local helper â€” kept inside this spec file because the tolerance is
 // news-feed-specific (some feeds genuinely have no image_url, others use
 // the ImageWithFallback placeholder which itself MUST load).
-async function assertImagesLoadedInFeed(page: import("@playwright/test").Page) {
+async function assertImagesLoadedInFeed(page: import('@playwright/test').Page) {
   const status = await page.evaluate(() => {
     const imgs = Array.from(
       document.querySelectorAll<HTMLImageElement>('[data-slot="card"] img')
     );
-    return imgs.map((img) => ({
+    return imgs.map(img => ({
       src: img.currentSrc || img.src,
       naturalWidth: img.naturalWidth,
       complete: img.complete,
@@ -499,8 +1054,8 @@ async function assertImagesLoadedInFeed(page: import("@playwright/test").Page) {
     }));
   });
 
-  const visible = status.filter((s) => s.visible);
-  const broken = visible.filter((s) => s.complete && s.naturalWidth === 0);
+  const visible = status.filter(s => s.visible);
+  const broken = visible.filter(s => s.complete && s.naturalWidth === 0);
 
   // Tolerance: at most 20% of visible images may be broken (placeholder
   // shows). If zero are visible, the test silently passes â€” the

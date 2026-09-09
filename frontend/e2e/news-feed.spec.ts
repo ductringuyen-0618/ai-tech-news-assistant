@@ -483,6 +483,211 @@ test.describe("rubric â€” News Feed", () => {
   });
 });
 
+// ------------------------------------------------------------------ //
+//  Personalized feed reactions (proposal 002) â€” "more/less like this"
+//  and the bounded interest-weighted reorder in UnifiedFeedView.
+//
+//  These run against a mocked /api/news/ response instead of live data:
+//  the reorder behavior needs a fixed, known article order to assert
+//  against, which real backend data can't guarantee run to run.
+// ------------------------------------------------------------------ //
+
+const INTEREST_WEIGHTS_KEY = "techpulse-interest-weights";
+
+const REACTION_TEST_ARTICLES = [
+  { id: "e2e-react-1", title: "Reaction Test Article One", source: "Alpha Source", category: "Alpha Topic", hoursAgo: 1 },
+  { id: "e2e-react-2", title: "Reaction Test Article Two", source: "Bravo Source", category: "Bravo Topic", hoursAgo: 2 },
+  { id: "e2e-react-3", title: "Reaction Test Article Three", source: "Charlie Source", category: "Charlie Topic", hoursAgo: 3 },
+  { id: "e2e-react-4", title: "Reaction Test Article Four", source: "Delta Source", category: "Delta Topic", hoursAgo: 4 },
+  { id: "e2e-react-5", title: "Reaction Test Article Five", source: "Echo Source", category: "Echo Topic", hoursAgo: 5 },
+  { id: "e2e-react-6", title: "Reaction Test Article Six", source: "Foxtrot Source", category: "Foxtrot Topic", hoursAgo: 6 },
+  { id: "e2e-react-7", title: "Reaction Test Article Seven", source: "Golf Source", category: "Golf Topic", hoursAgo: 7 },
+  { id: "e2e-react-8", title: "Reaction Test Article Eight", source: "Hotel Source", category: "Hotel Topic", hoursAgo: 8 },
+];
+
+// windowSize in reorderByInterest defaults to 6, so this fixture spans two
+// windows: articles 1-6, then 7-8. A weight seeded on article 6's source
+// should only ever move it within the first window, never past article 7.
+const BASELINE_ORDER = REACTION_TEST_ARTICLES.map((a) => a.id);
+const FAVORED_SOURCE = "Foxtrot Source"; // article 6 -- last in the first window
+const REORDERED_WITH_FAVORED_SOURCE = [
+  "e2e-react-6",
+  "e2e-react-1",
+  "e2e-react-2",
+  "e2e-react-3",
+  "e2e-react-4",
+  "e2e-react-5",
+  "e2e-react-7",
+  "e2e-react-8",
+];
+
+async function mockNewsFeed(page: import("@playwright/test").Page) {
+  const now = Date.now();
+  const payload = {
+    data: REACTION_TEST_ARTICLES.map((a) => ({
+      id: a.id,
+      title: a.title,
+      url: `https://example.com/${a.id}`,
+      source: a.source,
+      published_at: new Date(now - a.hoursAgo * 3_600_000).toISOString(),
+      image_url: "",
+      categories: [a.category],
+      summary: `${a.title} â€” summary for e2e personalization tests.`,
+      content: `${a.title} â€” full body for e2e personalization tests.`,
+      credibility_score: 80,
+    })),
+  };
+  await page.route("**/api/news/**", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(payload),
+    });
+  });
+}
+
+async function seedInterestWeights(
+  context: import("@playwright/test").BrowserContext,
+  weights: Record<string, number>
+) {
+  await context.addInitScript(
+    ([key, value]) => {
+      try {
+        window.localStorage.setItem(key as string, value as string);
+      } catch {
+        /* privacy mode -- fall through, the spec will still navigate */
+      }
+    },
+    [INTEREST_WEIGHTS_KEY, JSON.stringify(weights)]
+  );
+}
+
+async function getRenderedArticleIds(page: import("@playwright/test").Page): Promise<string[]> {
+  return page.locator('[data-testid="news-card"]').evaluateAll((nodes) =>
+    nodes.map((n) => n.getAttribute("data-article-id") || "")
+  );
+}
+
+async function gotoMockedFeed(page: import("@playwright/test").Page) {
+  await page.goto("/feed");
+  await expect(page.getByRole("heading", { name: /TechPulse AI/i })).toBeVisible();
+  await page.waitForLoadState("networkidle", { timeout: 20_000 }).catch(() => {});
+  await expect(page.locator(".animate-spin").first()).toBeHidden({ timeout: 20_000 });
+  await expect(page.getByTestId("news-card").first()).toBeVisible({ timeout: 15_000 });
+}
+
+test.describe("News Feed tab â€” personalized feed reactions", () => {
+  test("each card renders More/Less like this reaction controls", async ({ page }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const cardCount = await page.getByTestId("news-card").count();
+    expect(cardCount).toBe(REACTION_TEST_ARTICLES.length);
+    await expect(page.getByTestId("reaction-more")).toHaveCount(cardCount);
+    await expect(page.getByTestId("reaction-less")).toHaveCount(cardCount);
+  });
+
+  test("reacting persists a source + category weight and confirms with a toast", async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const firstCard = page.getByTestId("news-card").first();
+    await firstCard.getByTestId("reaction-more").click();
+
+    await expect(page.getByText(/Showing more from Alpha Source/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const stored = await page.evaluate(
+      (key) => window.localStorage.getItem(key),
+      INTEREST_WEIGHTS_KEY
+    );
+    const weights = JSON.parse(stored || "{}");
+    expect(weights["source:Alpha Source"]).toBe(1);
+    expect(weights["category:Alpha Topic"]).toBe(1);
+  });
+
+  test("a fresh visitor (empty localStorage) sees byte-identical chronological order", async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    expect(await getRenderedArticleIds(page)).toEqual(BASELINE_ORDER);
+    await expect(page.getByTestId("personalization-status")).toHaveCount(0);
+  });
+
+  test("reacting to one card does not immediately reorder the feed", async ({ page }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const before = await getRenderedArticleIds(page);
+    // React to a mid-list card with the strongest possible signal.
+    const targetCard = page.locator('[data-testid="news-card"][data-article-id="e2e-react-4"]');
+    for (let i = 0; i < 3; i++) {
+      await targetCard.getByTestId("reaction-more").click();
+    }
+    // Give React a beat to settle -- the reorder must NOT apply here; it
+    // only applies on the next feed load, per the proposal's "not a live
+    // jump-scare mid-scroll" requirement.
+    await page.waitForTimeout(500);
+    const after = await getRenderedArticleIds(page);
+    expect(after).toEqual(before);
+  });
+
+  test("a pre-seeded favored source reorders within its window on load, without crossing it", async ({
+    page,
+    context,
+  }) => {
+    await seedInterestWeights(context, { [`source:${FAVORED_SOURCE}`]: 3 });
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    expect(await getRenderedArticleIds(page)).toEqual(REORDERED_WITH_FAVORED_SOURCE);
+    await expect(page.getByTestId("personalization-status")).toBeVisible();
+  });
+
+  test("the reset control clears weights and restores chronological order instantly", async ({
+    page,
+    context,
+  }) => {
+    await seedInterestWeights(context, { [`source:${FAVORED_SOURCE}`]: 3 });
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    expect(await getRenderedArticleIds(page)).toEqual(REORDERED_WITH_FAVORED_SOURCE);
+
+    await page.getByTestId("personalization-reset").click();
+
+    await expect(page.getByTestId("personalization-status")).toHaveCount(0);
+    expect(await getRenderedArticleIds(page)).toEqual(BASELINE_ORDER);
+    const stored = await page.evaluate(
+      (key) => window.localStorage.getItem(key),
+      INTEREST_WEIGHTS_KEY
+    );
+    expect(stored).toBeNull();
+  });
+
+  test("a negative reaction never removes an article from the feed", async ({ page }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const before = await getRenderedArticleIds(page);
+    const targetCard = page.locator('[data-testid="news-card"][data-article-id="e2e-react-2"]');
+    for (let i = 0; i < 3; i++) {
+      await targetCard.getByTestId("reaction-less").click();
+    }
+    await page.reload();
+    await gotoMockedFeed(page);
+
+    const after = await getRenderedArticleIds(page);
+    expect(after.sort()).toEqual([...before].sort());
+    expect(after.length).toBe(before.length);
+  });
+});
+
 // Local helper â€” kept inside this spec file because the tolerance is
 // news-feed-specific (some feeds genuinely have no image_url, others use
 // the ImageWithFallback placeholder which itself MUST load).

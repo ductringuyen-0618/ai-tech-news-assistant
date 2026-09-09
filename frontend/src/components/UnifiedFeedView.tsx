@@ -23,13 +23,15 @@
  * from the pre-merge Atelier/Mission markup so existing specs keep
  * scoping to it).
  */
-import { ReactNode, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { Loader2, Newspaper } from "lucide-react";
+import { toast } from "sonner";
 import { NewsCard } from "./NewsCard";
 import { AtelierShell } from "./atelier/AtelierShell";
 import { MissionShell } from "./mission/MissionShell";
 import { DenseArticleRow } from "./mission/DenseArticleRow";
 import { AgentTelemetry } from "./mission/AgentTelemetry";
+import { readInterestWeights, clearInterestWeights, reorderByInterest } from "../lib/interestWeights";
 
 export type FeedDensity = "comfortable" | "compact";
 
@@ -97,6 +99,28 @@ export function UnifiedFeedView({
 }: UnifiedFeedViewProps) {
   const [statusOpen, setStatusOpen] = useState(true);
 
+  const [resetSignal, setResetSignal] = useState(0);
+  // Snapshot weights only when the article list itself changes (a real
+  // feed load/refresh) or the user explicitly resets -- never on a bare
+  // reaction click, so reacting to one card never re-ranks the rest of
+  // the feed mid-scroll. The new order becomes visible on the next load,
+  // per the proposal's "not a live jump-scare" requirement.
+  const weights = useMemo(
+    () => readInterestWeights(),
+    // Intentionally re-reads localStorage only on a real feed load or
+    // explicit reset, never on a bare reaction click (see comment above).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [articles, resetSignal]
+  );
+  const orderedArticles = useMemo(() => reorderByInterest(articles, weights), [articles, weights]);
+  const isPersonalized = Object.keys(weights).length > 0;
+
+  const handleResetPersonalization = () => {
+    clearInterestWeights();
+    setResetSignal((v) => v + 1);
+    toast.success("Personalization reset — showing latest first");
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -105,13 +129,31 @@ export function UnifiedFeedView({
     );
   }
 
+  const personalizationRow = isPersonalized && articles.length > 0 && (
+    <div
+      data-testid="personalization-status"
+      className="mb-3 flex items-center justify-between gap-2 text-[11px] font-mono-tx uppercase tracking-wide text-foreground-mute"
+    >
+      <span>Personalized for you — based on your reactions</span>
+      <button
+        type="button"
+        data-testid="personalization-reset"
+        onClick={handleResetPersonalization}
+        className="underline-offset-4 hover:underline hover:text-foreground transition-colors"
+      >
+        Reset
+      </button>
+    </div>
+  );
+
   const body =
     articles.length === 0 ? (
       emptyState ?? DefaultEmptyState
     ) : density === "compact" ? (
       <MissionShell heading={heading} showTelemetry={false}>
+        {personalizationRow}
         <div data-testid="news-feed-list" className="flex flex-col">
-          {articles.map((article) => (
+          {orderedArticles.map((article) => (
             <DenseArticleRow key={article.id} article={article} />
           ))}
         </div>
@@ -123,11 +165,12 @@ export function UnifiedFeedView({
             {heading}
           </div>
         )}
+        {personalizationRow}
         <div
           data-testid="news-feed-list"
           className="grid grid-cols-1 lg:grid-cols-3 gap-6"
         >
-          {articles.map((article) => (
+          {orderedArticles.map((article) => (
             // NewsCard's article prop requires several fields (imageUrl,
             // category, summaryShort, ...) that UnifiedFeedArticle keeps
             // optional so DenseArticleRow's narrower subset also fits.

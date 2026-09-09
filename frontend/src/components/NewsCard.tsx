@@ -1,5 +1,8 @@
 import { useEffect, useState } from "react";
+import { ThumbsUp, ThumbsDown } from "lucide-react";
+import { toast } from "sonner";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
+import { nudgeInterestWeight } from "../lib/interestWeights";
 
 /**
  * NewsCard -- broadsheet secondary-article tile.
@@ -143,6 +146,19 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
       setIsSaved(true);
     }
     persistSavedSet(next);
+  };
+
+  // Nudges the feed's per-source / per-category interest weights. The
+  // reorder itself is applied by UnifiedFeedView on the next feed load --
+  // reacting here never re-ranks cards already on screen, so this stays a
+  // quiet, local write plus a confirmation toast, not a live re-sort.
+  const react = (delta: 1 | -1) => {
+    nudgeInterestWeight({ source: article.source, category: article.category }, delta);
+    toast.success(
+      delta > 0
+        ? `Showing more from ${article.source} and similar topics`
+        : `Showing less from ${article.source} and similar topics`
+    );
   };
 
   const timeAgo = (dateString: string) => {
@@ -414,6 +430,32 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
           )}
         </div>
         <div className="flex items-center gap-2">
+          <button
+            type="button"
+            data-testid="reaction-more"
+            onClick={(e) => {
+              e.stopPropagation();
+              react(1);
+            }}
+            aria-label="More like this"
+            title="More like this"
+            className="p-1 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
+          >
+            <ThumbsUp className="w-3 h-3" />
+          </button>
+          <button
+            type="button"
+            data-testid="reaction-less"
+            onClick={(e) => {
+              e.stopPropagation();
+              react(-1);
+            }}
+            aria-label="Less like this"
+            title="Less like this"
+            className="p-1 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
+          >
+            <ThumbsDown className="w-3 h-3" />
+          </button>
           <a
             data-testid="news-card-share-x"
             href={`https://twitter.com/intent/tweet?url=${shareUrl}&text=${shareText}`}

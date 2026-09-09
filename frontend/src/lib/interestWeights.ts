@@ -53,17 +53,24 @@ function persistInterestWeights(weights: Record<string, number>): void {
   }
 }
 
+export interface NudgeResult {
+  weights: Record<string, number>;
+  /** False when every affected key was already at the clamp -- the click had no real effect. */
+  changed: boolean;
+}
+
 /** Nudges the weight for a subject's source and every category up/down by one step. */
-export function nudgeInterestWeight(
-  subject: WeightSubject,
-  delta: 1 | -1
-): Record<string, number> {
+export function nudgeInterestWeight(subject: WeightSubject, delta: 1 | -1): NudgeResult {
   const weights = readInterestWeights();
+  let changed = false;
   for (const key of subjectKeys(subject)) {
-    weights[key] = clamp((weights[key] ?? 0) + delta);
+    const previous = weights[key] ?? 0;
+    const next = clamp(previous + delta);
+    if (next !== previous) changed = true;
+    weights[key] = next;
   }
   persistInterestWeights(weights);
-  return weights;
+  return { weights, changed };
 }
 
 export function clearInterestWeights(): void {

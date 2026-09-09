@@ -521,22 +521,26 @@ const REORDERED_WITH_FAVORED_SOURCE = [
   "e2e-react-8",
 ];
 
+type ReactionTestArticle = (typeof REACTION_TEST_ARTICLES)[number];
+
+function toApiArticle(a: ReactionTestArticle, now: number) {
+  return {
+    id: a.id,
+    title: a.title,
+    url: `https://example.com/${a.id}`,
+    source: a.source,
+    published_at: new Date(now - a.hoursAgo * 3_600_000).toISOString(),
+    image_url: "",
+    categories: [a.category],
+    summary: `${a.title} â€” summary for e2e personalization tests.`,
+    content: `${a.title} â€” full body for e2e personalization tests.`,
+    credibility_score: 80,
+  };
+}
+
 async function mockNewsFeed(page: import("@playwright/test").Page) {
   const now = Date.now();
-  const payload = {
-    data: REACTION_TEST_ARTICLES.map((a) => ({
-      id: a.id,
-      title: a.title,
-      url: `https://example.com/${a.id}`,
-      source: a.source,
-      published_at: new Date(now - a.hoursAgo * 3_600_000).toISOString(),
-      image_url: "",
-      categories: [a.category],
-      summary: `${a.title} â€” summary for e2e personalization tests.`,
-      content: `${a.title} â€” full body for e2e personalization tests.`,
-      credibility_score: 80,
-    })),
-  };
+  const payload = { data: REACTION_TEST_ARTICLES.map((a) => toApiArticle(a, now)) };
   await page.route("**/api/news/**", async (route) => {
     await route.fulfill({
       status: 200,
@@ -637,6 +641,58 @@ test.describe("News Feed tab â€” personalized feed reactions", () => {
     expect(after).toEqual(before);
   });
 
+  test("a reacted card shows a persisted pressed indicator on its reaction button", async ({
+    page,
+  }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const card = page.locator('[data-testid="news-card"][data-article-id="e2e-react-3"]');
+    const moreBtn = card.getByTestId("reaction-more");
+    const lessBtn = card.getByTestId("reaction-less");
+
+    await expect(moreBtn).toHaveAttribute("aria-pressed", "false");
+    await moreBtn.click();
+    await expect(moreBtn).toHaveAttribute("aria-pressed", "true");
+    await expect(lessBtn).toHaveAttribute("aria-pressed", "false");
+
+    // Reload -- the indicator must be re-derived from the persisted
+    // weight, not just held in transient component state.
+    await page.reload();
+    await gotoMockedFeed(page);
+    await expect(
+      page.locator('[data-testid="news-card"][data-article-id="e2e-react-3"]').getByTestId("reaction-more")
+    ).toHaveAttribute("aria-pressed", "true");
+  });
+
+  test("reacting past the clamp stops claiming an effect it didn't have", async ({ page }) => {
+    await mockNewsFeed(page);
+    await gotoMockedFeed(page);
+
+    const card = page.locator('[data-testid="news-card"][data-article-id="e2e-react-5"]');
+    const moreBtn = card.getByTestId("reaction-more");
+
+    // Weight range is clamped to -3..3, so the 4th "more" click on a
+    // fresh (zero-weight) subject has no real effect.
+    for (let i = 0; i < 3; i++) {
+      await moreBtn.click();
+      await expect(page.getByText(/Showing more from Echo Source/i).first()).toBeVisible({
+        timeout: 10_000,
+      });
+    }
+    await moreBtn.click();
+    await expect(
+      page.getByText(/Already showing as much from Echo Source as possible/i).first()
+    ).toBeVisible({ timeout: 10_000 });
+
+    const stored = await page.evaluate(
+      (key) => window.localStorage.getItem(key),
+      INTEREST_WEIGHTS_KEY
+    );
+    const weights = JSON.parse(stored || "{}");
+    expect(weights["source:Echo Source"]).toBe(3);
+  });
+
   test("a pre-seeded favored source reorders within its window on load, without crossing it", async ({
     page,
     context,
@@ -685,6 +741,58 @@ test.describe("News Feed tab â€” personalized feed reactions", () => {
     const after = await getRenderedArticleIds(page);
     expect(after.sort()).toEqual([...before].sort());
     expect(after.length).toBe(before.length);
+  });
+
+  test("infinite-scroll pagination never reshuffles already-rendered windows", async ({
+    page,
+  }) => {
+    // Regression test: App.tsx's `articles` prop is an unmemoized filter
+    // that gets a new array reference on most renders, and infinite
+    // scroll appends to it too. An earlier version of this feature keyed
+    // its weights re-read off that array reference, which meant loading
+    // more articles could re-read localStorage mid-scroll and silently
+    // reshuffle windows already on screen -- exactly the "jump-scare"
+    // the proposal rules out. This pins the fix: reacting, then paging,
+    // must never move the already-rendered articles.
+    const now = Date.now();
+    const secondPageArticles: ReactionTestArticle[] = [
+      { id: "e2e-react-9", title: "Reaction Test Article Nine", source: "India Source", category: "India Topic", hoursAgo: 9 },
+      { id: "e2e-react-10", title: "Reaction Test Article Ten", source: "Juliet Source", category: "Juliet Topic", hoursAgo: 10 },
+    ];
+    const firstPage = {
+      data: REACTION_TEST_ARTICLES.map((a) => toApiArticle(a, now)),
+      pagination: { next_cursor: "e2e-cursor-2" },
+    };
+    const secondPage = {
+      data: secondPageArticles.map((a) => toApiArticle(a, now)),
+      pagination: { next_cursor: null },
+    };
+    await page.route("**/api/news/**", async (route) => {
+      const url = new URL(route.request().url());
+      const body = url.searchParams.has("cursor") ? secondPage : firstPage;
+      await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify(body) });
+    });
+
+    await gotoMockedFeed(page);
+
+    // React to a card before pagination fires so a real weight exists in
+    // localStorage for the reshuffle-on-append bug to have latched onto.
+    const targetCard = page.locator('[data-testid="news-card"][data-article-id="e2e-react-6"]');
+    await targetCard.getByTestId("reaction-more").click();
+    await expect(page.getByText(/Showing more from Foxtrot Source/i).first()).toBeVisible({
+      timeout: 10_000,
+    });
+
+    const beforeScroll = await getRenderedArticleIds(page);
+
+    await page.mouse.wheel(0, 20_000);
+    await expect(
+      page.locator('[data-testid="news-card"][data-article-id="e2e-react-9"]')
+    ).toBeVisible({ timeout: 15_000 });
+
+    const afterScroll = await getRenderedArticleIds(page);
+    expect(afterScroll.slice(0, beforeScroll.length)).toEqual(beforeScroll);
+    expect(afterScroll.slice(beforeScroll.length)).toEqual(["e2e-react-9", "e2e-react-10"]);
   });
 });
 

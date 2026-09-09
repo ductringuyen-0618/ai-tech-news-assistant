@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ThumbsUp, ThumbsDown } from "lucide-react";
 import { toast } from "sonner";
 import { ImageWithFallback } from "./figma/ImageWithFallback";
-import { nudgeInterestWeight } from "../lib/interestWeights";
+import { articleInterestScore, nudgeInterestWeight, readInterestWeights } from "../lib/interestWeights";
 
 /**
  * NewsCard -- broadsheet secondary-article tile.
@@ -124,10 +124,24 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
   const [expanded, setExpanded] = useState(false);
   const [isSaved, setIsSaved] = useState<boolean>(false);
   const [isRead, setIsRead] = useState<boolean>(false);
+  // Derived from the aggregate source+category weights, not a per-article
+  // flag -- there isn't one. Positive/negative net weight is treated as
+  // "you've leaned this way on this card's topics", mirroring the
+  // persisted-marker treatment Save/Read already get.
+  const [reaction, setReaction] = useState<"more" | "less" | null>(null);
+
+  const reactionSubject = { source: article.source, category: article.category };
+
+  const readReaction = () => {
+    const score = articleInterestScore(reactionSubject, readInterestWeights());
+    return score > 0 ? "more" : score < 0 ? "less" : null;
+  };
 
   useEffect(() => {
     setIsSaved(readSavedSet().has(String(article.id)));
     setIsRead(readReadSet().has(String(article.id)));
+    setReaction(readReaction());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [article.id]);
 
   const markAsRead = () => {
@@ -153,7 +167,17 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
   // reacting here never re-ranks cards already on screen, so this stays a
   // quiet, local write plus a confirmation toast, not a live re-sort.
   const react = (delta: 1 | -1) => {
-    nudgeInterestWeight({ source: article.source, category: article.category }, delta);
+    const { changed } = nudgeInterestWeight(reactionSubject, delta);
+    setReaction(readReaction());
+    if (!changed) {
+      // Already at the clamp -- nothing actually moved, so don't claim it did.
+      toast.info(
+        delta > 0
+          ? `Already showing as much from ${article.source} as possible`
+          : `Already showing as little from ${article.source} as possible`
+      );
+      return;
+    }
     toast.success(
       delta > 0
         ? `Showing more from ${article.source} and similar topics`
@@ -438,8 +462,13 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
               react(1);
             }}
             aria-label="More like this"
+            aria-pressed={reaction === "more"}
             title="More like this"
-            className="p-1 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
+            className={`px-1.5 py-0.5 border rounded-md transition-colors font-mono-tx ${
+              reaction === "more"
+                ? "border-[var(--accent-signal)] text-[var(--accent-signal)] bg-[var(--background-tint)]"
+                : "border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)]"
+            }`}
           >
             <ThumbsUp className="w-3 h-3" />
           </button>
@@ -451,8 +480,13 @@ export function NewsCard({ article, viewMode }: NewsCardProps) {
               react(-1);
             }}
             aria-label="Less like this"
+            aria-pressed={reaction === "less"}
             title="Less like this"
-            className="p-1 border border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)] rounded-md transition-colors"
+            className={`px-1.5 py-0.5 border rounded-md transition-colors font-mono-tx ${
+              reaction === "less"
+                ? "border-[var(--accent-signal)] text-[var(--accent-signal)] bg-[var(--background-tint)]"
+                : "border-[var(--rule)] text-foreground-soft hover:text-foreground hover:bg-[var(--background-tint)]"
+            }`}
           >
             <ThumbsDown className="w-3 h-3" />
           </button>

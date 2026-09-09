@@ -23,7 +23,7 @@
  * from the pre-merge Atelier/Mission markup so existing specs keep
  * scoping to it).
  */
-import { ReactNode, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { Loader2, Newspaper } from "lucide-react";
 import { toast } from "sonner";
 import { NewsCard } from "./NewsCard";
@@ -99,25 +99,26 @@ export function UnifiedFeedView({
 }: UnifiedFeedViewProps) {
   const [statusOpen, setStatusOpen] = useState(true);
 
-  const [resetSignal, setResetSignal] = useState(0);
-  // Snapshot weights only when the article list itself changes (a real
-  // feed load/refresh) or the user explicitly resets -- never on a bare
-  // reaction click, so reacting to one card never re-ranks the rest of
-  // the feed mid-scroll. The new order becomes visible on the next load,
-  // per the proposal's "not a live jump-scare" requirement.
-  const weights = useMemo(
-    () => readInterestWeights(),
-    // Intentionally re-reads localStorage only on a real feed load or
-    // explicit reset, never on a bare reaction click (see comment above).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [articles, resetSignal]
-  );
+  const [weights, setWeights] = useState<Record<string, number>>(() => readInterestWeights());
+  // Re-read weights only when the feed's *leading* article changes -- a
+  // real reload/refresh/filter change -- never on a bare re-render or an
+  // infinite-scroll append. `articles` gets a brand-new array reference on
+  // most App renders (it's an unmemoized filter in App.tsx) and grows via
+  // append during infinite scroll, so keying this off array identity would
+  // re-read localStorage -- and pick up any reaction made earlier in the
+  // session -- on scroll, silently reshuffling windows already on screen.
+  // The leading id is stable across both of those and only moves on a
+  // genuine new fetch, so this is a safe proxy for "next feed load".
+  const leadingArticleId = articles[0]?.id;
+  useEffect(() => {
+    setWeights(readInterestWeights());
+  }, [leadingArticleId]);
   const orderedArticles = useMemo(() => reorderByInterest(articles, weights), [articles, weights]);
   const isPersonalized = Object.keys(weights).length > 0;
 
   const handleResetPersonalization = () => {
     clearInterestWeights();
-    setResetSignal((v) => v + 1);
+    setWeights({});
     toast.success("Personalization reset — showing latest first");
   };
 
@@ -130,16 +131,15 @@ export function UnifiedFeedView({
   }
 
   const personalizationRow = isPersonalized && articles.length > 0 && (
-    <div
-      data-testid="personalization-status"
-      className="mb-3 flex items-center justify-between gap-2 text-[11px] font-mono-tx uppercase tracking-wide text-foreground-mute"
-    >
-      <span>Personalized for you — based on your reactions</span>
+    <div data-testid="personalization-status" className="mb-3 flex items-center justify-between gap-2">
+      <span className="font-mono-tx uppercase-eyebrow">
+        Personalized for you — based on your reactions
+      </span>
       <button
         type="button"
         data-testid="personalization-reset"
         onClick={handleResetPersonalization}
-        className="underline-offset-4 hover:underline hover:text-foreground transition-colors"
+        className="font-mono-tx uppercase-eyebrow underline-offset-4 hover:underline hover:text-foreground transition-colors"
       >
         Reset
       </button>

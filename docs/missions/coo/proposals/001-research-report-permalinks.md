@@ -5,6 +5,20 @@ branch: null
 ---
 # Shareable Research Report Permalinks
 
+## What you get
+Every saved research report gets its own URL (`/research/:id`) that opens the
+full cited report directly, plus a "Copy link" button on the report view. The
+address bar follows what is on screen and the back button works. No new router
+or backend work: the API endpoint already exists.
+
+## Why start this now
+Research reports are the strongest thing TechPulse produces, and right now they
+cannot be bookmarked, sent to a colleague, or opened from a link. A report that
+can be shared is a free acquisition channel: each link lands a new visitor on
+finished, cited output with the rest of the app one click away. The backend half
+is already done, so this is the cheapest engagement win on the backlog, and it
+unblocks every future sharing feature.
+
 ## Problem / opportunity
 The Research mode already produces cited, agentic markdown reports and
 persists them via `POST /api/saved-research` (see

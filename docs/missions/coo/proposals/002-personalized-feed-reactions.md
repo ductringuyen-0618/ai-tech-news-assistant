@@ -5,6 +5,21 @@ branch: null
 ---
 # Personalized Feed Ranking via Lightweight Reactions
 
+## What you get
+"More like this" and "Less like this" buttons on each news card. Reacting
+nudges a per-source and per-category weight, stored in the browser, and the feed
+visibly re-ranks so the front page reflects what the visitor cares about. Weights
+survive between visits. Fully client-side; no backend or schema changes.
+
+## Why start this now
+The feed is the same reverse-chronological list for everyone, so a visitor who
+saved five machine-learning articles sees exactly what a first-timer sees. There
+is no way to say "more of this". A feed that adapts gives a reason to keep
+scrolling today and a more relevant front page tomorrow, which is the core
+return-visit loop competitors like Feedly already run. The signals it needs
+(read state, saved articles) are already tracked, so it is a medium-sized
+frontend change with no infrastructure risk.
+
 ## Problem / opportunity
 The feed (`UnifiedFeedView.tsx`) is strict reverse-chronological for every
 visitor. The app already tracks two client-side interest signals per

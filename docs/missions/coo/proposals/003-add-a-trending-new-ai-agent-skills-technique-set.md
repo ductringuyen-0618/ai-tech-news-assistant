@@ -2,7 +2,7 @@
 title: >-
   add a trending new ai agent skills/technique/setup that need to learn, add to
   your ai agent setup
-status: proposed
+status: approved
 attempts: 0
 branch: null
 ---

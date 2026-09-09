@@ -120,7 +120,9 @@ copy).
 
 ## What's next
 
-Branch `coo/personalized-feed-reactions` is pushed. `gh`/GitHub MCP is
-available in this environment, so a pull request was opened from this
-branch to `main` — see the PR link recorded alongside this report once
-created.
+Branch `coo/personalized-feed-reactions` is pushed. PR opened via GitHub
+MCP: https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/5
+
+Recommend running `npm run test:e2e:ui` locally before merge, since the
+new/changed Playwright cases could only be hand-traced (not executed
+live) in this environment.

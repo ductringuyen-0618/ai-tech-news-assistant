@@ -6,7 +6,7 @@
  * source or category. No backend calls, no schema.
  */
 
-const INTEREST_WEIGHTS_KEY = "techpulse-interest-weights";
+const INTEREST_WEIGHTS_KEY = 'techpulse-interest-weights';
 const MIN_WEIGHT = -3;
 const MAX_WEIGHT = 3;
 
@@ -33,7 +33,8 @@ export function readInterestWeights(): Record<string, number> {
     const raw = localStorage.getItem(INTEREST_WEIGHTS_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return {};
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed))
+      return {};
     const weights: Record<string, number> = {};
     for (const [key, value] of Object.entries(parsed)) {
       const num = Number(value);
@@ -60,7 +61,10 @@ export interface NudgeResult {
 }
 
 /** Nudges the weight for a subject's source and every category up/down by one step. */
-export function nudgeInterestWeight(subject: WeightSubject, delta: 1 | -1): NudgeResult {
+export function nudgeInterestWeight(
+  subject: WeightSubject,
+  delta: 1 | -1
+): NudgeResult {
   const weights = readInterestWeights();
   let changed = false;
   for (const key of subjectKeys(subject)) {
@@ -86,7 +90,10 @@ export function articleInterestScore(
   subject: WeightSubject,
   weights: Record<string, number>
 ): number {
-  return subjectKeys(subject).reduce((sum, key) => sum + (weights[key] ?? 0), 0);
+  return subjectKeys(subject).reduce(
+    (sum, key) => sum + (weights[key] ?? 0),
+    0
+  );
 }
 
 /**
@@ -102,15 +109,20 @@ export function reorderByInterest<T extends WeightSubject>(
   weights: Record<string, number>,
   windowSize = 6
 ): T[] {
-  if (Object.keys(weights).length === 0 || articles.length === 0) return articles;
+  if (Object.keys(weights).length === 0 || articles.length === 0)
+    return articles;
 
   const result: T[] = [];
   for (let start = 0; start < articles.length; start += windowSize) {
     const window = articles.slice(start, start + windowSize);
     const ranked = window
-      .map((article, index) => ({ article, index, score: articleInterestScore(article, weights) }))
+      .map((article, index) => ({
+        article,
+        index,
+        score: articleInterestScore(article, weights),
+      }))
       .sort((a, b) => b.score - a.score || a.index - b.index);
-    result.push(...ranked.map((entry) => entry.article));
+    result.push(...ranked.map(entry => entry.article));
   }
   return result;
 }

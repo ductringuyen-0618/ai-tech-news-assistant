@@ -128,11 +128,16 @@ function LearningCard({ item }: { item: LearningItem }) {
 
       <div className="pt-2 border-t border-[var(--rule)] flex items-center justify-between gap-2 text-[11px]">
         <div className="flex gap-1.5 flex-wrap items-center">
-          {item.category.map(c => (
-            <Badge key={c} variant="outline" className="font-mono-tx">
-              {c}
-            </Badge>
-          ))}
+          {/* Every item in this feed already carries the "Agent Skills"
+              category by definition -- showing it on every single card
+              is redundant chip clutter, so only surface tags beyond it. */}
+          {item.category
+            .filter(c => c !== 'Agent Skills')
+            .map(c => (
+              <Badge key={c} variant="outline" className="font-mono-tx">
+                {c}
+              </Badge>
+            ))}
         </div>
         <a
           data-testid="learning-card-read-more"
@@ -224,7 +229,7 @@ export function LearningView() {
           data-testid="learning-empty"
           className="p-6 border border-[var(--rule)] rounded-lg text-center text-foreground-soft text-[14px]"
         >
-          Nothing here yet -- the Learning feed updates as new agent tooling and
+          Nothing here yet — the Learning feed updates as new agent tooling and
           technique content comes in. Check back soon.
         </div>
       )}

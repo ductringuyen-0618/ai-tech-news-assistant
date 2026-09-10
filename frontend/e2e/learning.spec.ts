@@ -60,11 +60,29 @@ test.describe('Learning tab', () => {
       page.getByTestId('learning-card-summary').first()
     ).toContainText('Model Context Protocol');
     await expect(card.getByText('Hacker News')).toBeVisible();
-    await expect(card.getByText('Agent Skills')).toBeVisible();
+    // The feed-defining "Agent Skills" tag is redundant on every card (the
+    // whole tab is that category) and is filtered out of display -- only a
+    // more specific tag beyond it would render as a chip.
+    await expect(card.getByText('Agent Skills')).toHaveCount(0);
 
     const readMore = page.getByTestId('learning-card-read-more').first();
     await expect(readMore).toHaveAttribute('href', MOCK_ITEM.url);
     await expect(readMore).toHaveAttribute('target', '_blank');
+  });
+
+  test('shows a differentiating tag when one is present beyond Agent Skills', async ({
+    page,
+  }) => {
+    await mockLearningApi(page, [
+      { ...MOCK_ITEM, categories: ['Agent Skills', 'MCP'] },
+    ]);
+
+    await page.goto('/');
+    await page.getByRole('tab', { name: /Learning/i }).click();
+
+    const card = page.getByTestId('learning-card').first();
+    await expect(card.getByText('MCP', { exact: true })).toBeVisible();
+    await expect(card.getByText('Agent Skills')).toHaveCount(0);
   });
 
   test('shows an empty state when there are no items yet', async ({ page }) => {

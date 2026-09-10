@@ -41,6 +41,10 @@ export const API_ENDPOINTS = {
   newsStats: '/api/news/stats',
   newsCategories: '/api/news/categories',
 
+  // Learning feed (proposal 003) -- trending AI agent skills/techniques.
+  // Same trailing-slash rule as `news` above.
+  learning: '/api/learning/',
+
   // Search endpoints
   search: '/api/search/',
   semanticSearch: '/api/search/semantic',

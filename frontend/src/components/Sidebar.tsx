@@ -47,6 +47,7 @@ import {
   Settings,
   Bookmark,
   Menu,
+  GraduationCap,
 } from 'lucide-react';
 
 export interface SidebarNavItem {
@@ -63,6 +64,7 @@ export interface SidebarNavItem {
 export const SIDEBAR_NAV_ITEMS: SidebarNavItem[] = [
   { value: 'feed', label: 'News Feed', icon: Newspaper },
   { value: 'research', label: 'Research', icon: Lightbulb },
+  { value: 'learning', label: 'Learning', icon: GraduationCap },
   { value: 'digest', label: 'Digest', icon: Mail },
   { value: 'saved', label: 'Saved', icon: Bookmark },
   { value: 'preferences', label: 'Settings', icon: Settings },

@@ -32,7 +32,6 @@ Caps wall-clock at 90s; exits with non-zero on failure.
 from __future__ import annotations
 
 import asyncio
-import os
 import sqlite3
 import sys
 import time

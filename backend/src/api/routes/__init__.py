@@ -34,6 +34,7 @@ _safe_include_router(root_router, "health", "router")
 
 # Load API routers
 _safe_include_router(api_router, "news", "router")
+_safe_include_router(api_router, "learning", "router")
 _safe_include_router(api_router, "summarization", "router")
 _safe_include_router(api_router, "embeddings", "router")
 _safe_include_router(api_router, "search", "router")

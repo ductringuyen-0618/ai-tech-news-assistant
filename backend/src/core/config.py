@@ -235,7 +235,35 @@ class Settings(BaseSettings):
     rss_timeout: int = Field(default=10, alias="RSS_TIMEOUT", ge=1, le=60)
     rss_max_articles: int = Field(default=100, alias="RSS_MAX_ARTICLES", ge=1, le=1000)
     rss_update_interval: int = Field(default=3600, alias="RSS_UPDATE_INTERVAL", ge=300, le=86400)  # 5 min to 24 hours
-    
+
+    # Learning feed sources (proposal 003 -- "Trending AI Agent Skills").
+    # A small, high-trust curated list of feeds about agent tooling/
+    # techniques, kept in config (not hardcoded in the ingestion code) so
+    # it can be tuned without a redeploy. hnrss.org's query feeds already
+    # do keyword filtering server-side; ``learning_ingestion.py`` applies
+    # its own keyword filter on top as a second pass so a broader feed
+    # (like the GitHub Blog one) doesn't flood the tab with off-topic posts.
+    learning_rss_sources: List[Dict[str, str]] = Field(
+        default=[
+            {
+                "name": "GitHub Blog - AI & ML",
+                "url": "https://github.blog/ai-and-ml/feed/",
+                "description": "GitHub's own posts on AI/agent tooling",
+            },
+            {
+                "name": "Hacker News - AI Agents",
+                "url": "https://hnrss.org/newest?q=AI+agent",
+                "description": "HN posts matching 'AI agent'",
+            },
+            {
+                "name": "Hacker News - Claude Code",
+                "url": "https://hnrss.org/newest?q=Claude+Code",
+                "description": "HN posts matching 'Claude Code'",
+            },
+        ],
+        alias="LEARNING_RSS_SOURCES",
+    )
+
     # Logging settings
     log_level: LogLevel = Field(default=LogLevel.INFO, alias="LOG_LEVEL")
     log_format: str = Field(

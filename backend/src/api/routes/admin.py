@@ -51,9 +51,9 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ...core.config import get_settings
 from ...services.daily_ingestion_orchestrator import (
-    DailyIngestionReport,
     run_daily_ingestion,
 )
+from ...services.learning_ingestion import run_learning_ingestion
 from ...services.retention_service import RetentionService
 
 logger = logging.getLogger(__name__)
@@ -248,6 +248,35 @@ async def trigger_ingestion(
         extract_entities=extract_entities,
         dry_run=dry_run,
     )
+    return report.to_dict()
+
+
+# --------------------------------------------------------------------- #
+#  Learning-feed ingestion trigger (proposal 003)
+# --------------------------------------------------------------------- #
+
+
+@router.post("/ingest-learning")
+async def trigger_learning_ingestion(
+    _: str = Depends(require_admin_token),
+    dry_run: bool = Query(
+        default=False,
+        description=(
+            "If true, counts the Learning feed's work-set but writes "
+            "nothing -- same smoke-test convention as /admin/ingest."
+        ),
+    ),
+) -> Dict[str, Any]:
+    """Trigger an on-demand fetch of the Learning feed's curated sources.
+
+    Returns the same :class:`PhaseReport`-shaped dict as one phase of
+    ``/admin/ingest``. Summarization/embedding/entity-extraction are not
+    triggered here -- they run as part of the regular daily ingestion
+    cycle, which processes any row missing them regardless of category.
+    """
+    settings = get_settings()
+    db_path = settings.get_database_file_path()
+    report = await run_learning_ingestion(db_path, dry_run=dry_run)
     return report.to_dict()
 
 

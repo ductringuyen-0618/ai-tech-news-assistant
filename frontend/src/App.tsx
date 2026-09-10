@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Settings } from './components/Settings';
 import { SearchBar } from './components/SearchBar';
 import { DigestView } from './components/DigestView';
+import { LearningView } from './components/LearningView';
 import { TrendingRail } from './components/TrendingRail';
 import { ResearchMode } from './components/ResearchMode';
 import { SavedResearchList } from './components/SavedResearchList';
@@ -167,6 +168,7 @@ function AppShell() {
   const VALID_TABS = [
     'feed',
     'research',
+    'learning',
     'digest',
     'saved',
     'preferences',
@@ -177,6 +179,7 @@ function AppShell() {
   const TAB_TO_PATH: Record<string, string> = {
     feed: '/feed',
     research: '/research',
+    learning: '/learning',
     digest: '/digest',
     saved: '/saved',
     preferences: '/settings',
@@ -184,6 +187,7 @@ function AppShell() {
   const PATH_TO_TAB: Record<string, string> = {
     feed: 'feed',
     research: 'research',
+    learning: 'learning',
     digest: 'digest',
     saved: 'saved',
     settings: 'preferences',
@@ -1118,6 +1122,18 @@ function AppShell() {
                 transition={panelTransition}
               >
                 <ResearchMode />
+              </motion.div>
+            </TabsContent>
+
+            {/* Learning Tab (proposal 003) -- trending AI agent skills/
+                techniques/setups, distinct from the general News Feed. */}
+            <TabsContent value="learning" className="mt-0">
+              <motion.div
+                initial={panelInitial}
+                animate={panelAnimate}
+                transition={panelTransition}
+              >
+                <LearningView />
               </motion.div>
             </TabsContent>
 

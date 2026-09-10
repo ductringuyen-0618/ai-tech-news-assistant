@@ -57,7 +57,7 @@ def main() -> int:
     inserted = repo.seed_if_empty()
     final = repo.count()
 
-    print(f"Saved research seed run:")
+    print("Saved research seed run:")
     print(f"  db_path     = {db_path}")
     print(f"  existing    = {existing}")
     print(f"  inserted    = {inserted}")

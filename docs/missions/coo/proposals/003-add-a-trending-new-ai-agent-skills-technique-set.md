@@ -2,9 +2,9 @@
 title: >-
   add a trending new ai agent skills/technique/setup that need to learn, add to
   your ai agent setup
-status: approved
+status: in_progress
 attempts: 0
-branch: null
+branch: coo/add-a-trending-new-ai-agent-skills-technique-set
 ---
 # add a trending new ai agent skills/technique/setup that need to learn, add to your ai agent setup
 

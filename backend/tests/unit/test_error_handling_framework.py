@@ -9,7 +9,6 @@ and middleware components.
 import pytest
 import json
 from unittest.mock import patch
-from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from src.core.exceptions import (

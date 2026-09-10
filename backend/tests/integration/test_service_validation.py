@@ -8,8 +8,7 @@ Focused on successful operation paths and service correctness.
 
 import pytest
 from datetime import datetime
-from typing import List, Dict, Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 # Services
 from src.services.news_service import NewsService
@@ -21,7 +20,7 @@ from src.repositories.article_repository import ArticleRepository
 from src.repositories.embedding_repository import EmbeddingRepository
 
 # Models
-from src.models.article import Article, ArticleCreate
+from src.models.article import ArticleCreate
 
 
 class TestNewsServiceValidation:

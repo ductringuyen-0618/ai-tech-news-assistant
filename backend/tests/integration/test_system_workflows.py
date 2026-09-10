@@ -9,16 +9,13 @@ Tests successful paths for critical business operations.
 import pytest
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock
 
 # Import services
 from src.services.news_service import NewsService
-from src.services.embedding_service import EmbeddingService
-from src.services.summarization_service import SummarizationService
 from src.repositories.article_repository import ArticleRepository
 from src.repositories.embedding_repository import EmbeddingRepository
 from src.models.article import Article, ArticleCreate
-from src.core.exceptions import NotFoundError, ValidationError
 
 
 # ============================================================================
@@ -309,7 +306,6 @@ class TestEmbeddingWorkflow:
         3. Return ranked results
         """
         # Setup
-        query = "machine learning algorithms"
         query_embedding = [0.15, 0.25, 0.35, 0.45]
         
         mock_results = [
@@ -349,7 +345,6 @@ class TestSummarizationWorkflow:
         4. Return result
         """
         # Setup
-        article_id = 1
         article_content = """
         Artificial intelligence has made breakthrough achievements in natural language processing.
         Large language models can now understand and generate human-like text with remarkable accuracy.

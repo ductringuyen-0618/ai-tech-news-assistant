@@ -34,13 +34,11 @@ without a live LLM. The SearchService is also faked.
 from __future__ import annotations
 
 from typing import Any, Dict, List
-from unittest.mock import AsyncMock
 
 import pytest
 
 from src.services.agentic_research_service import (
     AgenticResearchService,
-    _SubQuestionResult,
 )
 
 
@@ -252,7 +250,6 @@ async def test_run_happy_path():
     assert len(fake_search.calls) == 3
 
     # ---- Ollama was called exactly twice (decompose + synthesize) ----
-    labels = [c["label"] for c in calls]
     # Implementation default label is 'generate'; we only assert the count
     assert len(calls) == 2, calls
 

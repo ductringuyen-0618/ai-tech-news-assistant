@@ -51,7 +51,6 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
 
 from ...core.config import get_settings
 from ...services.daily_ingestion_orchestrator import (
-    DailyIngestionReport,
     run_daily_ingestion,
 )
 from ...services.retention_service import RetentionService

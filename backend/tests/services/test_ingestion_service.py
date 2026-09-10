@@ -3,7 +3,7 @@ Unit Tests for IngestionService
 """
 import pytest
 from datetime import datetime
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import Mock, patch
 from sqlalchemy.orm import Session
 
 from src.services.ingestion_service import (
@@ -11,7 +11,7 @@ from src.services.ingestion_service import (
     IngestionStatus,
     IngestionResult,
 )
-from src.database.models import Article, Source, Category
+from src.database.models import Source, Category
 
 
 @pytest.fixture
@@ -175,9 +175,9 @@ class TestIngestionServiceMethods:
     def test_get_source_id_new(self, ingestion_service, mock_db):
         """Test _get_source_id creates new source."""
         mock_db.query.return_value.filter.return_value.first.return_value = None
-        
-        source_id = ingestion_service._get_source_id("TechCrunch")
-        
+
+        ingestion_service._get_source_id("TechCrunch")
+
         # Should create a source
         mock_db.add.assert_called()
         mock_db.flush.assert_called()
@@ -387,9 +387,9 @@ class TestIngestionServicePipeline:
         """Test ingest_all commits transaction on success."""
         ingestion_service._ingest_feed = Mock()
         mock_db.commit = Mock()
-        
-        result = ingestion_service.ingest_all([])
-        
+
+        ingestion_service.ingest_all([])
+
         mock_db.commit.assert_called_once()
     
     def test_ingest_all_rollback_on_error(self, ingestion_service, mock_db):

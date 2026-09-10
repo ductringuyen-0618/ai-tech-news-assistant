@@ -7,7 +7,7 @@ Tests for news API endpoints with real database and service integration.
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock
 
 from src.api.routes.news import router
 from src.repositories.article_repository import ArticleRepository

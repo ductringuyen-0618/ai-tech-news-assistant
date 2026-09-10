@@ -16,8 +16,8 @@ from pathlib import Path
 backend_dir = Path(__file__).parent.parent
 sys.path.insert(0, str(backend_dir))
 
-import httpx
-from datetime import datetime, timedelta
+import httpx  # noqa: E402
+from datetime import datetime, timedelta  # noqa: E402
 
 # Production backend URL
 BACKEND_URL = os.getenv("BACKEND_URL", "https://ai-tech-news-assistant-backend.onrender.com")
@@ -143,7 +143,7 @@ async def seed_articles():
                 print(f"✅ Database now contains {total} articles")
                 
                 if "items" in data and len(data["items"]) > 0:
-                    print(f"\n📰 Sample articles:")
+                    print("\n📰 Sample articles:")
                     for article in data["items"][:3]:
                         print(f"   • {article.get('title', 'No title')[:60]}...")
             else:

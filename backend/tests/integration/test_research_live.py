@@ -42,7 +42,6 @@ import json
 import os
 import re
 import time
-from collections import Counter
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
@@ -387,7 +386,7 @@ def test_ten_article_scenario():
     # to confirm the synthesis loop wired up correctly without making the
     # test flaky against model output stochasticity.
     distinct = _distinct_citations(report)
-    assert distinct >= 1, f"no [N] citations at all in report"
+    assert distinct >= 1, "no [N] citations at all in report"
 
     # Sources Used section.
     assert re.search(r"(?im)^##\s+Sources\s+Used\s*$", report), \
@@ -451,7 +450,7 @@ def test_twenty_article_scenario():
     # architecture. The architectural payoff for this tier is the
     # prompt-size discipline canary asserted below.
     distinct = _distinct_citations(report)
-    assert distinct >= 1, f"no [N] citations at all in report"
+    assert distinct >= 1, "no [N] citations at all in report"
 
     # ---- The architectural canary: synthesis prompt size < 30KB.
     # We read the backend log starting from where it was before our run

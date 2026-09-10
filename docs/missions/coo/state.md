@@ -1,6 +1,6 @@
 # TechPulse COO -- State
 
-Shipped: 1/3
+Shipped: 2/3
 
 ## Log
 - 2026-09-09: No proposals existed yet, so proposed two new engagement
@@ -55,3 +55,14 @@ Shipped: 1/3
   frontend before this was built and `/api/learning/` doesn't carry
   per-article entity data. Status stays `in_progress` in the proposal
   pending both PRs' CI going green.
+- 2026-09-10: Both PRs' CI went green (`Build & Test`: success; both
+  `mergeable_state: clean`; no `Claude Approvals` check configured on this
+  repo). Shipped `003-add-a-trending-new-ai-agent-skills-technique-set`
+  (attempt 1) -- see
+  `docs/missions/coo/reports/add-a-trending-new-ai-agent-skills-technique-set.md`
+  for the full trace, including the three incidental backend-CI fixes
+  (PR #7) this build surfaced. PR #8:
+  https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/8 and
+  PR #7: https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/7
+  both left open (green, mergeable) for the repo owner to merge -- this
+  routine never merges its own PRs.

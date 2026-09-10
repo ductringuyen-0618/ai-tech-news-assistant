@@ -66,3 +66,10 @@ Shipped: 2/3
   PR #7: https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/7
   both left open (green, mergeable) for the repo owner to merge -- this
   routine never merges its own PRs.
+- 2026-09-10: PR #8 merged by the repo owner. Since #8's branch already
+  carried PR #7's ruff-lint-baseline fix plus the httpx/fastapi/langchain
+  and test_ci.py fixes, `main` was now a strict superset of #7's branch
+  (confirmed via `git diff origin/main origin/coo/fix-backend-ruff-lint-baseline`
+  -- zero net-new content, only things `main` had that #7 didn't). Closed
+  #7 as redundant with an explanatory comment rather than resolving the
+  now-stale merge conflict.

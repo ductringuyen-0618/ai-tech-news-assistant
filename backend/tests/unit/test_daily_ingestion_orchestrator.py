@@ -27,7 +27,6 @@ and the patched object is what each phase resolves at call time.
 from __future__ import annotations
 
 import sqlite3
-from typing import List
 from unittest.mock import AsyncMock, MagicMock
 
 import pytest

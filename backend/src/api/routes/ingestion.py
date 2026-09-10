@@ -16,7 +16,6 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks, Depends, Body
 from pydantic import BaseModel
 
 from src.database.base import get_db
-from src.database.session import DatabaseManager
 from src.services.ingestion_service import IngestionService
 from src.services.summarization_orchestrator import SummarizationOrchestrator
 

@@ -6,7 +6,7 @@ API endpoints for Retrieval-Augmented Generation functionality.
 Combines semantic search with LLM generation for intelligent Q&A.
 """
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from typing import Optional
 from pydantic import BaseModel, Field
 

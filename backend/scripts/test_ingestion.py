@@ -5,14 +5,14 @@ sys.path.insert(0, '.')
 print("Testing ingestion system imports...")
 
 try:
-    from src.services.ingestion_service import IngestionService, IngestionStatus
+    from src.services.ingestion_service import IngestionService, IngestionStatus  # noqa: F401
     print("✅ IngestionService imported")
 except Exception as e:
     print(f"❌ Failed to import IngestionService: {e}")
     sys.exit(1)
 
 try:
-    from src.api.routes.ingestion import router
+    from src.api.routes.ingestion import router  # noqa: F401
     print("✅ Ingestion router imported")
 except Exception as e:
     print(f"❌ Failed to import ingestion router: {e}")
@@ -20,7 +20,7 @@ except Exception as e:
 
 try:
     import main
-    print(f"✅ main.py imported successfully")
+    print("✅ main.py imported successfully")
     print(f"   Routes registered: {len(main.app.routes)}")
     
     # Check for ingestion routes

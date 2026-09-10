@@ -12,7 +12,6 @@ Features:
 - Error handling and logging
 """
 
-import asyncio
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 import uuid
@@ -20,7 +19,6 @@ import uuid
 try:
     import chromadb
     from chromadb.config import Settings
-    from chromadb.utils import embedding_functions
     CHROMADB_AVAILABLE = True
 except ImportError:
     CHROMADB_AVAILABLE = False

@@ -6,9 +6,8 @@ Tests for service-to-service interactions and integration points.
 """
 
 import pytest
-from datetime import datetime, timedelta
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import List, Dict, Any
 
 from src.services.news_service import NewsService
 from src.services.embedding_service import EmbeddingService
@@ -340,19 +339,6 @@ class TestServiceCommunication:
         """Test NewsService passes data to EmbeddingService."""
         # Setup
         article_id = 1
-        created_article = Article(
-            id=article_id,
-            title=sample_article_data["title"],
-            content=sample_article_data["content"],
-            url=sample_article_data["url"],
-            source=sample_article_data["source"],
-            published_date=sample_article_data["published_date"],
-            created_at=datetime.now(),
-            updated_at=datetime.now(),
-            view_count=0,
-            embedding_generated=False
-        )
-        
         news_service_with_mocks.repository.create.return_value = article_id
         embedding_service_with_mocks.repository.store_embedding.return_value = 1
         

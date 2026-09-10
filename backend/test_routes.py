@@ -2,7 +2,7 @@
 sys.path.insert(0, '.')
 
 try:
-    from src.api.routes import api_router, root_router
+    from src.api.routes import api_router, root_router  # noqa: F401
     print(f" Routes loaded: {len(api_router.routes)} API routes")
     
     # List all RAG routes

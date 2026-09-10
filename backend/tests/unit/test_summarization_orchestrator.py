@@ -25,14 +25,13 @@ from __future__ import annotations
 import json
 from dataclasses import dataclass
 from types import SimpleNamespace
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from src.services.summarization_orchestrator import (
     SummarizationOrchestrator,
-    SummarizationRunResult,
 )
 
 

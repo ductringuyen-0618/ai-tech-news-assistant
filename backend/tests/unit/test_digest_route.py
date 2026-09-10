@@ -7,7 +7,7 @@ call must NOT populate ``_DAILY_SUMMARY_CACHE`` for the day, since that
 cache is keyed per-UTC-date and shared by every visitor until midnight.
 """
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from unittest.mock import AsyncMock, patch
 
 import pytest

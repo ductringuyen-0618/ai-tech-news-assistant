@@ -73,3 +73,14 @@ Shipped: 2/3
   -- zero net-new content, only things `main` had that #7 didn't). Closed
   #7 as redundant with an explanatory comment rather than resolving the
   now-stale merge conflict.
+- 2026-09-11: No proposal in flight (001 rejected, 002 and 003 shipped),
+  so proposed `004-ask-this-article.md`: a per-article "Ask about this
+  article" Q&A box in `ArticleReader.tsx`, answered by a new
+  `POST /api/news/{id}/ask` endpoint that reuses `SummarizationService`'s
+  existing LLM-provider call path (no new provider/secret) and stays
+  independent of the Research route's single-in-flight lock. Distinct
+  from the already-shipped Research/"Ask AI" tab and from the
+  already-existing "Related coverage" section, and not a repeat of the
+  rejected `001-research-report-permalinks` proposal. Pulls from
+  deferred item #4 in `docs/issues/2026-09-review-followups.md`.
+  Awaiting human approval.

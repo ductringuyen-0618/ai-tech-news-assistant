@@ -1,6 +1,6 @@
 # TechPulse COO -- State
 
-Shipped: 2/3
+Shipped: 3/4
 
 ## Log
 - 2026-09-09: No proposals existed yet, so proposed two new engagement
@@ -84,3 +84,22 @@ Shipped: 2/3
   rejected `001-research-report-permalinks` proposal. Pulls from
   deferred item #4 in `docs/issues/2026-09-review-followups.md`.
   Awaiting human approval.
+- 2026-09-13: Repo owner approved `004-ask-this-article` via a GitHub
+  comment on issue #9 ("Approve"); applied the decision and started the
+  build on branch `coo/ask-this-article`. Worker implemented
+  `POST /api/news/{id}/ask` (cached, per-client rate-limited, independent
+  of `/api/research`'s in-flight lock) plus a collapsed Q&A box in
+  `ArticleReader.tsx`, with new backend tests including a real-thread
+  concurrency proof. An independent scrutiny-validator pass (all
+  CI-equivalent commands run and confirmed clean, pre-existing failures
+  distinguished from new ones via a clean `main` worktree) and a
+  product-quality reviewer pass (full live run: real backend, real Vite
+  dev server, real Chromium via Playwright, exercising the whole flow
+  including keyboard nav, mobile viewport, and a forced network failure)
+  both passed with no must-fix defects. Pushed and opened PR #10; CI
+  ("Build & Test", "Deploy Preview") went green and `mergeable_state: clean`
+  within one run. Shipped
+  `004-ask-this-article` (attempt 1) -- see
+  `docs/missions/coo/reports/ask-this-article.md` for the full trace. PR
+  #10: https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/10
+  left open (green, mergeable) for the repo owner to merge.

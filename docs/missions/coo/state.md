@@ -103,3 +103,10 @@ Shipped: 3/4
   `docs/missions/coo/reports/ask-this-article.md` for the full trace. PR
   #10: https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/10
   left open (green, mergeable) for the repo owner to merge.
+- 2026-09-14: No proposal in flight (001 rejected, 002/003/004 shipped; no
+  open `agentos:decision` issues), so proposed `005-daily-reading-streak.md`:
+  a purely client-side "N-day streak" badge (Duolingo/Wordle-style) built on
+  the existing `getClientId()`/localStorage pattern, no backend or secrets
+  needed. Distinct from all four prior proposals (permalinks, feed
+  reactions, Learning tab, per-article Q&A) and not previously listed in
+  `docs/issues/2026-09-review-followups.md`. Awaiting human approval.

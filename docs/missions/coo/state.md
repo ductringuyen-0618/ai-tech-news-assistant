@@ -110,3 +110,10 @@ Shipped: 3/4
   needed. Distinct from all four prior proposals (permalinks, feed
   reactions, Learning tab, per-article Q&A) and not previously listed in
   `docs/issues/2026-09-review-followups.md`. Awaiting human approval.
+- 2026-09-18: `005-daily-reading-streak` still `proposed` with no verdict on
+  issue #11 (no `agentos:approve`/`agentos:reject` label, no owner comment).
+  It is 3 days old and carried no `n=1` nudge marker yet, so per the silence
+  policy posted the first reminder (marker `<!-- agentos:nudge n=1 -->`,
+  "expires in 4 days") with the proposal's "What you get"/"Why start this
+  now" sections. No proposal is approved or in_progress, and 005 is still
+  in flight waiting on the human, so nothing else to do this fire.

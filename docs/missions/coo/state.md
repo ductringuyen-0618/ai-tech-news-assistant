@@ -117,3 +117,12 @@ Shipped: 3/4
   "expires in 4 days") with the proposal's "What you get"/"Why start this
   now" sections. No proposal is approved or in_progress, and 005 is still
   in flight waiting on the human, so nothing else to do this fire.
+- 2026-09-21: `005-daily-reading-streak` still `proposed` with no verdict on
+  issue #11 (no `agentos:approve`/`agentos:reject` label, no owner comment
+  besides the routine's own prior nudge). It is 6 days old (created
+  2026-09-14T16:07:11Z) and carried only the `n=1` nudge marker, so per the
+  silence policy posted the second reminder (marker `<!-- agentos:nudge n=2
+  -->`, "expires tomorrow") with the proposal's "What you get"/"Why start
+  this now" sections. It is not yet 7 whole days old, so it does not expire
+  this fire. No proposal is approved or in_progress, and 005 is still in
+  flight waiting on the human, so nothing else to do this fire.

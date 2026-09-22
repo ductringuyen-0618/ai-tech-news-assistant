@@ -126,3 +126,16 @@ Shipped: 3/4
   this now" sections. It is not yet 7 whole days old, so it does not expire
   this fire. No proposal is approved or in_progress, and 005 is still in
   flight waiting on the human, so nothing else to do this fire.
+- 2026-09-22: `005-daily-reading-streak` still had no verdict on issue #11
+  and was now 7+ days old (created 2026-09-14T16:07:11Z; fired at
+  2026-09-22T16:05:09Z). Per the silence policy, set its status to
+  `expired`, closed issue #11 with the standard expiry comment, and (since
+  an expired proposal no longer counts as in flight, and nothing else was
+  `approved`/`in_progress`/`building`) proposed
+  `006-digest-rss-feed.md`: a `GET /api/digest/rss` endpoint plus a small
+  "subscribe" link on the Digest tab, reusing the existing digest query
+  logic with stdlib XML (no new dependency, no secret, no schema change).
+  Pulled from the "RSS/JSON export of the digest" item explicitly listed
+  as deferred-but-unassigned in
+  `docs/issues/2026-09-review-followups.md`, and distinct from all five
+  prior proposals. Opened issue for the decision. Awaiting human approval.

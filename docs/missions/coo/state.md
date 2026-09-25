@@ -139,3 +139,11 @@ Shipped: 3/4
   as deferred-but-unassigned in
   `docs/issues/2026-09-review-followups.md`, and distinct from all five
   prior proposals. Opened issue for the decision. Awaiting human approval.
+- 2026-09-25: `006-digest-rss-feed` still `proposed` with no verdict on
+  issue #12 (no `agentos:approve`/`agentos:reject` label, no owner
+  comment). It is exactly 3 days old (created 2026-09-22T16:07:02Z) and
+  carried no nudge marker yet, so per the silence policy posted the first
+  reminder (marker `<!-- agentos:nudge n=1 -->`, "expires in 4 days") with
+  the proposal's "What you get"/"Why start this now" sections. No proposal
+  is approved or in_progress, and 006 is still in flight waiting on the
+  human, so nothing else to do this fire.

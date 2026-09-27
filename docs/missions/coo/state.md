@@ -1,6 +1,6 @@
 # TechPulse COO -- State
 
-Shipped: 3/4
+Shipped: 4/4
 
 ## Log
 - 2026-09-09: No proposals existed yet, so proposed two new engagement
@@ -147,3 +147,21 @@ Shipped: 3/4
   the proposal's "What you get"/"Why start this now" sections. No proposal
   is approved or in_progress, and 006 is still in flight waiting on the
   human, so nothing else to do this fire.
+- 2026-09-27: Repo owner approved `006-digest-rss-feed` via a GitHub
+  comment on issue #12 ("Approve"); applied the decision, closed the
+  issue, and started the build on branch `coo/digest-rss-feed` in the same
+  fire. Worker added `GET /api/digest/rss` (stdlib-only RSS 2.0, sharing
+  the same top-story query as `/api/digest/` via a new
+  `_fetch_top_story_rows()` helper) plus a small RSS subscribe link in
+  `DigestView.tsx`'s masthead, gated on the digest having already loaded.
+  An independent scrutiny-validator pass (all CI-equivalent commands
+  re-run from scratch, mypy's pre-existing error baseline confirmed
+  unchanged vs `main`) and a product-quality reviewer pass (design-token
+  consistency, loading-state gating, accessibility basics, real vs.
+  stubbed data) both passed with no must-fix defects. Pushed and opened
+  PR #13; CI ("Build & Test", "Deploy Preview") went green and
+  `mergeable_state: clean` within one run. Shipped `006-digest-rss-feed`
+  (attempt 1) -- see `docs/missions/coo/reports/digest-rss-feed.md` for
+  the full trace. PR #13:
+  https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/13
+  left open (green, mergeable) for the repo owner to merge.

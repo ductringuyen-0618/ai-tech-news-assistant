@@ -165,3 +165,15 @@ Shipped: 4/4
   the full trace. PR #13:
   https://github.com/ductringuyen-0618/ai-tech-news-assistant/pull/13
   left open (green, mergeable) for the repo owner to merge.
+- 2026-09-29: No proposal in flight (001 rejected, 002/003/004/006 shipped,
+  005 expired; no open `agentos:decision` issues), so proposed
+  `007-digest-permalinks.md`: a `date` query param on `GET /api/digest/`
+  plus `/digest/:date` frontend routing (mirroring the existing
+  `/article/:id` path pattern) and a "Copy link to this edition" button,
+  so a specific day's digest gets a stable, shareable URL instead of
+  always showing "whatever is newest." Pulled from the "Per-digest
+  permalinks" item explicitly listed as deferred-but-unassigned in
+  `docs/issues/2026-09-review-followups.md`, and distinct from all six
+  prior proposals (RSS export in 006 covers subscribing to the feed, not
+  linking to one specific past edition). Opened issue for the decision.
+  Awaiting human approval.

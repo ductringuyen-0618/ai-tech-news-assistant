@@ -22,9 +22,11 @@ import logging
 import sqlite3
 from collections import Counter, defaultdict
 from datetime import datetime, timedelta, timezone
+from email.utils import format_datetime
 from typing import Any, Dict, List, Optional, Tuple
+from xml.sax.saxutils import escape
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request, Response
 
 from ...core.config import get_settings
 from ...models.article import SummarizationRequest
@@ -85,6 +87,20 @@ def _parse_dt(raw: Any) -> Optional[datetime]:
 # ---------------------------------------------------------------------------
 
 
+def _fetch_top_story_rows(con: sqlite3.Connection, top: int) -> List[sqlite3.Row]:
+    """Shared query for "top N most-recent, non-archived articles" — used by
+    both ``/`` and ``/rss`` so the two endpoints never drift on selection
+    logic. Includes columns ``/rss`` needs (``url``, ``published_at``,
+    ``created_at``) in addition to the ones ``/`` renders."""
+    return con.execute(
+        "SELECT id, title, source, summary, content, categories, url, "
+        "       published_at, created_at "
+        "FROM articles WHERE is_archived = 0 "
+        "ORDER BY created_at DESC LIMIT ?",
+        (top,),
+    ).fetchall()
+
+
 @router.get("/")
 async def get_daily_digest(top: int = 5) -> Dict[str, Any]:
     """
@@ -101,12 +117,7 @@ async def get_daily_digest(top: int = 5) -> Dict[str, Any]:
         con.row_factory = sqlite3.Row
 
         # Top stories: most-recent N
-        rows = con.execute(
-            "SELECT id, title, source, summary, content, categories "
-            "FROM articles WHERE is_archived = 0 "
-            "ORDER BY created_at DESC LIMIT ?",
-            (top,),
-        ).fetchall()
+        rows = _fetch_top_story_rows(con, top)
 
         top_stories: List[Dict[str, Any]] = [
             {
@@ -168,6 +179,75 @@ async def get_daily_digest(top: int = 5) -> Dict[str, Any]:
         raise HTTPException(
             status_code=500, detail=f"Digest build failed: {exc}"
         )
+
+
+# ---------------------------------------------------------------------------
+# /api/digest/rss — RSS 2.0 feed of the same top stories, for feed readers.
+# ---------------------------------------------------------------------------
+
+RSS_TOP_N = 5
+
+
+@router.get("/rss")
+async def get_daily_digest_rss(request: Request) -> Response:
+    """Return the daily digest's top stories as an RSS 2.0 feed.
+
+    Reuses ``_fetch_top_story_rows`` (the same query ``/`` uses) so the two
+    endpoints never disagree on which articles are "today's top stories".
+    Built with stdlib XML escaping only — no new dependency.
+    """
+    db_path = _resolve_db_path()
+    channel_link = str(request.base_url)
+
+    try:
+        con = sqlite3.connect(db_path)
+        con.row_factory = sqlite3.Row
+        rows = _fetch_top_story_rows(con, RSS_TOP_N)
+        con.close()
+    except Exception as exc:
+        logger.error("Failed to build digest RSS feed: %s", exc, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail=f"Digest RSS build failed: {exc}"
+        )
+
+    items_xml: List[str] = []
+    for r in rows:
+        title = r["title"] or "(untitled)"
+        summary = (
+            r["summary"]
+            or (r["content"][:200] + "..." if r["content"] else "")
+        )
+        link = r["url"] or channel_link
+        published = _parse_dt(r["published_at"]) or _parse_dt(r["created_at"])
+        pub_date = format_datetime(published) if published else format_datetime(
+            datetime.now(timezone.utc)
+        )
+        guid = str(r["id"])
+        items_xml.append(
+            "    <item>\n"
+            f"      <title>{escape(title)}</title>\n"
+            f"      <link>{escape(link)}</link>\n"
+            f"      <description>{escape(summary)}</description>\n"
+            f"      <pubDate>{pub_date}</pubDate>\n"
+            f'      <guid isPermaLink="false">{escape(guid)}</guid>\n'
+            "    </item>"
+        )
+
+    rss_document = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<rss version="2.0">\n'
+        "  <channel>\n"
+        "    <title>TechPulse Daily Digest</title>\n"
+        f"    <link>{escape(channel_link)}</link>\n"
+        "    <description>"
+        "Today's top tech stories, curated by TechPulse."
+        "</description>\n"
+        + ("\n".join(items_xml) + "\n" if items_xml else "")
+        + "  </channel>\n"
+        "</rss>\n"
+    )
+
+    return Response(content=rss_document, media_type="application/rss+xml")
 
 
 # ---------------------------------------------------------------------------

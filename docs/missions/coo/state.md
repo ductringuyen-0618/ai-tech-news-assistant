@@ -177,3 +177,12 @@ Shipped: 4/4
   prior proposals (RSS export in 006 covers subscribing to the feed, not
   linking to one specific past edition). Opened issue for the decision.
   Awaiting human approval.
+- 2026-10-02: `007-digest-permalinks` still `proposed` with no verdict on
+  issue #14 (no `agentos:approve`/`agentos:reject` label, no owner
+  comment). It is exactly 3 days old (created 2026-09-29T16:08:11Z) and
+  carried no nudge marker yet, so per the silence policy posted the first
+  reminder (marker `<!-- agentos:nudge n=1 -->`, "expires in 4 days") with
+  the proposal's "What you get"/"Why start this now" sections. No
+  proposal is approved or in_progress (PRs #10 and #13 are already
+  `shipped` in their proposals and sitting green, waiting on the repo
+  owner to merge — not mine to touch), so nothing else to do this fire.

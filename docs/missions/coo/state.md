@@ -186,3 +186,12 @@ Shipped: 4/4
   proposal is approved or in_progress (PRs #10 and #13 are already
   `shipped` in their proposals and sitting green, waiting on the repo
   owner to merge — not mine to touch), so nothing else to do this fire.
+- 2026-10-05: `007-digest-permalinks` still `proposed` with no verdict on
+  issue #14 (no `agentos:approve`/`agentos:reject` label, no owner comment
+  besides the routine's own prior `n=1` nudge). It is 5 whole days old
+  (created 2026-09-29T16:08:11Z, fired 2026-10-05T16:06:37Z) — past the
+  3-day mark where `n=1` already posted, but not yet the 6-day mark where
+  `n=2` applies, so no new nudge this fire. No proposal is approved or
+  in_progress, and 007 is still in flight waiting on the human (PRs #10
+  and #13 remain green and unmerged, still not mine to touch), so nothing
+  else to do this fire.

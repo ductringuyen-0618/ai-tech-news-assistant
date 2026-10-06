@@ -195,3 +195,18 @@ Shipped: 4/4
   in_progress, and 007 is still in flight waiting on the human (PRs #10
   and #13 remain green and unmerged, still not mine to touch), so nothing
   else to do this fire.
+- 2026-10-06: `007-digest-permalinks` hit 7 whole days old (created
+  2026-09-29T16:08:11Z, fired 2026-10-06T16:11:39Z) with still no verdict
+  on issue #14 beyond its own prior `n=1` nudge. Per the silence policy,
+  set its status to `expired`, closed issue #14 with the standard expiry
+  comment. Since an expired proposal no longer counts as in flight and
+  nothing else was `approved`/`in_progress`/`building`, proposed
+  `008-social-share-buttons.md`: frontend-only "Share" button on article
+  cards and the article reader (native share sheet on mobile, X/LinkedIn/
+  copy-link fallback menu on desktop), reusing the existing `/article/:id`
+  URL scheme with no backend change and no new dependency. Confirmed via a
+  fresh codebase check that article save/bookmarking, "new since last
+  visit," and digest email capture are all already shipped (so not
+  re-proposable), and that social share buttons were completely absent
+  anywhere in the frontend — distinct from all seven prior proposals.
+  Opened issue for the decision. Awaiting human approval.

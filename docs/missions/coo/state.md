@@ -216,3 +216,11 @@ Shipped: 4/4
   fired 2026-10-08T16:07:05Z), so no nudge is due yet. No proposal is
   `approved`/`in_progress`/`building`, and 008 is still in flight waiting
   on the human, so nothing else to do this fire.
+- 2026-10-09: `008-social-share-buttons` still `proposed` with no verdict
+  on issue #15 (no `agentos:approve`/`agentos:reject` label, no owner
+  comment). Still not yet 3 whole days old (created 2026-10-06T16:19:56Z,
+  fired 2026-10-09T16:06:43Z — about 71h46m elapsed), so no nudge is due
+  yet. No proposal is `approved`/`in_progress`/`building` (PRs #10 and
+  #13 remain green and unmerged from earlier ships, not mine to touch),
+  and 008 is still in flight waiting on the human, so nothing else to do
+  this fire.

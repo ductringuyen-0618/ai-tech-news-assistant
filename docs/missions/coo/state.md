@@ -253,3 +253,15 @@ Shipped: 4/4
   `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
   unmerged, not mine to touch), and 008 is still in flight waiting on the
   human, so nothing else to do this fire.
+- 2026-10-13: `008-social-share-buttons` still `proposed` with no verdict
+  on issue #15 — its only comment is still the routine's own prior `n=1`
+  nudge, no `agentos:approve`/`agentos:reject` label was added, and no
+  owner reply. It is 6 days 23h47m old (created 2026-10-06T16:19:56Z,
+  fired 2026-10-13T16:07:03Z) — 6 days or older with no `n=2` nudge marker
+  yet, so per the silence policy posted the second reminder (marker
+  `<!-- agentos:nudge n=2 -->`, "expires tomorrow") with the proposal's
+  "What you get"/"Why start this now" sections. It is not yet 7 whole days
+  old, so it does not expire this fire. No proposal is
+  `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
+  unmerged, not mine to touch), and 008 is still in flight waiting on the
+  human, so nothing else to do this fire.

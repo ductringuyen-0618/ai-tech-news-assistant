@@ -265,3 +265,24 @@ Shipped: 4/4
   `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
   unmerged, not mine to touch), and 008 is still in flight waiting on the
   human, so nothing else to do this fire.
+- 2026-10-14: `008-social-share-buttons` hit 7 whole days old (created
+  2026-10-06T16:19:56Z, fired 2026-10-14T16:06:34Z) with still no verdict
+  on issue #15 beyond its own prior `n=1`/`n=2` nudges — both comments
+  there were the routine's own, no `agentos:approve`/`agentos:reject`
+  label and no owner reply. Per the silence policy, set its status to
+  `expired`, closed issue #15 with the standard expiry comment. Since an
+  expired proposal no longer counts as in flight and nothing else was
+  `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
+  unmerged from earlier ships, not mine to touch), proposed
+  `009-research-daily-quota.md`: a per-visitor daily cap on the Research
+  agent (keyed on the existing anonymous `X-Client-Id`), surfaced as a
+  visible "N of 5 used today · resets at midnight UTC" status instead of
+  the current silent global in-flight-only gate. Pulled from the
+  "rate-limiting / soft-paywall UI on the Research agent" item explicitly
+  listed as deferred-but-unassigned in
+  `docs/issues/2026-09-review-followups.md` (previously blocked on
+  `client_id` identity landing, which it now has), and distinct from all
+  eight prior proposals — confirmed via a fresh read of every proposal
+  file plus the current frontend component list that no reaction/quota/
+  rate-limit UI exists on the Research tab today. Opened issue for the
+  decision. Awaiting human approval.

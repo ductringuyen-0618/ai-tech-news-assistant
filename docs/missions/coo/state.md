@@ -286,3 +286,11 @@ Shipped: 4/4
   file plus the current frontend component list that no reaction/quota/
   rate-limit UI exists on the Research tab today. Opened issue for the
   decision. Awaiting human approval.
+- 2026-10-16: `009-research-daily-quota` still `proposed` with no verdict
+  on issue #16 (no `agentos:approve`/`agentos:reject` label, no comments
+  at all). It is just under 2 whole days old (created
+  2026-10-14T16:10:28Z, fired 2026-10-16T16:07:33Z), short of the 3-day
+  mark where the first nudge applies, so no nudge is due yet. No proposal
+  is `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open
+  and unmerged from earlier ships, not mine to touch), and 009 is still
+  in flight waiting on the human, so nothing else to do this fire.

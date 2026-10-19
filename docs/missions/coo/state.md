@@ -313,3 +313,13 @@ Shipped: 4/4
   `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
   unmerged from earlier ships, not mine to touch), and 009 is still in
   flight waiting on the human, so nothing else to do this fire.
+- 2026-10-19: `009-research-daily-quota` still `proposed` with no verdict
+  on issue #16 — its only comment is still the routine's own prior `n=1`
+  nudge, no `agentos:approve`/`agentos:reject` label was added, and no
+  owner reply. It is 4 days 23h57m old (created 2026-10-14T16:10:05Z,
+  fired 2026-10-19T16:06:50Z) — past the 3-day mark where `n=1` already
+  posted, but short of the 6-day mark where `n=2` applies, so no new
+  nudge this fire. No proposal is `approved`/`in_progress`/`building`
+  (PRs #4, #10 and #13 remain open and unmerged from earlier ships, not
+  mine to touch), and 009 is still in flight waiting on the human, so
+  nothing else to do this fire.

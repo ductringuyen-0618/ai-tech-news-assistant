@@ -333,3 +333,15 @@ Shipped: 4/4
   `building` (PRs #4, #10 and #13 remain open and unmerged from earlier
   ships, not mine to touch), and 009 is still in flight waiting on the
   human, so nothing else to do this fire.
+- 2026-10-21: `009-research-daily-quota` still `proposed` with no verdict
+  on issue #16 — its only comment is still the routine's own prior `n=1`
+  nudge, no `agentos:approve`/`agentos:reject` label was added, and no
+  owner reply. It is 6 days 23h57m old (created 2026-10-14T16:10:28Z,
+  fired 2026-10-21T16:07:52Z) — 6 days or older with no `n=2` nudge
+  marker yet, so per the silence policy posted the second reminder
+  (marker `<!-- agentos:nudge n=2 -->`, "expires tomorrow") with the
+  proposal's "What you get"/"Why start this now" sections. It is not yet
+  7 whole days old, so it does not expire this fire. No proposal is
+  `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
+  unmerged from earlier ships, not mine to touch), and 009 is still in
+  flight waiting on the human, so nothing else to do this fire.

@@ -345,3 +345,25 @@ Shipped: 4/4
   `approved`/`in_progress`/`building` (PRs #4, #10 and #13 remain open and
   unmerged from earlier ships, not mine to touch), and 009 is still in
   flight waiting on the human, so nothing else to do this fire.
+- 2026-10-22: `009-research-daily-quota` hit 8 whole days old (created
+  2026-10-14T16:10:28Z, fired 2026-10-22T16:13:21Z) with still no verdict
+  on issue #16 beyond its own prior `n=1`/`n=2` nudges — both comments
+  there were the routine's own (posted under the owner's account by
+  automation, neither a real approve/reject reply), no
+  `agentos:approve`/`agentos:reject` label was added. Per the silence
+  policy, set its status to `expired`, closed issue #16 with the standard
+  expiry comment. Since an expired proposal no longer counts as in flight
+  and nothing else was `approved`/`in_progress`/`building` (PRs #4, #10
+  and #13 remain open and unmerged from earlier ships, not mine to
+  touch), proposed `010-article-coverage-chip.md`: a frontend-only
+  "Covered by N sources" chip in `ArticleReader.tsx`'s existing "Related
+  coverage" section, derived entirely from the `related-articles`
+  response the reader already fetches (no new endpoint, no new network
+  call), reusing the exact distinct-source-counting pattern already
+  shipped in `TrendingRail.tsx`'s per-entity "· Nsrc" chip. Pulled from
+  the "coverage-diversity chip" fallback explicitly recommended in
+  `docs/issues/2026-09-review-followups.md` item #2 as the cheap
+  alternative to full story clustering, and distinct from all nine prior
+  proposals (004/008 covered per-article Q&A and sharing; 009, now
+  expired, covered Research-agent rate-limiting, not coverage counts).
+  Opened issue for the decision. Awaiting human approval.

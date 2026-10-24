@@ -90,6 +90,7 @@ export const API_ENDPOINTS = {
   digestDailySummary: '/api/digest/daily-summary',
   digestCurated: '/api/digest/curated',
   digestTopics: '/api/digest/topics',
+  digestRss: '/api/digest/rss',
 
   // Digest email capture (storage only -- no sending pipeline yet, see
   // docs/issues/2026-09-review-followups.md #1).

@@ -35,6 +35,9 @@ export const API_ENDPOINTS = {
   // the canonical (trailing-slash) URL from the start.
   news: '/api/news/',
   newsById: (id: string) => `/api/news/${id}`,
+  // Per-article "Ask about this article" Q&A (proposal 004). No trailing-
+  // slash ambiguity here since this isn't a router-prefix root.
+  newsAsk: (id: string) => `/api/news/${id}/ask`,
   newsSearch: '/api/news/search',
   newsIngest: '/api/news/ingest',
   newsSources: '/api/news/sources',

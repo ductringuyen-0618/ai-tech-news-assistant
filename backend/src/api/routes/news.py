@@ -8,20 +8,22 @@ retrieval, filtering, and statistics.
 
 import json
 import sqlite3
-from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import Dict, Any, List, Optional
+import time
+from fastapi import APIRouter, HTTPException, Query, Depends, Request
+from pydantic import BaseModel, Field
+from typing import Dict, Any, List, Optional, Tuple
 
-from ...services import NewsService
+from ...services import NewsService, SummarizationService
 from ...repositories import ArticleRepository
 from ...models.article import (
-    Article, 
+    Article,
     ArticleSearchRequest,
     ArticleStats,
     IngestRequest,
     IngestResponse
 )
 from ...models.api import BaseResponse, PaginatedResponse, PaginationInfo
-from ...core.exceptions import NewsIngestionError
+from ...core.exceptions import NewsIngestionError, RateLimitError
 
 router = APIRouter(prefix="/news", tags=["News"])
 
@@ -35,6 +37,12 @@ def get_article_repository() -> ArticleRepository:
     from ...core.config import get_settings
     settings = get_settings()
     return ArticleRepository(settings.get_database_file_path())
+
+def get_summarization_service() -> SummarizationService:
+    """Get summarization service instance (used by /{article_id}/ask for its
+    plain Groq-first/Ollama-fallback LLM call -- same dispatch
+    `summarize_content` uses, via `SummarizationService._call_llm`)."""
+    return SummarizationService()
 
 
 @router.get("/", response_model=PaginatedResponse[Article])
@@ -434,8 +442,148 @@ async def get_article(
             message="Article retrieved successfully",
             data=article
         )
-        
+
     except Exception as e:
         if "not found" in str(e).lower():
             raise HTTPException(status_code=404, detail=f"Article not found: {article_id}")
         raise HTTPException(status_code=500, detail=f"Failed to get article: {str(e)}")
+
+
+# ---------------------------------------------------------------------- #
+#  Ask about this article (per-article Q&A -- proposal 004)
+# ---------------------------------------------------------------------- #
+#
+# Deliberately separate from `POST /api/research`: this is a single plain
+# LLM call answered strictly from one article's own stored content, not
+# the multi-subagent `AgenticResearchService`. It must never touch
+# `research.py`'s process-wide in-flight lock, so a burst of article
+# questions can never block (or be blocked by) a Research run -- hence no
+# import from `research.py` anywhere in this module.
+
+
+class AskRequest(BaseModel):
+    """Request body for `POST /{article_id}/ask`."""
+    question: str = Field(
+        ...,
+        min_length=1,
+        max_length=1000,
+        description="Reader's question about this article",
+    )
+
+
+class AskResponse(BaseModel):
+    """Response body for `POST /{article_id}/ask`."""
+    answer: str
+
+
+# In-memory response cache, keyed on (article_id, normalized question), for
+# the process lifetime. Matches CLAUDE.md's "cache LLM responses"
+# convention and cheaply handles "two visitors ask the same obvious
+# question" without hitting the LLM twice.
+_ask_cache: Dict[Tuple[int, str], str] = {}
+
+# Minimal per-client rate limit, scoped to only this endpoint (fixed
+# window: at most _ASK_RATE_LIMIT_MAX requests per _ASK_RATE_LIMIT_WINDOW_
+# SECONDS per client key). Self-contained here rather than a new shared
+# rate-limiting module -- this repo has no generic framework to reuse and
+# the proposal explicitly scopes this to just this route.
+_ASK_RATE_LIMIT_MAX_REQUESTS = 10
+_ASK_RATE_LIMIT_WINDOW_SECONDS = 60.0
+_ask_rate_limit_buckets: Dict[str, List[float]] = {}
+
+
+def _enforce_ask_rate_limit(client_key: str) -> None:
+    """Raise `RateLimitError` (-> 429 via the app's registered handler) once
+    `client_key` has made `_ASK_RATE_LIMIT_MAX_REQUESTS` calls within the
+    trailing `_ASK_RATE_LIMIT_WINDOW_SECONDS`."""
+    now = time.monotonic()
+    window_start = now - _ASK_RATE_LIMIT_WINDOW_SECONDS
+    recent = [t for t in _ask_rate_limit_buckets.get(client_key, []) if t > window_start]
+    if len(recent) >= _ASK_RATE_LIMIT_MAX_REQUESTS:
+        raise RateLimitError(
+            f"Too many questions for client '{client_key}' -- "
+            f"max {_ASK_RATE_LIMIT_MAX_REQUESTS} per "
+            f"{int(_ASK_RATE_LIMIT_WINDOW_SECONDS)}s",
+            retry_after=int(_ASK_RATE_LIMIT_WINDOW_SECONDS),
+        )
+    recent.append(now)
+    _ask_rate_limit_buckets[client_key] = recent
+
+
+def _build_ask_prompt(article: Article, question: str) -> str:
+    """Build a prompt that answers `question` strictly from `article`'s own
+    stored content -- title + summary (or a content excerpt when there's
+    no summary yet) + source. Instructs the model to say plainly that the
+    answer isn't covered rather than guess or pull in outside knowledge."""
+    body = (article.summary or "").strip()
+    if not body:
+        body = (article.content or "").strip()[:2000]
+
+    return (
+        "You are answering a reader's question about a single news "
+        "article, using ONLY the article content given below. Do not use "
+        "any outside knowledge, and do not guess. If the question cannot "
+        "be answered from this article's content, say plainly that it "
+        "isn't covered in this article instead of speculating.\n\n"
+        f"Title: {article.title}\n"
+        f"Source: {article.source}\n"
+        f"Content: {body}\n\n"
+        f"Question: {question}\n\n"
+        "Answer (based only on the article above):"
+    )
+
+
+@router.post("/{article_id}/ask", response_model=AskResponse)
+async def ask_about_article(
+    article_id: int,
+    payload: AskRequest,
+    request: Request,
+    repo: ArticleRepository = Depends(get_article_repository),
+    summarizer: SummarizationService = Depends(get_summarization_service),
+) -> AskResponse:
+    """
+    Answer a reader's question about a single article, grounded strictly in
+    that article's own stored content.
+
+    Reuses `SummarizationService._call_llm` -- the same Groq-first,
+    Ollama-fallback dispatch `summarize_content` already uses -- for one
+    plain request/response call. No SSE, no agent dispatch, and
+    independent of `POST /api/research`'s in-flight lock.
+
+    Args:
+        article_id: The article ID
+        payload: `{"question": str}`
+
+    Returns:
+        `{"answer": str}`
+    """
+    client_key = request.headers.get("X-Client-Id") or (
+        request.client.host if request.client else "unknown"
+    )
+    _enforce_ask_rate_limit(client_key)
+
+    try:
+        article = await repo.get_by_id(article_id)
+    except Exception as e:
+        if "not found" in str(e).lower():
+            raise HTTPException(status_code=404, detail=f"Article not found: {article_id}")
+        raise HTTPException(status_code=500, detail=f"Failed to get article: {str(e)}")
+
+    normalized_question = payload.question.strip().lower()
+    cache_key = (article_id, normalized_question)
+    cached_answer = _ask_cache.get(cache_key)
+    if cached_answer is not None:
+        return AskResponse(answer=cached_answer)
+
+    prompt = _build_ask_prompt(article, payload.question.strip())
+
+    try:
+        answer_text, _word_count = await summarizer._call_llm(prompt)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500, detail=f"Failed to answer question: {str(e)}"
+        )
+
+    answer = answer_text.strip()
+    _ask_cache[cache_key] = answer
+    return AskResponse(answer=answer)

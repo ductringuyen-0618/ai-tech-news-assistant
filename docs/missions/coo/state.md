@@ -367,3 +367,12 @@ Shipped: 4/4
   proposals (004/008 covered per-article Q&A and sharing; 009, now
   expired, covered Research-agent rate-limiting, not coverage counts).
   Opened issue for the decision. Awaiting human approval.
+- 2026-10-24: `010-article-coverage-chip` still `proposed` with no verdict
+  on issue #17 (no `agentos:approve`/`agentos:reject` label, no comments
+  at all). It is just under 2 whole days old (created
+  2026-10-22T16:20:03Z, fired 2026-10-24T16:05:57Z — about 47h46m
+  elapsed), short of the 3-day mark where the first nudge applies, so no
+  nudge is due yet. No proposal is `approved`/`in_progress`/`building`,
+  and 010 is still in flight waiting on the human, so nothing else to do
+  this fire. PRs #4, #10 and #13 remain open, green/unmerged from earlier
+  ships and not mine to touch.

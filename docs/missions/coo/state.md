@@ -376,3 +376,12 @@ Shipped: 4/4
   and 010 is still in flight waiting on the human, so nothing else to do
   this fire. PRs #4, #10 and #13 remain open, green/unmerged from earlier
   ships and not mine to touch.
+- 2026-10-25: `010-article-coverage-chip` still `proposed` with no verdict
+  on issue #17 (no `agentos:approve`/`agentos:reject` label, no comments
+  at all). It is just under 3 whole days old (created
+  2026-10-22T16:20:03Z, fired 2026-10-25T16:07:24Z — about 71h47m
+  elapsed), still short of the 3-day mark where the first nudge applies,
+  so no nudge is due yet. No proposal is `approved`/`in_progress`/
+  `building`, and 010 is still in flight waiting on the human, so nothing
+  else to do this fire. PRs #4, #10 and #13 remain open, green/unmerged
+  from earlier ships and not mine to touch.

@@ -405,3 +405,15 @@ Shipped: 4/4
   and 010 is still in flight waiting on the human, so nothing else to do
   this fire. PRs #4, #10 and #13 remain open, green/unmerged from earlier
   ships and not mine to touch.
+- 2026-10-28: `010-article-coverage-chip` still `proposed` with no verdict
+  on issue #17 — its only comment was still the routine's own prior `n=1`
+  nudge, no `agentos:approve`/`agentos:reject` label was added, and no
+  owner reply. It is 5 days 23h48m old (created 2026-10-22T16:19:39Z,
+  fired 2026-10-28T16:07:42Z) — 6 days or older with no `n=2` nudge
+  marker yet, so per the silence policy posted the second reminder
+  (marker `<!-- agentos:nudge n=2 -->`, "expires tomorrow") with the
+  proposal's "What you get"/"Why start this now" sections. It is not yet
+  7 whole days old, so it does not expire this fire. No proposal is
+  `approved`/`in_progress`/`building`, and 010 is still in flight waiting
+  on the human, so nothing else to do this fire. PRs #4, #10 and #13
+  remain open, green/unmerged from earlier ships and not mine to touch.

@@ -417,3 +417,13 @@ Shipped: 4/4
   `approved`/`in_progress`/`building`, and 010 is still in flight waiting
   on the human, so nothing else to do this fire. PRs #4, #10 and #13
   remain open, green/unmerged from earlier ships and not mine to touch.
+- 2026-10-29: `010-article-coverage-chip` still `proposed` with no verdict
+  on issue #17 — its only two comments are still the routine's own prior
+  `n=1`/`n=2` nudges, no `agentos:approve`/`agentos:reject` label was
+  added, and no owner reply. It is 6 days 23h51m old (created
+  2026-10-22T16:19:39Z, fired 2026-10-29T16:10:47Z) — past the 6-day mark
+  where `n=2` already posted, but just short of the 7-day mark where it
+  would expire, so no new action on the issue this fire. No proposal is
+  `approved`/`in_progress`/`building`, and 010 is still in flight waiting
+  on the human, so nothing else to do this fire. PRs #4, #10 and #13
+  remain open, green/unmerged from earlier ships and not mine to touch.

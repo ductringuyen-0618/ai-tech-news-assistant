@@ -427,3 +427,17 @@ Shipped: 4/4
   `approved`/`in_progress`/`building`, and 010 is still in flight waiting
   on the human, so nothing else to do this fire. PRs #4, #10 and #13
   remain open, green/unmerged from earlier ships and not mine to touch.
+- 2026-10-30: `010-article-coverage-chip` hit the 7-day mark with no
+  verdict on issue #17 (created 2026-10-22T16:19:39Z, fired
+  2026-10-30T16:39:18Z, both `n=1`/`n=2` nudges posted, no owner reply or
+  `agentos:approve`/`agentos:reject` label) — expired it per the silence
+  policy and closed #17 as not planned. That cleared the one-idea-in-
+  flight slot, so in the same fire proposed `011-your-interests-panel`:
+  a new "Your Interests" section in Settings that surfaces and lets
+  readers reset the source/category weights the existing feed-reactions
+  system (002, shipped) has been silently recording since last month —
+  built entirely on `readInterestWeights`/`clearInterestWeights`, which
+  already exist in `interestWeights.ts` and were previously unused for
+  display. No app code touched. Opened issue #18 for the decision. PRs
+  #4, #10 and #13 remain open, green/unmerged from earlier ships and not
+  mine to touch.

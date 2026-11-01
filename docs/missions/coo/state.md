@@ -441,3 +441,12 @@ Shipped: 4/4
   display. No app code touched. Opened issue #18 for the decision. PRs
   #4, #10 and #13 remain open, green/unmerged from earlier ships and not
   mine to touch.
+- 2026-11-01: `011-your-interests-panel` still `proposed` with no verdict
+  on issue #18 (no `agentos:approve`/`agentos:reject` label, no comments
+  at all). It is just under 2 whole days old (created
+  2026-10-30T16:44:03Z, fired 2026-11-01T16:07:57Z — about 47h24m
+  elapsed), short of the 3-day mark where the first nudge applies, so no
+  nudge is due yet. No proposal is `approved`/`in_progress`/`building`,
+  and 011 is still in flight waiting on the human, so nothing else to do
+  this fire. PRs #4, #10 and #13 remain open and unmerged from earlier
+  ships, not mine to touch.

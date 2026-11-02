@@ -5,11 +5,12 @@ import {
   Layers,
   ArrowUp,
   MessageCircle,
+  Rss,
 } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Skeleton } from './ui/skeleton';
 import { DropCap } from './DropCap';
-import { API_ENDPOINTS, apiFetch } from '../config/api';
+import { API_BASE_URL, API_ENDPOINTS, apiFetch } from '../config/api';
 
 /**
  * DigestView -- M5 newspaper-section restyle of the daily digest.
@@ -418,15 +419,30 @@ export function DigestView({
     <div className="max-w-5xl mx-auto space-y-10">
       {/* === DIGEST MASTHEAD ============================== */}
       <header className="space-y-2 border-b-2 border-[var(--foreground)] pb-4">
-        <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-          ━ {formatMasthead(digest.date)} ━ DAILY EDITION
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-2">
+            <div className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+              ━ {formatMasthead(digest.date)} ━ DAILY EDITION
+            </div>
+            <h1 className="font-display text-[36px] font-medium tracking-tight text-foreground leading-[1.05]">
+              Daily Tech Digest
+            </h1>
+            <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+              the agentic desk · curated by the wire
+            </p>
+          </div>
+          <a
+            href={`${API_BASE_URL}${API_ENDPOINTS.digestRss}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            data-testid="digest-rss-link"
+            title="Subscribe via RSS"
+            className="flex shrink-0 items-center gap-1.5 font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft transition-colors hover:text-foreground"
+          >
+            <Rss className="h-3.5 w-3.5" aria-hidden="true" />
+            RSS
+          </a>
         </div>
-        <h1 className="font-display text-[36px] font-medium tracking-tight text-foreground leading-[1.05]">
-          Daily Tech Digest
-        </h1>
-        <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
-          the agentic desk · curated by the wire
-        </p>
       </header>
 
       {/* === DAILY BRIEF (AI-generated summary) ============== */}

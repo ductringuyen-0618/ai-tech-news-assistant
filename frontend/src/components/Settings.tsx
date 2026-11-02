@@ -36,8 +36,13 @@
  *     the testid-contract level.
  */
 import { useState } from 'react';
+import { toast } from 'sonner';
 import { useTheme, Theme } from './ThemeProvider';
 import { TopicFilter } from './TopicFilter';
+import {
+  readInterestWeights,
+  clearInterestWeights,
+} from '../lib/interestWeights';
 
 export const DENSITY_STORAGE_KEY = 'techpulse-density';
 export const DENSITY_PREFERENCE_KEY = 'techpulse-density-preference';
@@ -107,6 +112,45 @@ function SectionEyebrow({ label }: { label: string }) {
   );
 }
 
+interface InterestEntry {
+  label: string;
+  weight: number;
+}
+
+/** Strips the `source:`/`category:` namespace prefix off a weight key. */
+function interestLabel(key: string): string {
+  const separatorIndex = key.indexOf(':');
+  return separatorIndex === -1 ? key : key.slice(separatorIndex + 1);
+}
+
+function splitInterestWeights(weights: Record<string, number>): {
+  more: InterestEntry[];
+  less: InterestEntry[];
+} {
+  const entries = Object.entries(weights)
+    .filter(([, weight]) => weight !== 0)
+    .map(([key, weight]) => ({ label: interestLabel(key), weight }));
+
+  return {
+    more: entries
+      .filter(entry => entry.weight > 0)
+      .sort((a, b) => b.weight - a.weight),
+    less: entries
+      .filter(entry => entry.weight < 0)
+      .sort((a, b) => a.weight - b.weight),
+  };
+}
+
+const MAX_INTEREST_ITEMS = 5;
+
+/** Joins the top N entries' labels, folding any remainder into "+N more". */
+function formatInterestList(entries: InterestEntry[]): string {
+  const shown = entries.slice(0, MAX_INTEREST_ITEMS);
+  const remaining = entries.length - shown.length;
+  const labels = shown.map(entry => entry.label).join(', ');
+  return remaining > 0 ? `${labels} +${remaining} more` : labels;
+}
+
 export function Settings({
   selectedCategories,
   onCategoriesChange,
@@ -118,9 +162,18 @@ export function Settings({
   const [density, setDensityState] = useState<Density>(() =>
     readStoredDensity()
   );
+  const [interestWeights, setInterestWeights] = useState<
+    Record<string, number>
+  >(() => readInterestWeights());
 
   const handleTheme = (next: Theme) => {
     setTheme(next);
+  };
+
+  const handleResetInterests = () => {
+    clearInterestWeights();
+    setInterestWeights({});
+    toast.success('Your interests have been reset');
   };
 
   const handleDensity = (next: Density) => {
@@ -206,6 +259,52 @@ export function Settings({
             />
           </div>
         </div>
+      </section>
+
+      {/* === YOUR INTERESTS ========================= */}
+      <section className="space-y-4" data-testid="settings-interests">
+        <SectionEyebrow label="YOUR INTERESTS" />
+        <p className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+          learned from your more / less like this reactions
+        </p>
+
+        {(() => {
+          const { more, less } = splitInterestWeights(interestWeights);
+          if (more.length === 0 && less.length === 0) {
+            return (
+              <p className="text-sm text-foreground-soft">
+                React to articles in your feed and your interests will show up
+                here.
+              </p>
+            );
+          }
+          return (
+            <div className="space-y-2" data-testid="settings-interests-list">
+              {more.length > 0 && (
+                <p className="text-sm text-foreground">
+                  <span className="font-mono-tx text-[11px] uppercase-eyebrow text-signal">
+                    More of:
+                  </span>{' '}
+                  {formatInterestList(more)}
+                </p>
+              )}
+              {less.length > 0 && (
+                <p className="text-sm text-foreground">
+                  <span className="font-mono-tx text-[11px] uppercase-eyebrow text-foreground-soft">
+                    Less of:
+                  </span>{' '}
+                  {formatInterestList(less)}
+                </p>
+              )}
+              <TickerOption
+                active={false}
+                label="reset my interests"
+                onClick={handleResetInterests}
+                testId="settings-interests-reset"
+              />
+            </div>
+          );
+        })()}
       </section>
 
       {/* === TOPICS (delegated to TopicFilter) ===== */}

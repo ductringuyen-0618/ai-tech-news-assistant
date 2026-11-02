@@ -1,6 +1,6 @@
 ---
-status: in_progress
-attempts: 0
+status: shipped
+attempts: 1
 branch: coo/your-interests-panel
 ---
 # Your Interests Panel

@@ -450,3 +450,17 @@ Shipped: 4/4
   and 011 is still in flight waiting on the human, so nothing else to do
   this fire. PRs #4, #10 and #13 remain open and unmerged from earlier
   ships, not mine to touch.
+- 2026-11-02: Fired on a push to `main` — the repo owner merged PR #13
+  (`006-digest-rss-feed`). That commit carries no COO-routine
+  co-author trailer and the checked-out HEAD matches `origin/main`, so
+  this was not an own-push loop; proceeded as normal. No open
+  `agentos:decision` issue has a verdict: issue #18
+  (`011-your-interests-panel`) still has no `agentos:approve`/
+  `agentos:reject` label and no comments at all, and at ~1 day 8h old
+  (created 2026-10-30T16:44:03Z, fired 2026-11-02T01:12:31Z) it is well
+  short of the 3-day mark, so no nudge is due. No proposal is
+  `approved`/`in_progress`/`building` (006 shipped and its PR is now
+  merged; 011 remains `proposed`), and since 011 is still in flight
+  waiting on the human, nothing to propose either. Nothing else to do
+  this fire. PRs #4 and #10 remain open and unmerged from earlier ships,
+  not mine to touch.

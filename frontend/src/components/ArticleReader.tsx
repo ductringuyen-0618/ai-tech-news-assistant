@@ -108,6 +108,17 @@ export default function ArticleReader({
   const [relatedEntity, setRelatedEntity] = useState<string | null>(null);
   const [related, setRelated] = useState<RelatedArticle[] | null>(null);
 
+  // "Ask about this article" -- session-only (component state, not
+  // persisted) Q&A history so a second question on the same article
+  // appends to, rather than replaces, the visible history.
+  const [askOpen, setAskOpen] = useState(false);
+  const [askQuestion, setAskQuestion] = useState('');
+  const [askLoading, setAskLoading] = useState(false);
+  const [askError, setAskError] = useState<string | null>(null);
+  const [askHistory, setAskHistory] = useState<
+    { question: string; answer: string }[]
+  >([]);
+
   useEffect(() => {
     setCurrentId(articleId);
   }, [articleId]);
@@ -120,6 +131,10 @@ export default function ArticleReader({
     setArticle(null);
     setRelated(null);
     setRelatedEntity(null);
+    setAskHistory([]);
+    setAskQuestion('');
+    setAskError(null);
+    setAskLoading(false);
 
     (async () => {
       try {
@@ -176,6 +191,32 @@ export default function ArticleReader({
 
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) onClose?.();
+  };
+
+  const handleAskSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const question = askQuestion.trim();
+    if (!question || !article || askLoading) return;
+
+    setAskLoading(true);
+    setAskError(null);
+    try {
+      const res = await apiFetch<{ answer: string }>(
+        API_ENDPOINTS.newsAsk(String(article.id)),
+        {
+          method: 'POST',
+          body: JSON.stringify({ question }),
+        }
+      );
+      setAskHistory(h => [...h, { question, answer: res.answer }]);
+      setAskQuestion('');
+    } catch {
+      setAskError(
+        "Couldn't get an answer. Check your connection and try again."
+      );
+    } finally {
+      setAskLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -421,6 +462,83 @@ export default function ArticleReader({
               >
                 Read the full story at {hostname(article.url)} {'→'}
               </a>
+
+              <div
+                className="mt-6 pt-4 border-t border-[var(--rule)]"
+                data-testid="article-ask-section"
+              >
+                <button
+                  type="button"
+                  onClick={() => setAskOpen(o => !o)}
+                  aria-expanded={askOpen}
+                  data-testid="article-ask-toggle"
+                  className="w-full flex items-center justify-between gap-2 text-left font-mono-tx text-[11px] uppercase-eyebrow text-foreground-mute hover:text-foreground transition-colors"
+                >
+                  <span>Ask about this article</span>
+                  <span aria-hidden="true">{askOpen ? '−' : '+'}</span>
+                </button>
+
+                {askOpen && (
+                  <div className="mt-3">
+                    {askHistory.length > 0 && (
+                      <ul className="space-y-2 mb-3">
+                        {askHistory.map((qa, idx) => (
+                          <li
+                            key={idx}
+                            className="border border-[var(--rule)] rounded-md p-3 bg-[var(--background-tint)]"
+                          >
+                            <p className="text-[13px] font-medium text-foreground mb-1.5">
+                              {qa.question}
+                            </p>
+                            <p
+                              data-testid="article-ask-answer"
+                              className="text-[14px] leading-[1.55] text-foreground-soft"
+                              style={{
+                                overflowWrap: 'anywhere',
+                                wordBreak: 'break-word',
+                              }}
+                            >
+                              {qa.answer}
+                            </p>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+
+                    <form
+                      onSubmit={handleAskSubmit}
+                      className="flex flex-col sm:flex-row gap-2"
+                    >
+                      <input
+                        type="text"
+                        value={askQuestion}
+                        onChange={e => setAskQuestion(e.target.value)}
+                        placeholder="What do you want to know?"
+                        disabled={askLoading}
+                        data-testid="article-ask-input"
+                        className="flex-1 min-w-0 px-3 py-2 text-[14px] rounded-md border border-[var(--rule)] bg-background text-foreground placeholder:text-foreground-mute focus:outline-none focus:border-[var(--accent-signal)] transition-colors"
+                      />
+                      <button
+                        type="submit"
+                        disabled={askLoading || !askQuestion.trim()}
+                        data-testid="article-ask-submit"
+                        className="shrink-0 px-4 py-2 text-[14px] font-medium rounded-md border border-[var(--accent-signal)] bg-signal-wash text-signal hover:bg-[var(--accent-signal)] hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        {askLoading ? 'Asking…' : 'Ask'}
+                      </button>
+                    </form>
+
+                    {askError && (
+                      <p
+                        className="mt-2 text-[13px] text-foreground-soft"
+                        data-testid="article-ask-error"
+                      >
+                        {askError}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {related && related.length > 0 && (
                 <div

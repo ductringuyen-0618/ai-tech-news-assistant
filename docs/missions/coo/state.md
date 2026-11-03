@@ -490,3 +490,18 @@ Shipped: 5/5
   left open (green, mergeable) for the repo owner to merge -- this routine
   never merges its own PRs. PRs #4 and #10 remain open and unmerged from
   earlier ships, not mine to touch.
+- 2026-11-03: No open `agentos:decision` issues and no proposal with status
+  `proposed`/`approved`/`in_progress`/`building` (001 rejected; 002/003/004/
+  006/011 shipped; 005/007/008/009/010 expired), so nothing in flight.
+  Proposed `012-your-week-in-tech-recap.md`: a personalized "Your Week in
+  Tech" recap banner on the feed (read count, saved count, top interest)
+  built entirely from data already sitting unused in localStorage from
+  shipped features (read-state tracking, Saved Articles, and 011's interest
+  weights), plus a permanent "Your Week" section in Settings mirroring 011's
+  layout pattern. Frontend-only, no backend/secret/new dependency. Distinct
+  from all eleven prior proposals -- closest neighbors are the expired
+  `005-daily-reading-streak` (a streak counter, not a weekly stats recap)
+  and the shipped `011-your-interests-panel` (surfaces interest weights
+  directly, not combined with read/save activity into a time-boxed recap).
+  Opened issue #20 for the decision. PRs #4 and #19 remain open and
+  unmerged from earlier ships, not mine to touch.
